@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima segunda revisão)
+**Última atualização:** 2026-10-02 (décima terceira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 97 passando (59 de domínio, 38 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -31,11 +31,11 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Implementação em C# | Atendido |
 | Testes automatizados | Atendido, 97 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
-| README com instruções de execução local | Atendido, precisa da revisão final |
+| README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
 | Repositório público no GitHub | Atendido: https://github.com/eduardojnet/PacioliBank (ver §6, L-01) |
 
-> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Desde o card 20, nenhum item acima impede a entrega; o README ainda precisa da revisão final (card 23).
+> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Desde o card 23, os seis requisitos obrigatórios estão atendidos.
 
 ---
 
@@ -304,7 +304,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
 5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
-6. **[23] README final**
+6. ~~**[23] README final**~~ concluído em 2026-10-02
 7. **[24] Despachante de outbox**
 8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
 
@@ -404,3 +404,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 21 concluído: as 4 correções da L-05 aplicadas com nota de revisão; 3 divergências novas achadas ao conferir os documentos contra o código (ADR-0010, ADR-0001 e convenções, EF §8.4) e tratadas; L-11 incorporada à EF 1.1 (§8.7, QA-008). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas |
 | 2026-10-02 | Card 22 concluído: experimento sem `FOR NO KEY UPDATE`. O teste reprova, mas por perda de disponibilidade (24% a 78% de `503`), não por saldo negativo: a constraint de sequência preserva a invariante sem o bloqueio. Resultado no ADR-0005. L-04 encerrada |
 | 2026-10-02 | Card 19.4 criado e concluído: repetição reconhecida sob o bloqueio da conta, antes do agregado. ADR-0006 revisado com alternativas rejeitadas. 3 testes novos (97 verdes), cenário reproduzido via curl. L-10 encerrada; nenhuma lacuna ALTA aberta |
+| 2026-10-02 | Card 23 concluído: README final com início em cinco minutos, uso da API com exemplos curl, erros, testes, decisões atualizadas (ADR-0005 medido, ADR-0006 revisado) e "o que seria feito com mais tempo". Verificado seguindo o README literalmente num clone limpo; o caminho "fora do Docker", que falharia como estava escrito, corrigido e verificado. Todos os requisitos obrigatórios atendidos |

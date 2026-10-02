@@ -97,7 +97,7 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 19, 19.1, 19.4, 20, 21 e 22 concluídos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **23** (README final). Ver `docs/ESTADO.md §7`.
+Cards 19, 19.1, 19.4, 20, 21, 22 e 23 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **24** (despachante de outbox), hoje na coluna Backlog do quadro. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 

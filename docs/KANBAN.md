@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 10 | 24, 25, 31 a 38 |
-| A Fazer | 6 | 19.2, 19.3, 23, 26, 27, 28 |
+| A Fazer | 5 | 19.2, 19.3, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 24 | 01 a 22, mais 19.4 |
+| Concluído | 25 | 01 a 23, mais 19.4 |
 
 ---
 
@@ -142,23 +142,6 @@ Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
-### 23. Finalizar o README
-
-`prioridade: Alta` · `doc` · `requisito-obrigatorio`
-
-Requisito obrigatório. Item 6 da fila: revisão final, DEPOIS dos endpoints.
-
-ESCOPO SEPARADO em 02/10: a correção urgente da tabela de estado saiu deste card e virou 'Corrigir a tabela de estado do README', priorizada à frente porque o repositório já está público com informação errada. Este card fica com o que só faz sentido no fim.
-
-PENDENTE AQUI:
-
-1. Endpoints documentados com exemplos curl executáveis
-2. Decisões resumidas com link para os ADRs
-3. Seção 'o que seria feito com mais tempo', que o enunciado pede explicitamente
-4. Instrução de execução dos testes de integração e seu pré-requisito (Docker)
-
-CRITÉRIO: alguém que nunca viu o projeto sobe o ambiente e faz um lançamento seguindo apenas o README.
-
 ### 26. Escrever os testes de arquitetura com NetArchTest
 
 `prioridade: Média` · `arquitetura` · `teste`
@@ -189,7 +172,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 23, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 24, hoje em Backlog, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -559,3 +542,24 @@ ENTREGA (02/10/2026): o teste REPROVA sem o bloqueio, mas por perda de disponibi
 SITUAÇÃO: o reenvio de um débito já efetivado, depois de o saldo cair, recebia 422 em vez do resultado original.
 
 ENTREGA (02/10/2026): repetição reconhecida sob o bloqueio da conta, antes do agregado; violação de chave mantida como segunda barreira. ADR-0006 revisado com 3 alternativas rejeitadas e gatilho de revisão. 3 testes de integração novos, que reprovaram antes da correção. 97 verdes. Cenário original reproduzido via curl: agora 200 com corpo idêntico. Diagrama de sequência redesenhado.
+
+### 23. Finalizar o README
+
+`prioridade: Alta` · `doc` · `requisito-obrigatorio`
+
+Requisito obrigatório. Item 6 da fila: revisão final, DEPOIS dos endpoints.
+
+ESCOPO SEPARADO em 02/10: a correção urgente da tabela de estado saiu deste card e virou 'Corrigir a tabela de estado do README', priorizada à frente porque o repositório já está público com informação errada. Este card fica com o que só faz sentido no fim.
+
+PENDENTE AQUI:
+
+1. Endpoints documentados com exemplos curl executáveis
+2. Decisões resumidas com link para os ADRs
+3. Seção 'o que seria feito com mais tempo', que o enunciado pede explicitamente
+4. Instrução de execução dos testes de integração e seu pré-requisito (Docker)
+
+CRITÉRIO: alguém que nunca viu o projeto sobe o ambiente e faz um lançamento seguindo apenas o README.
+
+ENTREGA (02/10/2026): os 4 itens pendentes feitos (endpoints com curl executável, decisões com link para os ADRs, "o que seria feito com mais tempo", testes e o pré-requisito Docker), mais início em cinco minutos e tabela de erros. Resumos do ADR-0005 e do ADR-0006 atualizados para o que foi medido e revisado.
+
+VERIFICAÇÃO DO CRITÉRIO: README seguido literalmente num clone limpo: subida, crédito, posição, débito, reenvio, recusa por saldo, posição histórica, extrato e estorno, todos com a resposta descrita. Achado e corrigido: "rodar sem Docker" falharia como estava escrito (sem `ASPNETCORE_ENVIRONMENT=Development` não há connection string); a instrução nova foi executada e funciona.
