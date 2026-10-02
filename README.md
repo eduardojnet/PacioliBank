@@ -29,7 +29,7 @@ Pré-requisito: SDK do .NET 10 e um PostgreSQL acessível.
 
 ```bash
 dotnet build          # deve terminar sem erro e sem aviso
-dotnet test           # testes de domínio
+dotnet test           # 57 testes; os de integração exigem Docker
 dotnet run --project src/PacioliBank.Api
 ```
 
@@ -41,7 +41,7 @@ O esquema é aplicado pelo entrypoint do container PostgreSQL, que só executa n
 docker compose down -v && docker compose up --build
 ```
 
-> Esta é uma limitação conhecida deste estágio. A próxima entrega substitui o mecanismo por migrações DbUp aplicadas na subida da aplicação, atendendo RNF-038.
+> Esta é uma limitação conhecida deste estágio, aceita no ambiente local e registrada como item próprio da fila: substituir o mecanismo por migrações DbUp aplicadas na subida da aplicação, atendendo RNF-038.
 
 ---
 
@@ -73,13 +73,17 @@ A documentação é parte da entrega, não um anexo. As decisões estão registr
 
 ```
 src/
-  PacioliBank.Ledger/      modulo Ledger: invariantes e tipos de dominio
-  PacioliBank.Api/         exposicao HTTP
+  PacioliBank.Ledger/              dominio e portas. ZERO pacotes externos
+    Domain/                        Money, Currency, Account, LedgerEntry, invariantes
+    Application/                   ILedgerStore (porta de saida), resultados, fingerprint
+  PacioliBank.Ledger.Persistence/  adaptador PostgreSQL: Dapper, SQL, transacao, bloqueio
+  PacioliBank.Api/                 adaptador HTTP
 tests/
-  PacioliBank.Domain.Tests/  unidade, sem I/O
-db/init/                   esquema, papeis e privilegios
-docs/adr/                  decisoes arquiteturais
-docs/specs/                especificacoes funcional, nao funcional e BDD
+  PacioliBank.Domain.Tests/        39 testes, sem I/O
+  PacioliBank.Integration.Tests/   18 testes, PostgreSQL real, inclui concorrencia
+db/init/                           esquema, papeis e privilegios
+docs/adr/                          decisoes arquiteturais
+docs/specs/                        especificacoes funcional, nao funcional e BDD
 ```
 
 ---
@@ -95,11 +99,15 @@ Honestidade sobre o que existe é parte da entrega. Apresentar requisito especif
 | Esquema, papéis e privilégio mínimo | Implementado |
 | `Money` e `Currency`, com testes | Implementado |
 | Ambiente local em um comando | Implementado |
-| Agregado Conta e registro de lançamentos | Pendente |
-| Idempotência e controle de concorrência | Pendente |
-| Consulta de posição e snapshot | Pendente |
-| Outbox e despachante | Pendente |
-| Testes de integração, concorrência e arquitetura | Pendentes |
+| Agregado Conta, invariantes e lançamento imutável, com testes | Implementado |
+| Idempotência e bloqueio pessimista por conta, com testes | Implementado |
+| Consulta de posição e snapshot inline amortizado | Implementado |
+| Gravação transacional na outbox | Implementado |
+| Testes de integração e concorrência contra PostgreSQL real | Implementados, 18 testes |
+| Porta de entrada e endpoints de negócio | Pendente |
+| Caminho de persistência do estorno | Pendente |
+| Despachante de outbox | Pendente |
+| Testes de arquitetura e de contrato | Pendentes |
 | Painel de evidência | Condicional, ver ADR-0011 |
 
 ---

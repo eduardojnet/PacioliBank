@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (terceira revisão)
+**Última atualização:** 2026-10-02 (quarta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 57 passando (39 de domínio, 18 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Atenção:** os tipos que a L-07 dava como "escritos e não compilados" **não existem no disco**. Ver §6, L-07.
@@ -213,6 +213,18 @@ O domínio tem `Account.Reverse(original, ...)`, que valida titularidade e proí
 
 Nenhum teste de integração cobre estorno. Corrigir dentro do item 1 da fila, com teste contra PostgreSQL real (ADR-0010).
 
+### L-09: README público subdeclarava o estado da implementação (ENCERRADA em 2026-10-02)
+
+Detectada ao verificar o repositório recém-publicado. A tabela "Estado atual da implementação" do README declarava como **pendentes** o agregado Conta, a idempotência, o controle de concorrência e os testes de integração, todos implementados e verdes. A árvore de estrutura omitia `PacioliBank.Ledger.Persistence` e `PacioliBank.Integration.Tests`.
+
+**Causa:** o README foi escrito antes dessas entregas e não foi revisado quando elas entraram. A regra 9 das invioláveis cobria o `ESTADO.md`, não o README.
+
+**Por que importa mais do que parece:** a §5 deste documento e a regra 5 existem contra **sobre**declarar. Aqui o erro foi o inverso, e no desafio o dano é maior: o avaliador lê "pendente" na primeira tela e não procura o código. Entrega existente avaliada como ausente.
+
+**Corrigido:** tabela de estado reescrita com nove linhas separando implementado de pendente, árvore de estrutura atualizada para os cinco projetos reais, comando de teste declarando 57 testes e o pré-requisito de Docker, e a promessa de DbUp "na próxima entrega" trocada por item da fila.
+
+**Controle adotado:** o README entra na mesma verificação da regra 9. Nenhuma entrega fecha com README divergente da §4 deste documento.
+
 ### L-06: `AnalysisMode` ainda em `Default` (BAIXA)
 
 O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build está limpo há três ciclos. Elevar é um commit próprio e pequeno.
@@ -321,3 +333,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Quadro Kanban criado no TickTick com 37 cartões; `KANBAN.md` acrescentado; lacuna L-07 registrada (código não compilado) |
 | 2026-10-02 | Build e suíte verificados (0 avisos, 57 verdes). L-07 encerrada: os tipos descritos não existiam no disco. L-08 registrada (estorno sem caminho de persistência). Contagem de exceções corrigida para 12 |
 | 2026-10-02 | Repositório público criado e publicado: L-01 encerrada, item 2 da fila concluído antes do item 1. Cartão movido para Concluído em `KANBAN.md` |
+| 2026-10-02 | L-09 registrada e encerrada: o README público subdeclarava domínio, persistência, idempotência e testes de integração como pendentes. README corrigido; a regra 9 passa a cobri-lo |
