@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (oitava revisão)
+**Última atualização:** 2026-10-02 (nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 94 passando (59 de domínio, 35 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -32,10 +32,10 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Testes automatizados | Atendido, 94 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido, precisa da revisão final |
-| Toda documentação no próprio repositório | **Parcial**: diagramas estão fora (ver §6, L-02) |
+| Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
 | Repositório público no GitHub | Atendido: https://github.com/eduardojnet/PacioliBank (ver §6, L-01) |
 
-> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Um item acima ainda impede a entrega hoje: os diagramas fora do repositório (L-02).
+> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Desde o card 20, nenhum item acima impede a entrega; o README ainda precisa da revisão final (card 23).
 
 ---
 
@@ -144,7 +144,7 @@ Os testes de concorrência usam barreira de sincronização para liberar as tare
 
 [BDD](./specs/BDD-comportamento.md) com 10 funcionalidades e ~55 cenários Gherkin, [EF](./specs/EF-especificacao-funcional.md) e [ENF](./specs/ENF-especificacao-nao-funcional.md), todas com rastreabilidade cruzada por IDs.
 
-Três documentos no Lucid: C4 detalhado (3 páginas), diagrama de sequência (nível 4), C4 consolidado (C1 a C4 em uma página). **Fora do repositório** (ver L-02).
+Modelo C4 em Mermaid em [`docs/diagrams/`](./diagrams/): contexto, contêineres, componentes da API e sequência do débito sob concorrência. Cada diagrama declara o estado de cada elemento (implementado, parcial ou especificado). Renderização dos quatro validada localmente com `mermaid-cli` antes do commit. Os três documentos do Lucid continuam para apresentação, mas deixaram de ser a fonte: C3 e C4 foram redesenhados a partir do código, e a correspondência com o Lucid está em `c3-componentes.md`.
 
 ---
 
@@ -175,13 +175,13 @@ Requisito obrigatório explícito. Atendido: https://github.com/eduardojnet/Paci
 
 O histórico tem 7 commits agrupados por área (base, banco, domínio, persistência, API, decisões, estado). Foram criados no mesmo dia, ao versionar o trabalho já existente, e não reproduzem a cronologia original; nenhuma data foi alterada. A partir daqui cada entrega vira commit próprio. Que cada um dos 7 commits compile isoladamente não foi verificado [NVI].
 
-### L-02: Diagramas fora do repositório (BLOQUEANTE PARCIAL)
+### L-02: Diagramas fora do repositório (ENCERRADA em 2026-10-02, card 20)
 
-O enunciado exige toda a documentação no próprio repositório. Hoje quem clona o repo não vê diagrama algum.
+**Situação registrada:** o enunciado exige toda a documentação no repositório, e os diagramas viviam só no Lucid. Além disso, mostravam componentes inexistentes (painel, despachante, autorização) como se existissem.
 
-**Correção recomendada:** recriar em Mermaid sob `docs/diagrams/`. O GitHub renderiza nativamente, o arquivo é versionável e diffável, e não depende de conta no Lucid. Os documentos do Lucid continuam úteis para apresentação.
+**Corrigido:** quatro diagramas em Mermaid em [`docs/diagrams/`](./diagrams/), renderizados nativamente pelo GitHub. Cada um traz uma tabela de estado por elemento, com a evidência no código, e uma convenção visual (borda tracejada para o especificado).
 
-**Segunda parte:** os diagramas mostram componentes que ainda não existem (painel, despachante, endpoints, autorização). Legítimo como arquitetura-alvo, desonesto como estado atual. Cada diagrama precisa de nota distinguindo o implementado do especificado.
+**Divergência registrada, não corrigida em silêncio:** o C3 do Lucid descreve oito componentes que o código organizou de outra forma (idempotência, cálculo de posição e outbox vivem dentro do `PostgresLedgerStore` e do SQL; a porta de entrada `LedgerService` não existia no Lucid). O C3 do repositório segue o código, com tabela de correspondência. O diagrama de sequência foi redesenhado a partir de `PostgresLedgerStore.PostOnceAsync` e torna visível a lacuna L-10.
 
 ### L-03: Hexágono implementado só no lado dirigido (ENCERRADA em 2026-10-02, card 19)
 
@@ -293,7 +293,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
    - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
-3. **[20] Diagramas em Mermaid no repositório** (L-02)
+3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
 4. **[21] Correções documentais** (L-05)
 5. **[22] Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
 6. **[23] README final**
@@ -392,3 +392,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Quadro sincronizado com a numeração aplicada no TickTick (41 cartões, 01 a 38 com subníveis 19.1 a 19.3). `KANBAN.md` regenerado por leitura direta do quadro; §6-A e §7 passam a citar o número do cartão. Push dos commits 12 e 13 confirmado (`origin/main` em `99924c4`) |
 | 2026-10-02 | Card 19.1 concluído: `ReverseAsync` no store, sob o mesmo bloqueio por conta, com 9 testes de integração (66 verdes). L-08 encerrada. L-10 registrada e verificada por execução: reenvio idempotente recusado quando o saldo mudou |
 | 2026-10-02 | Card 19 concluído: porta de entrada `ILedgerService`, os 5 endpoints da EF §8.3, `ProblemDetails` com o catálogo da §8.6, correlação, prontidão ligada ao PostgreSQL. L-03 e L-07 encerradas; L-11 registrada (6 decisões de contrato provisórias). O teste via curl achou 2 defeitos que a suíte não via (corpo da repetição diferente por precisão de instante; estorno duplicado saindo como saldo insuficiente), corrigidos com teste que reprova sem a correção. 94 verdes. `.dockerignore` criado: sem ele a imagem não compilava |
+| 2026-10-02 | Card 20 concluído: modelo C4 em Mermaid em `docs/diagrams/` (C1, C2, C3, sequência do débito), com estado por elemento. L-02 encerrada; requisito "documentação no repositório" passa a atendido. C3 e sequência redesenhados a partir do código, com correspondência explícita ao Lucid |

@@ -51,6 +51,7 @@ A documentação é parte da entrega, não um anexo. As decisões estão registr
 
 | Documento | Conteúdo |
 |---|---|
+| [`docs/diagrams/`](./docs/diagrams/) | Modelo C4 em Mermaid (contexto, contêineres, componentes, sequência), com o estado de cada elemento |
 | [`docs/adr/`](./docs/adr/) | 11 decisões arquiteturais em formato MADR |
 | [`docs/specs/EF-especificacao-funcional.md`](./docs/specs/EF-especificacao-funcional.md) | Domínio, regras de negócio, requisitos funcionais, contrato de API |
 | [`docs/specs/ENF-especificacao-nao-funcional.md`](./docs/specs/ENF-especificacao-nao-funcional.md) | Atributos de qualidade, SLOs, riscos |
@@ -82,6 +83,7 @@ tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
   PacioliBank.Integration.Tests/   35 testes, PostgreSQL real, inclui concorrencia, estorno e extrato
 db/init/                           esquema, papeis e privilegios
+docs/diagrams/                     modelo C4 em Mermaid
 docs/adr/                          decisoes arquiteturais
 docs/specs/                        especificacoes funcional, nao funcional e BDD
 ```
@@ -95,7 +97,7 @@ Honestidade sobre o que existe é parte da entrega. Apresentar requisito especif
 | Item | Estado |
 |---|---|
 | Especificações e ADRs | Completos |
-| Diagramas C4 (contexto, contêiner, componentes) | Completos |
+| Diagramas C4 (contexto, contêiner, componentes, sequência) | Completos, em Mermaid no repositório |
 | Esquema, papéis e privilégio mínimo | Implementado |
 | `Money` e `Currency`, com testes | Implementado |
 | Ambiente local em um comando | Implementado |

@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 10 | 24, 25, 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 20, 23, 26, 27, 28 |
+| A Fazer | 6 | 19.2, 19.3, 23, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 2 | 21, 22 |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 20 | 01 a 19.1 |
+| Concluído | 21 | 01 a 20 |
 
 ---
 
@@ -142,18 +142,6 @@ Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
-### 20. Converter os diagramas C4 para Mermaid no repositório
-
-`prioridade: Alta` · `doc` · `requisito-obrigatorio`
-
-LACUNA L-02, BLOQUEANTE PARCIAL. O enunciado exige toda a documentação no próprio repositório. Hoje quem clona o repo não vê diagrama algum: eles vivem no Lucid.
-
-SOLUÇÃO: recriar em Mermaid sob docs/diagrams/. O GitHub renderiza nativamente, o arquivo é versionável e diffável, e não depende de conta no Lucid.
-
-SEGUNDA PARTE: os diagramas mostram componentes que ainda não existem (painel, despachante, endpoints, autorização). Legítimo como arquitetura-alvo, desonesto como estado atual. Cada diagrama precisa de nota distinguindo implementado de especificado.
-
-CRITÉRIO: diagramas visíveis ao clonar o repositório, com o estado de cada componente declarado.
-
 ### 23. Finalizar o README
 
 `prioridade: Alta` · `doc` · `requisito-obrigatorio`
@@ -201,7 +189,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 20, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 21, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -533,3 +521,21 @@ Pode ser feito junto do item de endpoints, mas é verificável separadamente.
 ENTREGA (02/10/2026, commit `4c71b3f`): `ReverseAsync` no store, sob o mesmo bloqueio por conta. 9 testes de integração (os três casos do critério, F06 completo e 10 estornos simultâneos do mesmo lançamento, dos quais exatamente 1 é aceito). L-08 encerrada.
 
 ACHADO NA ENTREGA: L-10, reenvio idempotente recusado quando o saldo mudou. Verificado por execução e registrado; exige revisão do ADR-0006.
+
+### 20. Converter os diagramas C4 para Mermaid no repositório
+
+`prioridade: Alta` · `doc` · `requisito-obrigatorio`
+
+LACUNA L-02, BLOQUEANTE PARCIAL. O enunciado exige toda a documentação no próprio repositório. Hoje quem clona o repo não vê diagrama algum: eles vivem no Lucid.
+
+SOLUÇÃO: recriar em Mermaid sob docs/diagrams/. O GitHub renderiza nativamente, o arquivo é versionável e diffável, e não depende de conta no Lucid.
+
+SEGUNDA PARTE: os diagramas mostram componentes que ainda não existem (painel, despachante, endpoints, autorização). Legítimo como arquitetura-alvo, desonesto como estado atual. Cada diagrama precisa de nota distinguindo implementado de especificado.
+
+CRITÉRIO: diagramas visíveis ao clonar o repositório, com o estado de cada componente declarado.
+
+ENTREGA (02/10/2026): quatro diagramas em `docs/diagrams/` (C1 contexto, C2 contêineres, C3 componentes da API, sequência do débito), mais um README com a convenção visual. Cada diagrama tem tabela de estado por elemento, com evidência no código; o especificado aparece com borda e seta tracejadas.
+
+VERIFICAÇÃO: os quatro renderizados localmente com `mermaid-cli` e conferidos visualmente antes do commit; o C3 foi reorganizado duas vezes até eliminar sobreposição.
+
+DIVERGÊNCIA REGISTRADA: o C3 do Lucid não corresponde ao código. O do repositório segue o código, com tabela de correspondência. L-02 encerrada; o requisito obrigatório "documentação no repositório" passa a atendido.

@@ -68,7 +68,7 @@ tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
   PacioliBank.Integration.Tests/   35 testes, PostgreSQL real, inclui concorrencia, estorno e extrato
 db/init/                           esquema, papeis e privilegios
-docs/                              ESTADO, ADRs, specs, convencoes, kanban
+docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
 ```
 
 ---
@@ -97,7 +97,7 @@ docs/                              ESTADO, ADRs, specs, convencoes, kanban
 
 ## Pendência imediata
 
-Cards 19 e 19.1 concluídos: os 5 endpoints de negócio existem. O próximo da fila é o **20** (diagramas em Mermaid). Ver `docs/ESTADO.md §7`.
+Cards 19, 19.1 e 20 concluídos: endpoints de negócio no ar e modelo C4 em Mermaid em `docs/diagrams/`. O próximo da fila é o **21** (correções documentais; a L-11 tem esse card como destino proposto, ainda não incorporado ao escopo dele). Ver `docs/ESTADO.md §7`.
 
 Lacuna aberta de severidade ALTA fora da fila: **L-10** (reenvio idempotente recusado quando o saldo mudou), que exige revisão do ADR-0006.
 
