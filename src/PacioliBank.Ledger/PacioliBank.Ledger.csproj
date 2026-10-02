@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PacioliBank.Ledger</RootNamespace>
+    <AssemblyName>PacioliBank.Ledger</AssemblyName>
+  </PropertyGroup>
+
+</Project>
