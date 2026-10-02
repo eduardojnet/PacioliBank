@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.0
+**Versão:** 1.1
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -267,8 +267,8 @@ Formato SEI (fonte, estímulo, ambiente, artefato, resposta, medida). São os ce
 | R-02 | Premissa de capacidade (§3) divergir da realidade | **Alta** | Alto | Substituir premissas pela telemetria do legado antes do dimensionamento final | Diferença acima de 50% em qualquer dimensão |
 | R-03 | Atraso crônico na geração de snapshot | Média | Médio | Gerar snapshot por gatilho de volume além do gatilho temporal; alerta por atraso | `entriesReplayed` p99 acima de 1.000 |
 | R-04 | Crescimento do ledger sem política de arquivamento | Alta no longo prazo | Médio | Particionamento por tempo; definir retenção (QA-004) | Tamanho da partição ativa acima do limiar |
-| R-05 | Consumidor de evento que presume entrega única | Média | Alto | Contrato explícito de ao menos uma vez; `eventId` estável; validação na homologação do consumidor | Duplicidade reportada por consumidor |
-| R-06 | Acoplamento ao PostgreSQL via bloqueio consultivo | Média | Médio | Isolar a serialização atrás de abstração de domínio; documentar em ADR o custo de troca | Decisão corporativa de migração de SGBD |
+| R-05 | Consumidor de evento que presume entrega única | Média | Alto | Contrato explícito de ao menos uma vez; `message_id` estável; validação na homologação do consumidor | Duplicidade reportada por consumidor |
+| R-06 | Acoplamento ao PostgreSQL via bloqueio de linha (`FOR NO KEY UPDATE`) e `SKIP LOCKED` | Média | Médio | Isolar a serialização atrás de abstração de domínio; documentar em ADR o custo de troca | Decisão corporativa de migração de SGBD |
 | R-07 | Erosão da fronteira de escopo (§3.2 da EF) | **Alta** | Alto | Teste de arquitetura; revisão de ADR obrigatória para novo escopo | Requisito de cálculo de produto chegando a este sistema |
 
 **R-07 merece ênfase.** O enunciado afirma que o legado "foi crescendo sem muito planejamento". Nenhuma arquitetura inicial impede isso; o que impede é a disciplina de recusar o requisito que não pertence ao sistema. É por isso que §3.2 da [EF](./EF-especificacao-funcional.md) lista o que está fora com justificativa, e não apenas o que está dentro.
@@ -346,3 +346,4 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | Versão | Data | Autor | Alteração |
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
+| 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | R-05: `eventId` substituído por `message_id`, o identificador efetivo (ADR-0008). R-06: descrevia acoplamento por bloqueio consultivo, opção **rejeitada** no ADR-0005; corrigido para o mecanismo adotado, bloqueio de linha, mais o `SKIP LOCKED` do despachante (card 21.1) |

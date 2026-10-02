@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.1
+**Versão:** 1.2
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -481,12 +481,18 @@ A escrita dos endpoints encontrou pontos que esta especificação não respondia
 
 ## 9. Eventos de integração
 
-| Evento | Quando | Consumidores previstos |
+| Tipo do evento | Quando | Consumidores previstos |
 |---|---|---|
-| `LedgerEntryRecorded` | Lançamento efetivado | Extrato, notificação, antifraude, contabilidade |
-| `EntryReversed` | Estorno efetivado | Os mesmos de `LedgerEntryRecorded` |
+| `pacioli.ledger.entry-recorded.v1` | Crédito ou débito efetivado | Extrato, notificação, antifraude, contabilidade |
+| `pacioli.ledger.entry-reversed.v1` | Estorno efetivado | Os mesmos do anterior |
 
-**Garantia:** entrega ao menos uma vez, com `eventId` estável que permite deduplicação pelo consumidor. Ordenação é garantida apenas **dentro da mesma conta**, pela sequência. Ordenação global não é oferecida porque não é necessária e custaria serialização total do sistema.
+O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão no próprio nome permite coexistência de versões durante a migração de consumidores.
+
+**Garantia:** entrega ao menos uma vez, com `message_id` estável entre republicações, que permite deduplicação pelo consumidor ([ADR-0008](../adr/ADR-0008-outbox-transacional.md)). O `message_id` é o identificador da mensagem na outbox e viaja junto do evento, fora do payload. Ordenação é garantida apenas **dentro da mesma conta**, pelo campo `sequence`. Ordenação global não é oferecida porque não é necessária e custaria serialização total do sistema.
+
+**Payload: ainda não especificado.** Hoje o evento carrega o resultado da API serializado como está, com defeitos conhecidos: valores monetários como número JSON (contra a §8.2), propriedades internas do valor monetário, sentido como número, instantes sem o sufixo `Z` e, no estorno, sem a referência ao lançamento estornado. Nenhum consumidor externo recebe eventos hoje (o publicador registra em log), então o defeito ainda não quebrou ninguém. A definição do payload e a correção do código são o card 24.2 do quadro.
+
+> **Revisão 1.2 (2026-10-02).** A versão 1.1 nomeava os eventos `LedgerEntryRecorded` e `EntryReversed` e o identificador `eventId`; o código, as convenções e o ADR-0008 usam `pacioli.ledger.*.v1` e `message_id`. Alinhado ao código (card 21.1).
 
 **Contrato com o consumidor:** o consumidor é responsável por idempotência. O produtor não garante entrega única, e qualquer consumidor que dependa disso será incorreto sob falha de rede.
 
@@ -533,3 +539,4 @@ A escrita dos endpoints encontrou pontos que esta especificação não respondia
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | Lacuna L-05: `FORBIDDEN` restrito a serviço interno (ADR-0009); `type` de problema como URN. Lacuna L-11: §8.7 com as decisões de contrato tomadas na implementação, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 |
+| 1.2 | 2026-10-02 | Eduardo J. G. do Carmo | §9: nomes dos eventos e identificador de deduplicação alinhados ao código (`pacioli.ledger.*.v1`, `message_id`); payload declarado como não especificado, com os defeitos conhecidos (card 24.2) |

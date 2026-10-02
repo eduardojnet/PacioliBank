@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 46 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 47 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 21.1, 25, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 24.2, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 29 | 01 a 24, mais 18.1, 19.4, 20.1 e 24.1 |
+| Concluído | 30 | 01 a 24, mais 18.1, 19.4, 20.1, 21.1 e 24.1 |
 
 ---
 
@@ -102,12 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 21.1. Alinhar os nomes dos eventos da EF §9 ao código
-
-`prioridade: Média` · `doc` · `risco`
-
-ÂNCORA: EF §9, convenções §8, ADR-0008; achado no card 24. A EF nomeia `LedgerEntryRecorded`, `EntryReversed` e `eventId`; o código grava `pacioli.ledger.entry-recorded.v1`, `pacioli.ledger.entry-reversed.v1` e usa `message_id`. Subnível do 21 por ser correção documental; à frente do 25 por prioridade. CRITÉRIO: EF, convenções, ADR-0008 e código com os mesmos nomes.
-
 ### 19.2. Testar a API via Insomnia
 
 `prioridade: Média` · `teste`
@@ -127,6 +121,12 @@ ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI a
 Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que alteração acidental de contrato seja detectada antes da publicação (RNF-039).
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
+
+### 24.2. Definir e implementar o contrato do payload dos eventos
+
+`prioridade: Média` · `codigo` · `risco` · `arquitetura`
+
+ÂNCORA: EF §9, EF §8.2, ADR-0008; achado no card 21.1. O payload é o resultado da API serializado como está: valor como número JSON, internos do `Money` (`isZero`, `scale`...), sentido como número, instantes com `+00:00`, estorno sem `reversalOf`. Impacto hoje baixo (nenhum consumidor externo). ESCOPO: payload definido na EF §9; tipo de evento próprio no código; teste que confere o payload gravado; ajustar a v1, sem consumidor a migrar. CRITÉRIO: payload gravado igual ao definido, verificado contra PostgreSQL real.
 
 ### 25. Implementar o painel de evidência
 
@@ -170,7 +170,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 21.1, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 24.2, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -640,3 +640,15 @@ ENTREGA (02/10/2026): decisão do usuário, acrescentar a chave. Aplicada como `
 ÂNCORA: decisão do usuário em 02/10/2026, "todas as atividades deveriam estar no kanban, sendo ele a fonte de tudo". Altera o card 18. Escopo: PROCESSO-KANBAN 2.0 com o quadro como fonte da fila e de toda atividade; ESTADO §7 e KANBAN.md como espelhos; o disco continua fonte da verdade do código. CRITÉRIO: nenhum documento afirma mais que a ordem vem do ESTADO.md.
 
 ENTREGA (02/10/2026): `PROCESSO-KANBAN.md` 2.0: o quadro é a fonte de toda atividade e da ordem; `ESTADO.md §7` e este espelho em divergência perdem para o quadro. Regras novas: nenhum trabalho sem cartão; o bloco de trabalho começa lendo o quadro; commits só com os arquivos da entrega. Histórico de versões da política acrescentado. Ajustados: `ESTADO.md` §6-A, §7 e bloco de retomada; cabeçalho deste espelho; README; ordem de leitura e regra 10 do `CLAUDE.md`. VERIFICAÇÃO: busca no repositório por afirmações de que a ordem vem do `ESTADO.md`; as restantes são histórico de cartão, preservado pela regra append-only.
+
+### 21.1. Alinhar os nomes dos eventos da EF §9 ao código
+
+`prioridade: Média` · `doc` · `risco`
+
+ÂNCORA: EF §9, convenções §8, ADR-0008; achado no card 24. A EF nomeia `LedgerEntryRecorded`, `EntryReversed` e `eventId`; o código grava `pacioli.ledger.entry-recorded.v1`, `pacioli.ledger.entry-reversed.v1` e usa `message_id`. Subnível do 21 por ser correção documental; à frente do 25 por prioridade. CRITÉRIO: EF, convenções, ADR-0008 e código com os mesmos nomes.
+
+ESCOPO AMPLIADO, com motivo: a ENF R-06 descrevia acoplamento por bloqueio consultivo, opção rejeitada no ADR-0005; mesma natureza e mesma tabela que a R-05, que este cartão já corrigia.
+
+ENTREGA (02/10/2026): EF 1.2 (§9 com `pacioli.ledger.entry-recorded.v1`, `pacioli.ledger.entry-reversed.v1` e `message_id`), ENF 1.1 (R-05 e R-06), convenções §8 (o identificador é `message_id`; não existe `eventId`). Cada mudança com nota de revisão. VERIFICAÇÃO: busca no repositório pelos nomes antigos; restam só as notas de revisão.
+
+ACHADO, item 2 do escopo: lendo eventos reais na outbox, o payload é o resultado da API serializado como está, com cinco defeitos (valor como número JSON, internos do `Money`, sentido numérico, `+00:00` em vez de `Z`, estorno sem `reversalOf`). Declarados na EF §9 e transformados no card 24.2.

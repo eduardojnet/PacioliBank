@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima oitava revisão)
+**Última atualização:** 2026-10-02 (décima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 103 passando (59 de domínio, 44 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -170,6 +170,7 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Barramento de eventos real | Não escolhido (ADR-0008). O despachante publica em log; nenhum consumidor externo recebe eventos |
 | Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
+| Contrato do payload dos eventos | Não especificado na EF; o payload atual tem defeitos conhecidos (card 24.2) |
 | Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
 | Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
 | Testes de contrato (OpenAPI) | Previstos, não escritos |
@@ -300,7 +301,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 46 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 47 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -321,11 +322,12 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
    - ~~**[20.1] Diagrama de entidade e relacionamento do esquema**~~ concluído em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
-   - **[21.1] Alinhar os nomes dos eventos da EF §9 ao código**: a EF usa `LedgerEntryRecorded` e `eventId`; o código, `pacioli.ledger.entry-recorded.v1` e `message_id`. À frente do 25 por prioridade
+   - ~~**[21.1] Nomes dos eventos da EF §9 alinhados ao código**~~ concluído em 2026-10-02 (também ENF R-05 e R-06)
 5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
 6. ~~**[23] README final**~~ concluído em 2026-10-02
 7. ~~**[24] Despachante de outbox**~~ concluído em 2026-10-02
    - ~~**[24.1] Chave estrangeira na outbox** (L-12)~~ concluído em 2026-10-02
+   - **[24.2] Contrato do payload dos eventos**: hoje o payload é o resultado da API serializado como está (valor como número JSON, internos do `Money`, sem `reversalOf` no estorno). Achado no 21.1
 8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
 
 ---
@@ -433,3 +435,4 @@ confirmação.
 | 2026-10-02 | Card 24 concluído: módulo `PacioliBank.Events` com o despachante de outbox (`SKIP LOCKED`, recuo exponencial, limite de tentativas com alerta), executado no processo da API e publicando em log. Cartão recebeu critério de conclusão antes de começar. 5 testes de integração (102 verdes); o de paralelismo reprova sem o `SKIP LOCKED`. Verificado no Docker: crédito via curl publicado em menos de 3 s. Card 24.1 criado para a L-12 |
 | 2026-10-02 | Card 24.1 concluído: chave estrangeira `fk_outbox_entry (account_id, sequence)` na outbox, por decisão do usuário, registrada no ADR-0008 com alternativas rejeitadas. Teste novo reprovou antes e passa depois; 103 verdes. L-12 encerrada. Cards 18.1 (inverter a política do quadro) e 21.1 (nomes dos eventos da EF §9) criados |
 | 2026-10-02 | Card 18.1 concluído: política do quadro invertida (PROCESSO-KANBAN 2.0). O quadro no TickTick é a fonte de toda atividade e da ordem; §7 e `KANBAN.md` passam a espelhos. Regra nova: nenhum trabalho sem cartão |
+| 2026-10-02 | Card 21.1 concluído: EF §9 (1.2), ENF (1.1) e convenções §8 alinhados ao código: `pacioli.ledger.*.v1` e `message_id`. Escopo ampliado com motivo: ENF R-06 descrevia o bloqueio consultivo, opção rejeitada no ADR-0005. Lendo eventos reais, achados defeitos no payload; viraram o card 24.2, declarados na EF |

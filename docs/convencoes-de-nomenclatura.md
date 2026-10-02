@@ -150,6 +150,8 @@ pacioli.ledger.entry-reversed.v1
 
 A versão no próprio nome do tipo permite coexistência de versões durante migração de consumidores, sem negociação de esquema em tempo de execução.
 
+Identificador de deduplicação: `message_id`, a chave primária da mensagem na outbox, estável entre republicações ([ADR-0008](./adr/ADR-0008-outbox-transacional.md)). Não existe `eventId`.
+
 ---
 
 ## 9. Código
