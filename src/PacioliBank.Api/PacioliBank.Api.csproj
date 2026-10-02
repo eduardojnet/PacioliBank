@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>PacioliBank.Api</RootNamespace>
+    <AssemblyName>PacioliBank.Api</AssemblyName>
+    <UserSecretsId>pacioli-bank-ledger-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PacioliBank.Ledger\PacioliBank.Ledger.csproj" />
+  </ItemGroup>
+
+</Project>

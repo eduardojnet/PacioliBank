@@ -1,0 +1,5 @@
+### Verificacao de vida. Nao depende de nenhuma dependencia externa (RNF-013).
+GET http://localhost:8080/health/live
+
+### Verificacao de prontidao. Passara a refletir o armazenamento primario.
+GET http://localhost:8080/health/ready

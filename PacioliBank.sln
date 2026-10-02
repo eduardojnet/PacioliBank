@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35222.181
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PacioliBank.Ledger", "src\PacioliBank.Ledger\PacioliBank.Ledger.csproj", "{811BBD7F-B360-5BAA-AB7C-CA8A37915FD3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PacioliBank.Ledger.Persistence", "src\PacioliBank.Ledger.Persistence\PacioliBank.Ledger.Persistence.csproj", "{E1E6693B-71F6-54DA-BC31-CC8C55286B81}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PacioliBank.Api", "src\PacioliBank.Api\PacioliBank.Api.csproj", "{A7395900-7163-5617-9ACF-492ACCF5EF90}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PacioliBank.Domain.Tests", "tests\PacioliBank.Domain.Tests\PacioliBank.Domain.Tests.csproj", "{BA949627-00AB-5659-BF06-F323129FA48D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PacioliBank.Integration.Tests", "tests\PacioliBank.Integration.Tests\PacioliBank.Integration.Tests.csproj", "{A56B655D-506F-5135-AD57-C65C64AAABBF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{811BBD7F-B360-5BAA-AB7C-CA8A37915FD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{811BBD7F-B360-5BAA-AB7C-CA8A37915FD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{811BBD7F-B360-5BAA-AB7C-CA8A37915FD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{811BBD7F-B360-5BAA-AB7C-CA8A37915FD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1E6693B-71F6-54DA-BC31-CC8C55286B81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1E6693B-71F6-54DA-BC31-CC8C55286B81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1E6693B-71F6-54DA-BC31-CC8C55286B81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1E6693B-71F6-54DA-BC31-CC8C55286B81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7395900-7163-5617-9ACF-492ACCF5EF90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7395900-7163-5617-9ACF-492ACCF5EF90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7395900-7163-5617-9ACF-492ACCF5EF90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7395900-7163-5617-9ACF-492ACCF5EF90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA949627-00AB-5659-BF06-F323129FA48D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA949627-00AB-5659-BF06-F323129FA48D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA949627-00AB-5659-BF06-F323129FA48D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA949627-00AB-5659-BF06-F323129FA48D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A56B655D-506F-5135-AD57-C65C64AAABBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A56B655D-506F-5135-AD57-C65C64AAABBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A56B655D-506F-5135-AD57-C65C64AAABBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A56B655D-506F-5135-AD57-C65C64AAABBF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
