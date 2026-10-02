@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima terceira revisão)
+**Última atualização:** 2026-10-02 (décima quarta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 97 passando (59 de domínio, 38 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -283,7 +283,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 42 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 43 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
@@ -302,6 +302,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
    - ~~**[19.4] Repetição idempotente recusada quando o estado da conta mudou** (L-10)~~ concluído em 2026-10-02, antecipado ao 23 por decisão do usuário
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
+   - **[20.1] Diagrama de entidade e relacionamento do esquema** (as 5 tabelas de `db/init/001_roles_and_schema.sql`, com as notas sobre autorrelacionamento do estorno, PK composta do snapshot, outbox sem FK e as duas barreiras de idempotência). Mesmo item da fila que o 20; criado no Cowork em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
 5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
 6. ~~**[23] README final**~~ concluído em 2026-10-02
@@ -405,3 +406,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 22 concluído: experimento sem `FOR NO KEY UPDATE`. O teste reprova, mas por perda de disponibilidade (24% a 78% de `503`), não por saldo negativo: a constraint de sequência preserva a invariante sem o bloqueio. Resultado no ADR-0005. L-04 encerrada |
 | 2026-10-02 | Card 19.4 criado e concluído: repetição reconhecida sob o bloqueio da conta, antes do agregado. ADR-0006 revisado com alternativas rejeitadas. 3 testes novos (97 verdes), cenário reproduzido via curl. L-10 encerrada; nenhuma lacuna ALTA aberta |
 | 2026-10-02 | Card 23 concluído: README final com início em cinco minutos, uso da API com exemplos curl, erros, testes, decisões atualizadas (ADR-0005 medido, ADR-0006 revisado) e "o que seria feito com mais tempo". Verificado seguindo o README literalmente num clone limpo; o caminho "fora do Docker", que falharia como estava escrito, corrigido e verificado. Todos os requisitos obrigatórios atendidos |
+| 2026-10-02 | Sincronização do quadro: card 20.1 (ERD do esquema), criado no Cowork, incluído na §7 e no `KANBAN.md`; cards 24 e 25 movidos de Backlog para A Fazer, coerentes com a §7. **Registro de falha de processo:** o commit `38eeb4f` (L-10) incluiu, por `git add -A`, a emenda do usuário ao `PROCESSO-KANBAN.md` (versão 1.2, regra de subnível), feita no Cowork. O conteúdo é o do usuário; a mensagem do commit não o descreve. Histórico publicado não é reescrito; a correção de causa é adicionar só caminhos explícitos daqui em diante |
