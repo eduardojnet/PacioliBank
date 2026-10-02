@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima quinta revisão)
+**Última atualização:** 2026-10-02 (décima sexta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 97 passando (59 de domínio, 38 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 102 passando (59 de domínio, 43 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 97 passando |
+| Testes automatizados | Atendido, 102 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -113,6 +113,15 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 
 Instantes devolvidos são truncados para microssegundos, a precisão do `timestamptz`: sem isso, a primeira resposta e a repetição idempotente (lida do banco) diferiam no `recordedAt`, contra a EF §8.4. Defeito encontrado no teste via curl, coberto por teste desde então.
 
+### Eventos (`src/PacioliBank.Events`, card 24)
+
+| Arquivo | Conteúdo |
+|---|---|
+| `OutboxDispatcher.cs` | Uma passada, uma transação: lote com `FOR UPDATE SKIP LOCKED`, publicação, marcação ou recuo exponencial; limite de tentativas com alerta |
+| `IEventPublisher.cs` | Porta de saída para o barramento, que não foi escolhido (ADR-0008) |
+
+Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Events/OutboxDispatcherService.cs` roda o despachante em laço e `Events/LoggingEventPublisher.cs` publica em log.
+
 ### API (`src/PacioliBank.Api`)
 
 | Arquivo | Conteúdo |
@@ -136,7 +145,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
-| `PacioliBank.Integration.Tests` | 38 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05) e reenvio após mudança de estado (L-10) |
+| `PacioliBank.Integration.Tests` | 43 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -158,7 +167,9 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | `description` e `metadata` do corpo (EF §8.4) | Aceitos e ignorados: o lançamento de domínio não os carrega e a coluna `metadata` fica com o padrão `{}` |
 | Limite de taxa (RNF-012, código `RATE_LIMIT_EXCEEDED`) | Não implementado |
 | Documento OpenAPI | Não gerado. Pré-requisito do card 19.3 (testes de contrato) |
-| Despachante de outbox | Tabela e gravação existem; o publicador não |
+| Barramento de eventos real | Não escolhido (ADR-0008). O despachante publica em log; nenhum consumidor externo recebe eventos |
+| Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
+| Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
 | Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
 | Testes de contrato (OpenAPI) | Previstos, não escritos |
@@ -291,7 +302,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 43 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 44 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
@@ -314,7 +325,8 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
 5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
 6. ~~**[23] README final**~~ concluído em 2026-10-02
-7. **[24] Despachante de outbox**
+7. ~~**[24] Despachante de outbox**~~ concluído em 2026-10-02
+   - **[24.1] Decidir e registrar a ausência de FK na outbox** (L-12), aguarda decisão do usuário
 8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
 
 ---
@@ -324,7 +336,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 97 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 102 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -416,3 +428,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 23 concluído: README final com início em cinco minutos, uso da API com exemplos curl, erros, testes, decisões atualizadas (ADR-0005 medido, ADR-0006 revisado) e "o que seria feito com mais tempo". Verificado seguindo o README literalmente num clone limpo; o caminho "fora do Docker", que falharia como estava escrito, corrigido e verificado. Todos os requisitos obrigatórios atendidos |
 | 2026-10-02 | Sincronização do quadro: card 20.1 (ERD do esquema), criado no Cowork, incluído na §7 e no `KANBAN.md`; cards 24 e 25 movidos de Backlog para A Fazer, coerentes com a §7. **Registro de falha de processo:** o commit `38eeb4f` (L-10) incluiu, por `git add -A`, a emenda do usuário ao `PROCESSO-KANBAN.md` (versão 1.2, regra de subnível), feita no Cowork. O conteúdo é o do usuário; a mensagem do commit não o descreve. Histórico publicado não é reescrito; a correção de causa é adicionar só caminhos explícitos daqui em diante |
 | 2026-10-02 | Card 20.1 concluído: ERD do esquema em `docs/diagrams/ERD-esquema-ledger.md`, 5 tabelas e 40 colunas idênticas ao catálogo do PostgreSQL (comparação automática), 5 PK, 5 FK, 3 UNIQUE, 5 CHECK, índices e privilégios, com as 4 notas pedidas. Layout corrigido para a outbox não parecer relacionada. L-12 registrada: a justificativa da ausência de FK na outbox, atribuída ao ADR-0008 pelo cartão, não existe no ADR |
+| 2026-10-02 | Card 24 concluído: módulo `PacioliBank.Events` com o despachante de outbox (`SKIP LOCKED`, recuo exponencial, limite de tentativas com alerta), executado no processo da API e publicando em log. Cartão recebeu critério de conclusão antes de começar. 5 testes de integração (102 verdes); o de paralelismo reprova sem o `SKIP LOCKED`. Verificado no Docker: crédito via curl publicado em menos de 3 s. Card 24.1 criado para a L-12 |

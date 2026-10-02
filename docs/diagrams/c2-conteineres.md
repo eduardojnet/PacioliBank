@@ -13,7 +13,7 @@ flowchart TB
     subgraph sistema["Sistema: PacioliBank Ledger"]
         api["API do Ledger<br/>[ASP.NET Core 10]<br/>Valida invariantes, serializa escritas<br/>por conta e calcula a posição"]:::impl
         db[("Banco do Ledger<br/>[PostgreSQL 17]<br/>Lançamentos imutáveis, snapshots,<br/>idempotência e outbox")]:::impl
-        disp["Despachante de Outbox<br/>[Serviço hospedado]<br/>Publica eventos pendentes<br/>com SKIP LOCKED"]:::espec
+        disp["Despachante de Outbox<br/>[Serviço hospedado, no processo da API]<br/>Publica eventos pendentes<br/>com SKIP LOCKED"]:::impl
         painel["Painel de Evidência<br/>[HTML e JS estático]<br/>Demonstra concorrência, idempotência<br/>e posição temporal"]:::espec
     end
 
@@ -23,8 +23,8 @@ flowchart TB
     api -.->|"valida JWT"| iam
     api -.->|"lê conta"| cad
     api -.->|"serve"| painel
-    disp -.->|"lê outbox"| db
-    disp -.->|"publica"| bus
+    disp -->|"lê e marca a outbox"| db
+    disp -.->|"publica<br/>(hoje: registra em log)"| bus
 
     classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
     classDef impl fill:#1168bd,stroke:#0b4884,color:#fff
@@ -38,7 +38,8 @@ flowchart TB
 | API do Ledger | Implementado, sem autenticação | `src/PacioliBank.Api`; `docker compose up --build` serve em `:8080` |
 | Banco do Ledger | Implementado | `db/init/001_roles_and_schema.sql`: 5 tabelas, 3 papéis, constraints por regra |
 | Escrita na outbox | Implementado | `PostgresLedgerStore.WriteAsync`, na transação do lançamento (ADR-0008) |
-| Despachante de Outbox | Especificado | Card 24. A tabela e o índice parcial `ix_outbox_pending` já existem |
+| Despachante de Outbox | Implementado | Card 24: `PacioliBank.Events/OutboxDispatcher.cs`, executado por `OutboxDispatcherService` no processo da API. Rodar no mesmo processo é decisão operacional (ADR-0008); várias instâncias convivem pelo `SKIP LOCKED` |
+| Despachante → Barramento | Especificado | O publicador atual registra o evento em log (`LoggingEventPublisher`), como o ADR-0008 prevê enquanto a plataforma de mensageria não é conhecida |
 | Painel de Evidência | Especificado, condicional | Card 25, ADR-0011, com critério de corte |
 | API → Provedor de Identidade | Especificado | RF-009 pendente |
 | API → Cadastro de Contas | Especificado | Contas vêm de massa local |

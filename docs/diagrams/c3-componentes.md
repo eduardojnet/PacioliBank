@@ -12,6 +12,8 @@ flowchart TB
             authz["Autorização por Titularidade<br/>[Componente]<br/>Titular do token × titular da conta"]:::espec
             endp["LedgerEndpoints<br/>[Adaptador fino]<br/>Crédito, débito, estorno,<br/>posição, extrato"]:::impl
             probs["LedgerProblems<br/>[IExceptionHandler]<br/>Exceção → problem+json<br/>com code da EF §8.6"]:::impl
+            dispsvc["OutboxDispatcherService<br/>[Serviço hospedado]<br/>Passada a cada 1 s, imediata<br/>com fila acumulada"]:::impl
+            logpub["LoggingEventPublisher<br/>[IEventPublisher]<br/>Registra o evento em log"]:::impl
         end
 
         subgraph app["PacioliBank.Ledger (zero pacotes)"]
@@ -22,6 +24,10 @@ flowchart TB
         subgraph persist["PacioliBank.Ledger.Persistence"]
             store["PostgresLedgerStore<br/>[Porta de saída: ILedgerStore]<br/>Bloqueio por conta, idempotência,<br/>snapshot, outbox, nova tentativa"]:::impl
             sql["LedgerSql<br/>[SQL explícito]<br/>Posição = snapshot + delta,<br/>extrato por cursor"]:::impl
+        end
+
+        subgraph events["PacioliBank.Events"]
+            disp["OutboxDispatcher<br/>[Componente]<br/>Lote com SKIP LOCKED, publica,<br/>marca ou adia com recuo"]:::impl
         end
     end
 
@@ -36,6 +42,9 @@ flowchart TB
     store -->|"Rehydrate, Post, Reverse<br/>sob bloqueio"| dom
     store --> sql
     sql -->|"uma transação por comando"| db
+    dispsvc --> disp
+    disp -->|"lê e marca a outbox"| db
+    disp -->|"publica"| logpub
 
     classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
     classDef impl fill:#1168bd,stroke:#0b4884,color:#fff
@@ -54,6 +63,9 @@ flowchart TB
 | Account, Money, LedgerEntry | Implementado | `src/PacioliBank.Ledger/Domain/` |
 | PostgresLedgerStore | Implementado | `src/PacioliBank.Ledger.Persistence/PostgresLedgerStore.cs` |
 | LedgerSql | Implementado | `src/PacioliBank.Ledger.Persistence/LedgerSql.cs` |
+| OutboxDispatcher | Implementado | `src/PacioliBank.Events/OutboxDispatcher.cs` |
+| OutboxDispatcherService | Implementado | `src/PacioliBank.Api/Events/OutboxDispatcherService.cs` |
+| LoggingEventPublisher | Implementado, no lugar do barramento | `src/PacioliBank.Api/Events/LoggingEventPublisher.cs`. O barramento real não foi escolhido (ADR-0008) |
 
 ## A dependência aponta para dentro, e o compilador garante
 

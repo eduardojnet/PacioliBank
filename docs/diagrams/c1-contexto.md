@@ -17,7 +17,7 @@ flowchart TB
     orig -->|"registra crédito, débito, estorno<br/>HTTPS/JSON"| ledger
     ledger -.->|"lê conta<br/>(especificado)"| cad
     ledger -.->|"valida JWT<br/>(especificado)"| iam
-    ledger -.->|"publica eventos<br/>(especificado)"| cons
+    ledger -.->|"publica eventos<br/>(hoje: registra em log)"| cons
 
     classDef pessoa fill:#08427b,stroke:#052e56,color:#fff
     classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
@@ -28,12 +28,12 @@ flowchart TB
 
 | Elemento | Estado | Evidência |
 |---|---|---|
-| PacioliBank Ledger | **Parcial** | Os 5 endpoints da EF §8.3 respondem; autenticação, autorização e publicação de eventos não existem |
+| PacioliBank Ledger | **Parcial** | Os 5 endpoints da EF §8.3 respondem e os eventos são despachados; autenticação, autorização e a entrega a um barramento real não existem |
 | Canais Digitais → Ledger (consulta) | Implementado | `GET /balance` e `GET /entries` em `Endpoints/LedgerEndpoints.cs` |
 | Originadores → Ledger (registro) | Implementado | `POST /credits`, `/debits`, `/entries/{id}/reversals` |
 | Ledger → Cadastro de Contas | Especificado | Hoje a tabela `ledger.accounts` é preenchida por massa local (`db/init/002_seed_local.sql`); a replicação do Cadastro não existe |
 | Ledger → Provedor de Identidade | Especificado | Nenhuma validação de token. Qualquer chamador opera qualquer conta (ESTADO §5, RF-009) |
-| Ledger → Consumidores de Evento | Especificado | O evento é **gravado** na outbox, na mesma transação do lançamento (ADR-0008); nada o **publica** (card 24) |
+| Ledger → Consumidores de Evento | Parcial | O evento é gravado na outbox, na transação do lançamento, e o despachante o publica (card 24); mas o publicador registra em log, porque o barramento real não foi escolhido (ADR-0008). Nenhum consumidor externo recebe eventos hoje |
 
 ## Fronteira que o diagrama fixa
 

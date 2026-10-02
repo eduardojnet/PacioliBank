@@ -132,6 +132,16 @@ Essa separação é deliberada: trocar o barramento não toca o domínio nem o m
 - Teste de consumo paralelo com múltiplos despachantes, verificando ausência de processamento duplicado por `SKIP LOCKED`
 - Conciliação periódica entre `ledger_entries` e `outbox_messages`, alertando qualquer lançamento sem mensagem correspondente (RNF-033)
 
+### Estado da implementação (2026-10-02, card 24)
+
+Implementado em `src/PacioliBank.Events/OutboxDispatcher.cs`, executado por `OutboxDispatcherService` no processo da API, com o publicador que registra em log (`LoggingEventPublisher`). Três pontos onde o código difere do texto acima, sem mudar a decisão:
+
+- **Ordem do lote:** `ORDER BY account_id, sequence`, e não `ORDER BY occurred_at` como no exemplo. Com lançamento retroativo, a ordem do fato difere da ordem de registro, e a garantia ao consumidor é a ordem por sequência dentro da conta (EF §9). Entre despachantes paralelos a ordem não é garantida, e o consumidor ordena pelo campo `sequence`, como o contrato já diz
+- **"Marcada para inspeção":** sem coluna nova no esquema. A mensagem que atinge o limite de tentativas (10, configurável) deixa de ser lida pela condição `attempts < limite` e gera alerta em log com o `message_id`. Uma coluna própria exigiria migração, que hoje depende do card 27 (DbUp)
+- **Recuo:** `2^tentativas` segundos, com teto de 300, calculado no próprio `UPDATE`
+
+Validação feita, contra PostgreSQL real (`OutboxDispatcherTests`): publicação e marcação; falha e retomada com `message_id` estável (F08); 6 despachantes em paralelo sem publicação duplicada, teste que reprova quando `FOR UPDATE SKIP LOCKED` é removido; mensagem estacionada sem bloquear as demais. **Não feito:** o teste de falha *entre* a confirmação no barramento e a marcação no banco (exige barramento real), a conciliação periódica ledger × outbox (RNF-033) e o expurgo das mensagens publicadas.
+
 ## Gatilho de revisão
 
 1. Requisito de consumidor que exija latência incompatível com a leitura periódica

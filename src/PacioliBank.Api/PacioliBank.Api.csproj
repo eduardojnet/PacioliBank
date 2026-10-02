@@ -11,6 +11,7 @@
     <!-- Somente a raiz de composicao (Program.cs) usa a persistencia. Os
          endpoints conhecem apenas a porta de entrada (ADR-0001). -->
     <ProjectReference Include="..\PacioliBank.Ledger.Persistence\PacioliBank.Ledger.Persistence.csproj" />
+    <ProjectReference Include="..\PacioliBank.Events\PacioliBank.Events.csproj" />
   </ItemGroup>
 
 </Project>

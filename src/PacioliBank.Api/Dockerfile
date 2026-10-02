@@ -6,6 +6,7 @@ WORKDIR /source
 COPY Directory.Build.props ./
 COPY src/PacioliBank.Ledger/PacioliBank.Ledger.csproj src/PacioliBank.Ledger/
 COPY src/PacioliBank.Ledger.Persistence/PacioliBank.Ledger.Persistence.csproj src/PacioliBank.Ledger.Persistence/
+COPY src/PacioliBank.Events/PacioliBank.Events.csproj src/PacioliBank.Events/
 COPY src/PacioliBank.Api/PacioliBank.Api.csproj src/PacioliBank.Api/
 RUN dotnet restore src/PacioliBank.Api/PacioliBank.Api.csproj
 

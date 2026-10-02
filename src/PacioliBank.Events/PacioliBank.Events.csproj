@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PacioliBank.Events</RootNamespace>
+    <AssemblyName>PacioliBank.Events</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Mesmas versoes da persistencia do Ledger, ja verificadas com build limpo. -->
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Dapper" Version="2.1.89" />
+  </ItemGroup>
+
+  <!-- Sem referencia ao PacioliBank.Ledger: o modulo Events le a outbox pelo
+       contrato da tabela, e o Ledger nao conhece Events (ADR-0001). -->
+
+</Project>

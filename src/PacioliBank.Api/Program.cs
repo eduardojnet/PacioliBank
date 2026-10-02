@@ -1,5 +1,7 @@
 using Npgsql;
 using PacioliBank.Api.Endpoints;
+using PacioliBank.Api.Events;
+using PacioliBank.Events;
 using PacioliBank.Ledger.Application;
 using PacioliBank.Ledger.Persistence;
 
@@ -16,6 +18,13 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ILedgerStore, PostgresLedgerStore>();
 builder.Services.AddSingleton<ILedgerService, LedgerService>();
+
+// Despachante de outbox (ADR-0008), no mesmo processo por decisao operacional.
+// O publicador registra em log ate a plataforma de mensageria ser definida.
+builder.Services.AddSingleton(builder.Configuration.GetSection("Outbox").Get<OutboxDispatcherOptions>() ?? new OutboxDispatcherOptions());
+builder.Services.AddSingleton<IEventPublisher, LoggingEventPublisher>();
+builder.Services.AddSingleton<OutboxDispatcher>();
+builder.Services.AddHostedService<OutboxDispatcherService>();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull);

@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 43 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 44 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 24, 25, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 24.1, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 26 | 01 a 23, mais 19.4 e 20.1 |
+| Concluído | 27 | 01 a 24, mais 19.4 e 20.1 |
 
 ---
 
@@ -122,17 +122,17 @@ Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
-### 24. Implementar o despachante de outbox
+### 24.1. Decidir e registrar a ausência de chave estrangeira na outbox
 
-`prioridade: Média` · `codigo`
+`prioridade: Baixa` · `arquitetura` · `doc`
 
-ADR-0008. A tabela e a gravação transacional já existem; falta o processo que lê e publica.
+ÂNCORA: lacuna L-12 (BAIXA), ADR-0008, regra 2 do CLAUDE.md. Criado em 02/10 no card 20.1, quando a justificativa atribuída ao ADR-0008 não foi encontrada nele.
 
-Consumo com FOR UPDATE SKIP LOCKED permite múltiplos despachantes em paralelo sem coordenação externa. Recuo exponencial em falha de publicação.
+ESCOPO: decisão do usuário (manter sem FK ou acrescentar); registrar no ADR-0008 com alternativa rejeitada; ajustar a nota 3 do ERD.
 
-O barramento concreto não é decidido: a decisão arquitetural é o padrão, não o produto.
+CRITÉRIO: ADR-0008 com a decisão e a alternativa rejeitada; ERD e ADR coerentes; L-12 encerrada.
 
-ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuário. É o item 7 da fila do ESTADO.md §7, e o número está na faixa da fila ativa. Próximo a executar depois do 20.1.
+BLOQUEIO: depende de decisão do usuário.
 
 ### 25. Implementar o painel de evidência
 
@@ -176,7 +176,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 24, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 25, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -608,3 +608,19 @@ ENTREGA (02/10/2026): `docs/diagrams/ERD-esquema-ledger.md`, ligado no índice d
 VERIFICAÇÃO: além da leitura do script, comparação automática com o catálogo do PostgreSQL (`information_schema.columns`, `pg_constraint`): nome, tipo e ordem das 40 colunas idênticos. A comparação pegou dois erros de contagem na primeira versão (39 colunas, 4 PK), corrigidos. Renderização validada com mermaid-cli; o primeiro layout fazia a outbox parecer ligada a `accounts` e `ledger_entries`, exatamente a leitura que a nota 3 quer evitar, e foi corrigido.
 
 ACHADO: a nota 3 do cartão atribuía ao ADR-0008 a justificativa da ausência de FK na outbox; o ADR não a contém. O ERD declara o fato e marca a justificativa como `[INFERIDO]`. Registrado como L-12, para decisão.
+
+### 24. Implementar o despachante de outbox
+
+`prioridade: Média` · `codigo`
+
+ADR-0008. A tabela e a gravação transacional já existem; falta o processo que lê e publica.
+
+Consumo com FOR UPDATE SKIP LOCKED permite múltiplos despachantes em paralelo sem coordenação externa. Recuo exponencial em falha de publicação.
+
+O barramento concreto não é decidido: a decisão arquitetural é o padrão, não o produto.
+
+ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuário. É o item 7 da fila do ESTADO.md §7, e o número está na faixa da fila ativa. Próximo a executar depois do 20.1.
+
+CRITÉRIO ACRESCENTADO AO INICIAR (o cartão não tinha): despachante hospedado na API, `SKIP LOCKED`, publicação por abstração com implementação em log, recuo exponencial, limite de tentativas com alerta; testes contra PostgreSQL real de publicação, retomada com `message_id` estável (F08), paralelismo sem duplicidade e estacionamento; no Docker, crédito via curl publicado. Fora do escopo: expurgo, barramento real, conciliação (RNF-033).
+
+ENTREGA (02/10/2026): módulo `PacioliBank.Events` (sem referência ao `Ledger`), `OutboxDispatcherService` e `LoggingEventPublisher` na API. 5 testes de integração, 102 verdes. O teste de paralelismo reprova quando `FOR UPDATE SKIP LOCKED` é removido (medido). No Docker, crédito via curl publicado em menos de 3 s, com `published_at` preenchido e registro no log. ADR-0008 com nota de implementação (ordem por sequência, estacionamento sem coluna nova); C1, C2 e C3 atualizados.
