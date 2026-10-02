@@ -29,7 +29,7 @@ Pré-requisito: SDK do .NET 10 e um PostgreSQL acessível.
 
 ```bash
 dotnet build          # deve terminar sem erro e sem aviso
-dotnet test           # 57 testes; os de integração exigem Docker
+dotnet test           # 66 testes; os de integração exigem Docker
 dotnet run --project src/PacioliBank.Api
 ```
 
@@ -80,7 +80,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP
 tests/
   PacioliBank.Domain.Tests/        39 testes, sem I/O
-  PacioliBank.Integration.Tests/   18 testes, PostgreSQL real, inclui concorrencia
+  PacioliBank.Integration.Tests/   27 testes, PostgreSQL real, inclui concorrencia e estorno
 db/init/                           esquema, papeis e privilegios
 docs/adr/                          decisoes arquiteturais
 docs/specs/                        especificacoes funcional, nao funcional e BDD
@@ -103,9 +103,9 @@ Honestidade sobre o que existe é parte da entrega. Apresentar requisito especif
 | Idempotência e bloqueio pessimista por conta, com testes | Implementado |
 | Consulta de posição e snapshot inline amortizado | Implementado |
 | Gravação transacional na outbox | Implementado |
-| Testes de integração e concorrência contra PostgreSQL real | Implementados, 18 testes |
+| Testes de integração e concorrência contra PostgreSQL real | Implementados, 27 testes |
 | Porta de entrada e endpoints de negócio | Pendente |
-| Caminho de persistência do estorno | Pendente |
+| Caminho de persistência do estorno, com testes | Implementado |
 | Despachante de outbox | Pendente |
 | Testes de arquitetura e de contrato | Pendentes |
 | Painel de evidência | Condicional, ver ADR-0011 |

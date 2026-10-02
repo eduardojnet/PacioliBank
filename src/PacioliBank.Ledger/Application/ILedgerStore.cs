@@ -30,6 +30,24 @@ public interface ILedgerStore
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Registra o estorno de um lancamento, de forma atomica e idempotente,
+    /// sob o mesmo bloqueio por conta do lancamento comum (ADR-0005, RN-004).
+    /// </summary>
+    /// <exception cref="AccountNotFoundException">A conta nao existe.</exception>
+    /// <exception cref="EntryNotFoundException">O lancamento original nao existe.</exception>
+    /// <exception cref="EntryNotFromThisAccountException">O original pertence a outra conta.</exception>
+    /// <exception cref="CannotReverseReversalException">O original ja e um estorno.</exception>
+    /// <exception cref="EntryAlreadyReversedException">O original ja foi estornado.</exception>
+    /// <exception cref="InsufficientFundsException">O estorno tornaria a posicao negativa (QA-003).</exception>
+    /// <exception cref="IdempotencyConflictException">Chave reutilizada com conteudo diferente.</exception>
+    Task<PostEntryResult> ReverseAsync(
+        Guid accountId,
+        Guid entryId,
+        ReversalRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Calcula a posicao consolidada. Com <paramref name="asOf"/> nulo,
     /// devolve a posicao corrente; com instante informado, a posicao daquele
     /// momento pela data do fato (RN-009, RN-011).

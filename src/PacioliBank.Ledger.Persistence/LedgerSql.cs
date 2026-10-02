@@ -123,6 +123,27 @@ internal static class LedgerSql
         ON CONFLICT (account_id, up_to_sequence) DO NOTHING
         """;
 
+    /// <summary>
+    /// Lancamento original de um estorno. Lido pela chave primaria, sem filtro
+    /// de conta: a titularidade e decidida pelo agregado (RN-004), e filtrar
+    /// aqui esconderia essa regra dentro do SQL.
+    /// </summary>
+    internal const string SelectEntry = """
+        SELECT entry_id        AS EntryId,
+               account_id      AS AccountId,
+               sequence        AS Sequence,
+               direction       AS Direction,
+               amount          AS Amount,
+               currency        AS Currency,
+               occurred_at     AS OccurredAt,
+               idempotency_key AS IdempotencyKey,
+               correlation_id  AS CorrelationId,
+               reversal_of     AS ReversalOf,
+               balance_after   AS BalanceAfter
+          FROM ledger.ledger_entries
+         WHERE entry_id = @entryId
+        """;
+
     /// <summary>Lancamento e impressao originais, para a repeticao idempotente.</summary>
     internal const string SelectForReplay = """
         SELECT i.request_hash  AS RequestHash,

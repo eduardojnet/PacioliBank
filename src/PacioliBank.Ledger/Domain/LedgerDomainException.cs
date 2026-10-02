@@ -337,3 +337,113 @@ public sealed class LedgerUnavailableException : LedgerDomainException
     {
     }
 }
+
+/// <summary>
+/// Lancamento inexistente. Tambem usado, na borda, para lancamento de outra
+/// conta: responder de forma distinta revelaria a existencia do lancamento
+/// (mesmo principio do ADR-0009 para contas).
+/// </summary>
+public sealed class EntryNotFoundException : LedgerDomainException
+{
+    public EntryNotFoundException()
+        : base("Lancamento nao encontrado.")
+    {
+    }
+
+    public EntryNotFoundException(Guid entryId)
+        : base($"Lancamento nao encontrado: '{entryId}'.")
+    {
+        EntryId = entryId;
+    }
+
+    public EntryNotFoundException(string message)
+        : base(message)
+    {
+    }
+
+    public EntryNotFoundException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public Guid EntryId { get; }
+}
+
+/// <summary>
+/// O lancamento ja possui estorno. Ver RN-004. A deteccao e estrutural, pela
+/// constraint <c>uq_entries_reversal</c>, nunca por consulta previa.
+/// </summary>
+public sealed class EntryAlreadyReversedException : LedgerDomainException
+{
+    public EntryAlreadyReversedException()
+        : base("O lancamento ja foi estornado.")
+    {
+    }
+
+    public EntryAlreadyReversedException(Guid entryId)
+        : base($"O lancamento '{entryId}' ja foi estornado.")
+    {
+        EntryId = entryId;
+    }
+
+    public EntryAlreadyReversedException(string message)
+        : base(message)
+    {
+    }
+
+    public EntryAlreadyReversedException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public Guid EntryId { get; }
+}
+
+/// <summary>Limite de pagina do extrato acima do maximo admitido. Ver RF-005.</summary>
+public sealed class PageSizeExceededException : LedgerDomainException
+{
+    public PageSizeExceededException()
+        : base("Limite de pagina invalido.")
+    {
+    }
+
+    public PageSizeExceededException(int requested, int maximum)
+        : base($"Limite de pagina invalido: {requested}. O maximo admitido e {maximum}.")
+    {
+        Requested = requested;
+        Maximum = maximum;
+    }
+
+    public PageSizeExceededException(string message)
+        : base(message)
+    {
+    }
+
+    public PageSizeExceededException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public int Requested { get; }
+
+    public int Maximum { get; }
+}
+
+/// <summary>Instante de consulta invalido: futuro, ou intervalo invertido. Ver RN-009 e RF-004.</summary>
+public sealed class InvalidPointInTimeException : LedgerDomainException
+{
+    public InvalidPointInTimeException()
+        : base("Instante de consulta invalido.")
+    {
+    }
+
+    public InvalidPointInTimeException(string message)
+        : base(message)
+    {
+    }
+
+    public InvalidPointInTimeException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

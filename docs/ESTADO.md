@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (sexta revisão)
+**Última atualização:** 2026-10-02 (sétima revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 57 passando (39 de domínio, 18 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 66 passando (39 de domínio, 27 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Atenção:** os tipos que a L-07 dava como "escritos e não compilados" **não existem no disco**. Ver §6, L-07.
 
 ---
@@ -90,13 +90,13 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 | `Domain/Money.cs` | Value Object com moeda embutida; construtor privado; escala validada na criação |
 | `Domain/Currency.cs` | ISO 4217, catálogo restrito a BRL |
 | `Domain/Account.cs` | Agregado raiz; valida invariantes e produz lançamentos |
-| `Domain/LedgerEntry.cs` | Fato imutável, construtor interno |
-| `Domain/PostingRequest.cs` | Comando de lançamento |
+| `Domain/LedgerEntry.cs` | Fato imutável, construtor interno; `Rehydrate` reconstrói o já gravado, para o estorno |
+| `Domain/PostingRequest.cs`, `ReversalRequest.cs` | Comandos de lançamento e de estorno |
 | `Domain/AccountStatus.cs`, `EntryDirection.cs` | Enums alinhados às colunas do banco |
-| `Domain/LedgerDomainException.cs` | Exceção raiz mais 12 derivadas, uma por regra violável |
+| `Domain/LedgerDomainException.cs` | Exceção raiz mais 16 derivadas, uma por regra violável |
 | `Application/ILedgerStore.cs` | Porta de saída, estreita e orientada a caso de uso |
 | `Application/PostEntryResult.cs`, `BalanceResult.cs` | Contratos de saída |
-| `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando |
+| `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variante própria para estorno |
 
 **Decisão de modelagem a defender:** o agregado não carrega os lançamentos da conta. É reidratado dentro da transação, sob bloqueio, com a posição corrente já calculada. Carregar o histórico para validar um débito reintroduziria a degradação do sistema legado.
 
@@ -104,7 +104,7 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 
 | Arquivo | Conteúdo |
 |---|---|
-| `PostgresLedgerStore.cs` | Transação, bloqueio, idempotência, outbox, snapshot, nova tentativa |
+| `PostgresLedgerStore.cs` | Transação, bloqueio, idempotência, outbox, snapshot, nova tentativa; lançamento e estorno sob o mesmo bloqueio |
 | `LedgerSql.cs` | Todo o SQL reunido, comentado por decisão |
 
 **A ordem dos passos dentro da transação é a arquitetura**, não detalhe de implementação: bloqueia a linha da conta, depois lê a posição, o agregado decide, e lançamento, sequência, idempotência e outbox são gravados juntos.
@@ -120,7 +120,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 39 | Invariantes puras, sem I/O |
-| `PacioliBank.Integration.Tests` | 18 | PostgreSQL real via Testcontainers, incluindo concorrência |
+| `PacioliBank.Integration.Tests` | 27 | PostgreSQL real via Testcontainers, incluindo concorrência e estorno (9 testes, F06) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -212,15 +212,13 @@ Os tipos continuam necessários e passam a ser escritos dentro do item 1 da fila
 
 **Primeira ação de qualquer sessão nova continua sendo `dotnet test`**, e conferir no disco o que este documento afirma existir.
 
-### L-08: Estorno sem caminho de persistência (ALTA)
+### L-08: Estorno sem caminho de persistência (ENCERRADA em 2026-10-02, card 19.1)
 
-O domínio tem `Account.Reverse(original, ...)`, que valida titularidade e proíbe estorno de estorno (RN-004). **A persistência não o usa.** O `PostgresLedgerStore` só expõe `PostAsync`, que chama `Account.Post`. Consequências verificadas na leitura do código, sem execução:
+**Situação registrada:** o domínio tinha `Account.Reverse`, mas a persistência não o usava. Um `PostingRequest` com `ReversalOf` seria gravado sem validar titularidade nem estorno de estorno, e a violação de `uq_entries_reversal` saía como `PostgresException` crua.
 
-- Não existe leitura do lançamento original dentro da transação, então `EntryNotFromThisAccountException` e `CannotReverseReversalException` nunca são lançadas fora dos testes de domínio
-- Um `PostingRequest` com `ReversalOf` preenchido seria gravado sem essas validações. A FK `reversal_of` garante só que o original existe, não que pertence à conta, nem que não é estorno, nem que sentido e valor são os opostos
-- A violação de `uq_entries_reversal` (estorno duplicado) não é tratada: sai como `PostgresException` crua. Pela EF §8.6 deveria ser `ENTRY_ALREADY_REVERSED` (409)
+**Corrigido:** `ILedgerStore.ReverseAsync`, na mesma transação e sob o mesmo bloqueio por conta do lançamento comum (ADR-0005). O original é lido pela chave primária e reidratado (`LedgerEntry.Rehydrate`); titularidade, estorno de estorno e saldo são decididos pelo agregado. A violação de `uq_entries_reversal` vira `EntryAlreadyReversedException`, depois de conferir se não é o reenvio legítimo do mesmo estorno: o reenvio viola as duas unicidades, e qual o banco reporta primeiro não é contratual [NVI].
 
-Nenhum teste de integração cobre estorno. Corrigir dentro do item 1 da fila, com teste contra PostgreSQL real (ADR-0010).
+**Verificado** por 9 testes de integração contra PostgreSQL real (`ReversalTests`), incluindo 10 estornos simultâneos do mesmo lançamento, dos quais exatamente um é aceito.
 
 ### L-09: README público subdeclarava o estado da implementação (ENCERRADA em 2026-10-02)
 
@@ -233,6 +231,16 @@ Detectada ao verificar o repositório recém-publicado. A tabela "Estado atual d
 **Corrigido:** tabela de estado reescrita com nove linhas separando implementado de pendente, árvore de estrutura atualizada para os cinco projetos reais, comando de teste declarando 57 testes e o pré-requisito de Docker, e a promessa de DbUp "na próxima entrega" trocada por item da fila.
 
 **Controle adotado:** o README entra na mesma verificação da regra 9. Nenhuma entrega fecha com README divergente da §4 deste documento.
+
+### L-10: Reenvio idempotente recusado quando o estado da conta mudou (ALTA)
+
+**Verificado por execução**, não só por leitura: crédito de 150, débito de 100 com chave `k`, reenvio do mesmo débito com a mesma chave. Esperado pela RN-005: o resultado original, com `Replayed`. Obtido: `InsufficientFundsException`.
+
+**Causa:** dentro da transação, o agregado decide **antes** da gravação, e a repetição só é detectada **na** gravação, pela violação de chave (ADR-0006). Se o saldo caiu depois do envio original, o reenvio é rejeitado pelo domínio e nunca chega à colisão de chave. Vale também para conta bloqueada depois do envio original (`ACCOUNT_INACTIVE`) e para o estorno.
+
+**Impacto:** o cliente que reenvia após timeout, exatamente o caso que a idempotência existe para proteger, recebe 422 para um débito que foi efetivado. Pode levar o originador a tratar como recusado um pagamento consumado.
+
+**Correção provável, a decidir em ADR:** sob o bloqueio da conta, consultar o registro de idempotência antes de o agregado decidir. Sob bloqueio, a consulta prévia não tem a janela de corrida que o ADR-0006 rejeita, porque o registro é gravado pela mesma conta serializada. Contraria a letra do ADR-0006 ("nunca por consulta prévia"), por isso exige revisão do ADR, e não correção silenciosa. Fora do escopo do card 19.
 
 ### L-06: `AnalysisMode` ainda em `Default` (BAIXA)
 
@@ -255,7 +263,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 Ordem fixa. Cada item só começa quando o anterior está verde. O número em colchetes é o do cartão no quadro; subníveis (19.x) dependem do pai e não alteram a ordem.
 
 1. **[19] Endpoints HTTP e tratamento de erro**: injeção de dependência, porta de entrada (L-03), tipos de comando e exceções ausentes do disco (L-07), endpoints de crédito, débito, estorno, posição e extrato, `ProblemDetails` com os códigos da EF §8.6, leitura do `Idempotency-Key`
-   - **[19.1] Caminho de persistência do estorno** (L-08), junto ou depois do 19; pré-requisito do endpoint de estorno
+   - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
    - **[19.2] Teste via Insomnia**, bloqueado pelo 19
    - **[19.3] Testes de contrato da API**, depois do 19
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
@@ -350,3 +358,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | L-09 registrada e encerrada: o README público subdeclarava domínio, persistência, idempotência e testes de integração como pendentes. README corrigido; a regra 9 passa a cobri-lo |
 | 2026-10-02 | Correções da L-09 commitadas e publicadas (3 commits, `origin/main` em `c8d90ff`). `CLAUDE.md` retirado do `.gitignore` e versionado; decisão registrada na §3 |
 | 2026-10-02 | Quadro sincronizado com a numeração aplicada no TickTick (41 cartões, 01 a 38 com subníveis 19.1 a 19.3). `KANBAN.md` regenerado por leitura direta do quadro; §6-A e §7 passam a citar o número do cartão. Push dos commits 12 e 13 confirmado (`origin/main` em `99924c4`) |
+| 2026-10-02 | Card 19.1 concluído: `ReverseAsync` no store, sob o mesmo bloqueio por conta, com 9 testes de integração (66 verdes). L-08 encerrada. L-10 registrada e verificada por execução: reenvio idempotente recusado quando o saldo mudou |

@@ -36,4 +36,25 @@ public static class RequestFingerprint
 
         return SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
     }
+
+    /// <summary>
+    /// Calcula a impressao SHA-256 de um comando de estorno.
+    /// </summary>
+    /// <remarks>
+    /// O prefixo distingue o estorno do lancamento comum: a mesma chave usada
+    /// nos dois comandos e reuso indevido e precisa produzir conflito, nunca
+    /// coincidencia de impressao.
+    /// </remarks>
+    public static byte[] OfReversal(Guid accountId, Guid entryId, ReversalRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var canonical = string.Join('|',
+            "reversal",
+            accountId.ToString("D", CultureInfo.InvariantCulture),
+            entryId.ToString("D", CultureInfo.InvariantCulture),
+            request.OccurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+
+        return SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+    }
 }

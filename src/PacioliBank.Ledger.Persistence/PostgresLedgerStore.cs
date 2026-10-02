@@ -42,7 +42,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
     }
 
     /// <inheritdoc />
-    public async Task<PostEntryResult> PostAsync(
+    public Task<PostEntryResult> PostAsync(
         Guid accountId,
         PostingRequest request,
         ReadOnlyMemory<byte> requestHash,
@@ -50,11 +50,35 @@ public sealed class PostgresLedgerStore : ILedgerStore
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        return WithRetryAsync(
+            () => PostOnceAsync(accountId, request, requestHash, cancellationToken),
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<PostEntryResult> ReverseAsync(
+        Guid accountId,
+        Guid entryId,
+        ReversalRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return WithRetryAsync(
+            () => ReverseOnceAsync(accountId, entryId, request, requestHash, cancellationToken),
+            cancellationToken);
+    }
+
+    private static async Task<PostEntryResult> WithRetryAsync(
+        Func<Task<PostEntryResult>> operation,
+        CancellationToken cancellationToken)
+    {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
-                return await PostOnceAsync(accountId, request, requestHash, cancellationToken).ConfigureAwait(false);
+                return await operation().ConfigureAwait(false);
             }
             catch (PostgresException ex) when (IsRetryableConflict(ex))
             {
@@ -86,6 +110,102 @@ public sealed class PostgresLedgerStore : ILedgerStore
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
             .ConfigureAwait(false);
 
+        var account = await LockAndLoadAsync(connection, transaction, accountId, cancellationToken).ConfigureAwait(false);
+
+        // O dominio decide. Qualquer rejeicao sai daqui como excecao, antes de
+        // qualquer gravacao e antes de a sequencia ser consumida (RN-006).
+        var entry = account.Post(request);
+
+        var recordedAt = DateTimeOffset.UtcNow;
+
+        try
+        {
+            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, cancellationToken)
+                .ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (IsIdempotencyViolation(ex))
+        {
+            // Caminho esperado, nao excepcional: outra requisicao com a mesma
+            // chave venceu a insercao. Devolve-se o resultado original.
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return await ReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
+        }
+
+        return ToResult(entry, recordedAt, replayed: false);
+    }
+
+    private async Task<PostEntryResult> ReverseOnceAsync(
+        Guid accountId,
+        Guid entryId,
+        ReversalRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Mesmo bloqueio do lancamento comum: o estorno altera a posicao e
+        // precisa da mesma serializacao por conta (ADR-0005).
+        var account = await LockAndLoadAsync(connection, transaction, accountId, cancellationToken).ConfigureAwait(false);
+
+        // O original e imutavel (RN-003), entao le-lo sem bloqueio proprio e seguro.
+        var row = await connection.QuerySingleOrDefaultAsync<EntryRow>(new CommandDefinition(
+            LedgerSql.SelectEntry, new { entryId }, transaction, cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+
+        if (row is null)
+        {
+            throw new EntryNotFoundException(entryId);
+        }
+
+        // Titularidade, estorno de estorno e saldo sao decididos pelo agregado,
+        // nao por comparacao de colunas aqui (RN-001, RN-004).
+        var entry = account.Reverse(ToEntry(row), request.OccurredAt, request.IdempotencyKey, request.CorrelationId);
+
+        var recordedAt = DateTimeOffset.UtcNow;
+
+        try
+        {
+            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, cancellationToken)
+                .ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (IsIdempotencyViolation(ex))
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return await ReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (IsReversalViolation(ex))
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+
+            // O reenvio do mesmo estorno viola as duas unicidades, a da chave e a
+            // do estorno, e qual delas o banco reporta primeiro nao e contratual.
+            // A repeticao legitima tem precedencia; sem registro da chave, e um
+            // segundo estorno de verdade (RN-004).
+            var replayed = await TryReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken)
+                .ConfigureAwait(false);
+
+            return replayed ?? throw new EntryAlreadyReversedException(entryId);
+        }
+
+        return ToResult(entry, recordedAt, replayed: false);
+    }
+
+    /// <summary>
+    /// Bloqueia a linha da conta e, so entao, carrega a posicao e reidrata o
+    /// agregado. A ordem e a decisao do ADR-0005: inverte-la reabre a corrida.
+    /// </summary>
+    private static async Task<Account> LockAndLoadAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid accountId,
+        CancellationToken cancellationToken)
+    {
         // Espera limitada pelo bloqueio: melhor rejeitar como repetivel do que
         // esgotar o pool de conexoes sob contencao (ADR-0005).
         await connection.ExecuteAsync(new CommandDefinition(
@@ -107,36 +227,13 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         var currency = Currency.FromCode(control.Currency);
 
-        var account = Account.Rehydrate(
+        return Account.Rehydrate(
             control.AccountId,
             control.CustomerId,
             currency,
             (AccountStatus)control.Status,
             control.LastSequence,
             Money.Of(balanceRow.Balance, currency));
-
-        // O dominio decide. Qualquer rejeicao sai daqui como excecao, antes de
-        // qualquer gravacao e antes de a sequencia ser consumida (RN-006).
-        var entry = account.Post(request);
-
-        var recordedAt = DateTimeOffset.UtcNow;
-
-        try
-        {
-            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, cancellationToken)
-                .ConfigureAwait(false);
-
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (PostgresException ex) when (IsIdempotencyViolation(ex))
-        {
-            // Caminho esperado, nao excepcional: outra requisicao com a mesma
-            // chave venceu a insercao. Devolve-se o resultado original.
-            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            return await ReplayAsync(accountId, request, requestHash, cancellationToken).ConfigureAwait(false);
-        }
-
-        return ToResult(entry, recordedAt, replayed: false);
     }
 
     private static async Task WriteAsync(
@@ -208,7 +305,25 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
     private async Task<PostEntryResult> ReplayAsync(
         Guid accountId,
-        PostingRequest request,
+        string idempotencyKey,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        var replayed = await TryReplayAsync(accountId, idempotencyKey, requestHash, cancellationToken)
+            .ConfigureAwait(false);
+
+        // A chave colidiu mas o registro nao esta visivel: trata-se de outra
+        // transacao ainda em curso. Repetivel com seguranca.
+        return replayed ?? throw new LedgerUnavailableException();
+    }
+
+    /// <summary>
+    /// Devolve o resultado original da chave, ou nulo quando a chave nao tem
+    /// registro visivel. Impressao divergente e reuso indevido (ADR-0006).
+    /// </summary>
+    private async Task<PostEntryResult?> TryReplayAsync(
+        Guid accountId,
+        string idempotencyKey,
         ReadOnlyMemory<byte> requestHash,
         CancellationToken cancellationToken)
     {
@@ -216,19 +331,17 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         var row = await connection.QuerySingleOrDefaultAsync<ReplayRow>(new CommandDefinition(
             LedgerSql.SelectForReplay,
-            new { accountId, idempotencyKey = request.IdempotencyKey },
+            new { accountId, idempotencyKey },
             cancellationToken: cancellationToken)).ConfigureAwait(false);
 
         if (row is null)
         {
-            // A chave colidiu mas o registro nao esta visivel: trata-se de outra
-            // transacao ainda em curso. Repetivel com seguranca.
-            throw new LedgerUnavailableException();
+            return null;
         }
 
         if (!requestHash.Span.SequenceEqual(row.RequestHash))
         {
-            throw new IdempotencyConflictException(accountId, request.IdempotencyKey);
+            throw new IdempotencyConflictException(accountId, idempotencyKey);
         }
 
         var currency = Currency.FromCode(row.Currency);
@@ -312,6 +425,27 @@ public sealed class PostgresLedgerStore : ILedgerStore
             entry.BalanceAfter,
             replayed);
 
+    private static LedgerEntry ToEntry(EntryRow row)
+    {
+        var currency = Currency.FromCode(row.Currency);
+
+        return LedgerEntry.Rehydrate(
+            row.EntryId,
+            row.AccountId,
+            row.Sequence,
+            (EntryDirection)row.Direction,
+            Money.Of(row.Amount, currency),
+            new DateTimeOffset(row.OccurredAt, TimeSpan.Zero),
+            row.IdempotencyKey,
+            row.CorrelationId,
+            row.ReversalOf,
+            Money.Of(row.BalanceAfter, currency));
+    }
+
+    private static bool IsReversalViolation(PostgresException exception) =>
+        exception.SqlState == PostgresErrorCodes.UniqueViolation
+        && exception.ConstraintName == "uq_entries_reversal";
+
     private static bool IsIdempotencyViolation(PostgresException exception) =>
         exception.SqlState == PostgresErrorCodes.UniqueViolation
         && (exception.ConstraintName is "pk_idempotency" or "uq_entries_idempotency");
@@ -355,6 +489,31 @@ public sealed class PostgresLedgerStore : ILedgerStore
         public long EntriesReplayed { get; set; }
 
         public long LastSequence { get; set; }
+    }
+
+    private sealed class EntryRow
+    {
+        public Guid EntryId { get; set; }
+
+        public Guid AccountId { get; set; }
+
+        public long Sequence { get; set; }
+
+        public short Direction { get; set; }
+
+        public decimal Amount { get; set; }
+
+        public string Currency { get; set; } = string.Empty;
+
+        public DateTime OccurredAt { get; set; }
+
+        public string IdempotencyKey { get; set; } = string.Empty;
+
+        public Guid CorrelationId { get; set; }
+
+        public Guid? ReversalOf { get; set; }
+
+        public decimal BalanceAfter { get; set; }
     }
 
     private sealed class ReplayRow

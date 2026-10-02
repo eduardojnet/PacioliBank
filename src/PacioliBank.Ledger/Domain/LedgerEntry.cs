@@ -6,8 +6,9 @@ namespace PacioliBank.Ledger.Domain;
 /// lancamento compensatorio que referencia o original (RN-004).
 /// </summary>
 /// <remarks>
-/// A instancia so e criada por <see cref="Account.Post(PostingRequest)"/>,
+/// Lancamento novo so e criado por <see cref="Account.Post(PostingRequest)"/>,
 /// porque a sequencia e a validacao das invariantes pertencem ao agregado.
+/// <see cref="Rehydrate"/> apenas reconstroi o que ja foi gravado.
 /// </remarks>
 public sealed record LedgerEntry
 {
@@ -33,6 +34,49 @@ public sealed record LedgerEntry
         CorrelationId = correlationId;
         ReversalOf = reversalOf;
         BalanceAfter = balanceAfter;
+    }
+
+    /// <summary>
+    /// Reconstroi um lancamento ja gravado, lido do armazenamento.
+    /// </summary>
+    /// <remarks>
+    /// Nao cria fato novo: a sequencia e o saldo vem do registro persistido.
+    /// Existe para que o estorno (RN-004) seja decidido pelo agregado sobre o
+    /// lancamento original, e nao por comparacao de colunas no adaptador.
+    /// </remarks>
+    public static LedgerEntry Rehydrate(
+        Guid entryId,
+        Guid accountId,
+        long sequence,
+        EntryDirection direction,
+        Money amount,
+        DateTimeOffset occurredAt,
+        string idempotencyKey,
+        Guid correlationId,
+        Guid? reversalOf,
+        Money balanceAfter)
+    {
+        if (entryId == Guid.Empty)
+        {
+            throw new ArgumentException("Identificador de lancamento invalido.", nameof(entryId));
+        }
+
+        if (sequence < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sequence), sequence, "A sequencia de um lancamento gravado comeca em 1.");
+        }
+
+        return new LedgerEntry(
+            entryId,
+            accountId,
+            sequence,
+            direction,
+            amount,
+            occurredAt,
+            idempotencyKey,
+            correlationId,
+            reversalOf,
+            balanceAfter);
     }
 
     public Guid EntryId { get; }

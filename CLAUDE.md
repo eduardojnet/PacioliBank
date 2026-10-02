@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 57 testes; os de integração exigem Docker
+dotnet test                   # 66 testes; os de integração exigem Docker
 docker compose up --build     # API em http://localhost:8080
 docker compose down -v        # obrigatório após qualquer mudança de esquema
 ```
@@ -66,7 +66,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP
 tests/
   PacioliBank.Domain.Tests/        39 testes, sem I/O
-  PacioliBank.Integration.Tests/   18 testes, PostgreSQL real, inclui concorrencia
+  PacioliBank.Integration.Tests/   27 testes, PostgreSQL real, inclui concorrencia e estorno
 db/init/                           esquema, papeis e privilegios
 docs/                              ESTADO, ADRs, specs, convencoes, kanban
 ```
@@ -99,4 +99,4 @@ docs/                              ESTADO, ADRs, specs, convencoes, kanban
 
 O próximo item da fila é a **porta de entrada e os endpoints HTTP**, com escopo ampliado para absorver L-03, L-07 e L-08. Ver `docs/ESTADO.md §7`, item 1.
 
-Antes de começar, rode `dotnet test`. Esperado: 57 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 66 passando, sem avisos.
