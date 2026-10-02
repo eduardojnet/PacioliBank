@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 8 | 19.2, 19.3, 20.1, 24, 25, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 24, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 25 | 01 a 23, mais 19.4 |
+| Concluído | 26 | 01 a 23, mais 19.4 e 20.1 |
 
 ---
 
@@ -122,41 +122,6 @@ Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
-### 20.1. Gerar o Diagrama de Entidade e Relacionamento em Mermaid
-
-`prioridade: Alta` · `doc` · `requisito-obrigatorio`
-
-ÂNCORA: mesmo item 3 da fila (ESTADO.md 7, diagramas no repositório) que o cartão 20. Complementa a L-02: o C4 descreve a arquitetura, o ERD descreve o esquema de dados, e nenhum dos dois substitui o outro.
-
-SITUAÇÃO: o esquema existe e está implementado em db/init/001_roles_and_schema.sql, com 5 tabelas, mas não há representação visual dele em lugar algum. Nem no Lucid, nem no repositório. Quem lê o desafio precisa abrir o SQL e montar o modelo de cabeça.
-
-ESCOPO, as 5 tabelas do schema ledger:
-
-1. accounts: PK account_id; CHECK ck_accounts_status (1,2,3) e ck_accounts_sequence (>= 0)
-2. ledger_entries: PK entry_id; FK account_id -> accounts; FK reversal_of -> ledger_entries (AUTORRELACIONAMENTO, o estorno aponta para o lançamento original); UNIQUE uq_entries_sequence (account_id, sequence) por RN-006; UNIQUE uq_entries_idempotency (account_id, idempotency_key) por RN-005; UNIQUE uq_entries_reversal (reversal_of) por RN-004; CHECK amount > 0 por RN-002 e direction IN (1,-1)
-3. balance_snapshots: PK COMPOSTA (account_id, up_to_sequence); FK account_id -> accounts
-4. idempotency_records: PK COMPOSTA (account_id, idempotency_key); FK account_id -> accounts; FK entry_id -> ledger_entries
-5. outbox_messages: PK message_id; sem FK, por desenho (ADR-0008: a outbox não conhece o domínio que a alimenta)
-
-CADA ENTIDADE com atributos, tipo, PK, FK e cardinalidade declarada. Sintaxe erDiagram do Mermaid, renderizada nativamente pelo GitHub.
-
-QUATRO PONTOS QUE O ERD TEM DE TORNAR VISÍVEIS, e que são o valor real deste cartão:
-
-1. O autorrelacionamento de ledger_entries, com UNIQUE em reversal_of: é o que materializa 'cada lançamento admite no máximo um estorno' (RN-004) como garantia estrutural, não como regra de código
-2. A PK composta de balance_snapshots: snapshot é ancorado em SEQUÊNCIA, não em data. Isso explica por que a consulta histórica por occurred_at não o usa (ADR-0007)
-3. A ausência de FK em outbox_messages é DELIBERADA, não esquecimento. Precisa de nota no diagrama, ou será lida como defeito
-4. A redundância aparente entre uq_entries_idempotency e a tabela idempotency_records: são controles em níveis diferentes (ADR-0006), e um ERD sem nota faz parecer duplicação
-
-ARQUIVO: docs/diagrams/ERD-esquema-ledger.md
-
-CRITÉRIO DE CONCLUSÃO: o diagrama renderiza no GitHub; as 5 tabelas, todas as PK, todas as FK e as 3 constraints UNIQUE estão representadas; cada um dos 4 pontos acima tem nota explicativa; e o conteúdo confere com db/init/001_roles_and_schema.sql lido linha por linha, não de memória.
-
-RISCO DE NÃO EXECUTAR: o esquema é onde as invariantes financeiras moram de fato (ADR-0009: imutabilidade por privilégio, não por disciplina). Sem ERD, o avaliador precisa ler SQL para ver que as regras de negócio estão no banco, e a decisão arquitetural mais forte do projeto fica ilegível para quem não abre o arquivo.
-
-NOTA SOBRE A NUMERAÇÃO: este cartão é 20.1 por compartilhar o item 3 da fila e o diretório de destino com o 20, não por depender dele. Pode ser executado antes, depois ou junto. A regra de subnível do PROCESSO-KANBAN 4 dizia apenas 'dependência real': fica emendada aqui para admitir também 'mesmo item da fila'.
-
-ATUALIZAÇÃO 02/10/2026: criado no Cowork e incluído neste espelho e no ESTADO.md §7 na sincronização seguinte. A emenda de subnível que ele cita já está no PROCESSO-KANBAN.md 1.2 §4.
-
 ### 24. Implementar o despachante de outbox
 
 `prioridade: Média` · `codigo`
@@ -211,7 +176,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 20.1, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 24, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -602,3 +567,44 @@ CRITÉRIO: alguém que nunca viu o projeto sobe o ambiente e faz um lançamento 
 ENTREGA (02/10/2026): os 4 itens pendentes feitos (endpoints com curl executável, decisões com link para os ADRs, "o que seria feito com mais tempo", testes e o pré-requisito Docker), mais início em cinco minutos e tabela de erros. Resumos do ADR-0005 e do ADR-0006 atualizados para o que foi medido e revisado.
 
 VERIFICAÇÃO DO CRITÉRIO: README seguido literalmente num clone limpo: subida, crédito, posição, débito, reenvio, recusa por saldo, posição histórica, extrato e estorno, todos com a resposta descrita. Achado e corrigido: "rodar sem Docker" falharia como estava escrito (sem `ASPNETCORE_ENVIRONMENT=Development` não há connection string); a instrução nova foi executada e funciona.
+
+### 20.1. Gerar o Diagrama de Entidade e Relacionamento em Mermaid
+
+`prioridade: Alta` · `doc` · `requisito-obrigatorio`
+
+ÂNCORA: mesmo item 3 da fila (ESTADO.md 7, diagramas no repositório) que o cartão 20. Complementa a L-02: o C4 descreve a arquitetura, o ERD descreve o esquema de dados, e nenhum dos dois substitui o outro.
+
+SITUAÇÃO: o esquema existe e está implementado em db/init/001_roles_and_schema.sql, com 5 tabelas, mas não há representação visual dele em lugar algum. Nem no Lucid, nem no repositório. Quem lê o desafio precisa abrir o SQL e montar o modelo de cabeça.
+
+ESCOPO, as 5 tabelas do schema ledger:
+
+1. accounts: PK account_id; CHECK ck_accounts_status (1,2,3) e ck_accounts_sequence (>= 0)
+2. ledger_entries: PK entry_id; FK account_id -> accounts; FK reversal_of -> ledger_entries (AUTORRELACIONAMENTO, o estorno aponta para o lançamento original); UNIQUE uq_entries_sequence (account_id, sequence) por RN-006; UNIQUE uq_entries_idempotency (account_id, idempotency_key) por RN-005; UNIQUE uq_entries_reversal (reversal_of) por RN-004; CHECK amount > 0 por RN-002 e direction IN (1,-1)
+3. balance_snapshots: PK COMPOSTA (account_id, up_to_sequence); FK account_id -> accounts
+4. idempotency_records: PK COMPOSTA (account_id, idempotency_key); FK account_id -> accounts; FK entry_id -> ledger_entries
+5. outbox_messages: PK message_id; sem FK, por desenho (ADR-0008: a outbox não conhece o domínio que a alimenta)
+
+CADA ENTIDADE com atributos, tipo, PK, FK e cardinalidade declarada. Sintaxe erDiagram do Mermaid, renderizada nativamente pelo GitHub.
+
+QUATRO PONTOS QUE O ERD TEM DE TORNAR VISÍVEIS, e que são o valor real deste cartão:
+
+1. O autorrelacionamento de ledger_entries, com UNIQUE em reversal_of: é o que materializa 'cada lançamento admite no máximo um estorno' (RN-004) como garantia estrutural, não como regra de código
+2. A PK composta de balance_snapshots: snapshot é ancorado em SEQUÊNCIA, não em data. Isso explica por que a consulta histórica por occurred_at não o usa (ADR-0007)
+3. A ausência de FK em outbox_messages é DELIBERADA, não esquecimento. Precisa de nota no diagrama, ou será lida como defeito
+4. A redundância aparente entre uq_entries_idempotency e a tabela idempotency_records: são controles em níveis diferentes (ADR-0006), e um ERD sem nota faz parecer duplicação
+
+ARQUIVO: docs/diagrams/ERD-esquema-ledger.md
+
+CRITÉRIO DE CONCLUSÃO: o diagrama renderiza no GitHub; as 5 tabelas, todas as PK, todas as FK e as 3 constraints UNIQUE estão representadas; cada um dos 4 pontos acima tem nota explicativa; e o conteúdo confere com db/init/001_roles_and_schema.sql lido linha por linha, não de memória.
+
+RISCO DE NÃO EXECUTAR: o esquema é onde as invariantes financeiras moram de fato (ADR-0009: imutabilidade por privilégio, não por disciplina). Sem ERD, o avaliador precisa ler SQL para ver que as regras de negócio estão no banco, e a decisão arquitetural mais forte do projeto fica ilegível para quem não abre o arquivo.
+
+NOTA SOBRE A NUMERAÇÃO: este cartão é 20.1 por compartilhar o item 3 da fila e o diretório de destino com o 20, não por depender dele. Pode ser executado antes, depois ou junto. A regra de subnível do PROCESSO-KANBAN 4 dizia apenas 'dependência real': fica emendada aqui para admitir também 'mesmo item da fila'.
+
+ATUALIZAÇÃO 02/10/2026: criado no Cowork e incluído neste espelho e no ESTADO.md §7 na sincronização seguinte. A emenda de subnível que ele cita já está no PROCESSO-KANBAN.md 1.2 §4.
+
+ENTREGA (02/10/2026): `docs/diagrams/ERD-esquema-ledger.md`, ligado no índice da pasta. 5 tabelas, 40 colunas com tipo, 5 PK (duas compostas), 5 FK, 3 UNIQUE, 5 CHECK, mais índices e privilégios do papel da aplicação. As 4 notas pedidas.
+
+VERIFICAÇÃO: além da leitura do script, comparação automática com o catálogo do PostgreSQL (`information_schema.columns`, `pg_constraint`): nome, tipo e ordem das 40 colunas idênticos. A comparação pegou dois erros de contagem na primeira versão (39 colunas, 4 PK), corrigidos. Renderização validada com mermaid-cli; o primeiro layout fazia a outbox parecer ligada a `accounts` e `ledger_entries`, exatamente a leitura que a nota 3 quer evitar, e foi corrigido.
+
+ACHADO: a nota 3 do cartão atribuía ao ADR-0008 a justificativa da ausência de FK na outbox; o ADR não a contém. O ERD declara o fato e marca a justificativa como `[INFERIDO]`. Registrado como L-12, para decisão.

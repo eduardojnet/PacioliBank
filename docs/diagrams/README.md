@@ -8,6 +8,7 @@ Modelo C4 do PacioliBank Ledger em [Mermaid](https://mermaid.js.org/), renderiza
 | C2 | [Contêineres](./c2-conteineres.md) | Que processos e armazenamentos compõem o sistema? |
 | C3 | [Componentes da API](./c3-componentes.md) | Como a API se organiza por dentro, e onde cada regra vive? |
 | C4 | [Registro de débito sob concorrência](./c4-sequencia-debito.md) | Em que ordem bloqueio, decisão e gravação acontecem? |
+| Dados | [Esquema do ledger (ERD)](./ERD-esquema-ledger.md) | Onde os dados e as regras de negócio moram no banco? |
 
 ## Implementado ou especificado
 
