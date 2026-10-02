@@ -157,7 +157,8 @@ As decisões estão registradas com alternativas rejeitadas e gatilho de revisã
 | [`docs/specs/EF-especificacao-funcional.md`](./docs/specs/EF-especificacao-funcional.md) | Domínio, regras de negócio, requisitos funcionais, contrato de API |
 | [`docs/specs/ENF-especificacao-nao-funcional.md`](./docs/specs/ENF-especificacao-nao-funcional.md) | Atributos de qualidade, SLOs, riscos |
 | [`docs/specs/BDD-comportamento.md`](./docs/specs/BDD-comportamento.md) | Cenários de aceite em Gherkin |
-| [`docs/ESTADO.md`](./docs/ESTADO.md) | Estado detalhado, lacunas por severidade, fila de execução e histórico |
+| [`docs/ESTADO.md`](./docs/ESTADO.md) | Estado detalhado, lacunas por severidade, espelho da fila do quadro e histórico |
+| [`docs/PROCESSO-KANBAN.md`](./docs/PROCESSO-KANBAN.md) | Política do quadro Kanban, que é a fonte de toda atividade |
 
 ### As decisões que definem o sistema
 

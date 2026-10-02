@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima sétima revisão)
+**Última atualização:** 2026-10-02 (décima oitava revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 103 passando (59 de domínio, 44 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -302,15 +302,15 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 46 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
-**Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
+**O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
 A política do quadro está em [`docs/PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md): critério de entrada e saída de cada coluna, limite de trabalho em andamento, anatomia do cartão e o procedimento de sincronização em cinco passos. Esse documento existe porque L-07 e L-09 nasceram, as duas, de sincronização mal definida.
 
 Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um cartão ali significa trabalho registrado sem critério, e a ação é triá-lo, não executá-lo. O limite de **Em Andamento é um cartão**.
 
-## 7. Fila de execução
+## 7. Fila de execução (espelho do quadro)
 
-Ordem fixa. Cada item só começa quando o anterior está verde. O número em colchetes é o do cartão no quadro; subníveis (19.x) dependem do pai e não alteram a ordem.
+**Espelho da fila do quadro**, que é a fonte (PROCESSO-KANBAN 2.0). Cada item só começa quando o anterior está verde. O número em colchetes é o do cartão; subníveis (19.x) dependem do pai ou realizam o mesmo item.
 
 1. ~~**[19] Endpoints HTTP e tratamento de erro** (L-03, L-07)~~ concluído em 2026-10-02
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
@@ -380,7 +380,8 @@ consolidada de um cliente em qualquer instante, com consistência forte
 por conta.
 
 Leia, nesta ordem, antes de qualquer sugestão:
-  docs/ESTADO.md                 estado atual, lacunas e fila de execução
+  o quadro no TickTick, projeto PacioliBank   fonte das atividades e da ordem
+  docs/ESTADO.md                 estado atual e lacunas; a §7 espelha o quadro
   docs/adr/README.md             índice das 11 decisões arquiteturais
   docs/specs/EF-especificacao-funcional.md    domínio, regras e contratos
   docs/convencoes-de-nomenclatura.md
@@ -401,8 +402,10 @@ Regras de trabalho desta sessão:
 8. Invariante financeira é garantida por constraint e privilégio no
    banco, não por disciplina de código.
 
-Comece lendo docs/ESTADO.md e me diga qual é o próximo item da fila e
-por quê. Não avance sem minha confirmação.
+Comece lendo o quadro e comparando-o com docs/KANBAN.md e a §7 do
+ESTADO.md; em divergência, vale o quadro. Depois me diga qual é o próximo
+cartão e por quê. Nenhum trabalho sem cartão. Não avance sem minha
+confirmação.
 ```
 
 ---
@@ -429,3 +432,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 20.1 concluído: ERD do esquema em `docs/diagrams/ERD-esquema-ledger.md`, 5 tabelas e 40 colunas idênticas ao catálogo do PostgreSQL (comparação automática), 5 PK, 5 FK, 3 UNIQUE, 5 CHECK, índices e privilégios, com as 4 notas pedidas. Layout corrigido para a outbox não parecer relacionada. L-12 registrada: a justificativa da ausência de FK na outbox, atribuída ao ADR-0008 pelo cartão, não existe no ADR |
 | 2026-10-02 | Card 24 concluído: módulo `PacioliBank.Events` com o despachante de outbox (`SKIP LOCKED`, recuo exponencial, limite de tentativas com alerta), executado no processo da API e publicando em log. Cartão recebeu critério de conclusão antes de começar. 5 testes de integração (102 verdes); o de paralelismo reprova sem o `SKIP LOCKED`. Verificado no Docker: crédito via curl publicado em menos de 3 s. Card 24.1 criado para a L-12 |
 | 2026-10-02 | Card 24.1 concluído: chave estrangeira `fk_outbox_entry (account_id, sequence)` na outbox, por decisão do usuário, registrada no ADR-0008 com alternativas rejeitadas. Teste novo reprovou antes e passa depois; 103 verdes. L-12 encerrada. Cards 18.1 (inverter a política do quadro) e 21.1 (nomes dos eventos da EF §9) criados |
+| 2026-10-02 | Card 18.1 concluído: política do quadro invertida (PROCESSO-KANBAN 2.0). O quadro no TickTick é a fonte de toda atividade e da ordem; §7 e `KANBAN.md` passam a espelhos. Regra nova: nenhum trabalho sem cartão |

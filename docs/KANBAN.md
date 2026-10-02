@@ -1,6 +1,6 @@
 # Quadro Kanban: PacioliBank
 
-Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
+Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
 **Data:** 2026-10-02 · **Cartões:** 46 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 8 | 18.1, 19.2, 19.3, 21.1, 25, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 21.1, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 28 | 01 a 24, mais 19.4, 20.1 e 24.1 |
+| Concluído | 29 | 01 a 24, mais 18.1, 19.4, 20.1 e 24.1 |
 
 ---
 
@@ -102,12 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 18.1. Inverter a política: o quadro passa a ser a fonte da fila
-
-`prioridade: Média` · `processo` · `doc`
-
-ÂNCORA: decisão do usuário em 02/10/2026, "todas as atividades deveriam estar no kanban, sendo ele a fonte de tudo". Altera o card 18. Escopo: PROCESSO-KANBAN 2.0 com o quadro como fonte da fila e de toda atividade; ESTADO §7 e KANBAN.md como espelhos; o disco continua fonte da verdade do código. CRITÉRIO: nenhum documento afirma mais que a ordem vem do ESTADO.md.
-
 ### 21.1. Alinhar os nomes dos eventos da EF §9 ao código
 
 `prioridade: Média` · `doc` · `risco`
@@ -176,7 +170,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 25, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 21.1, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -638,3 +632,11 @@ CRITÉRIO: ADR-0008 com a decisão e a alternativa rejeitada; ERD e ADR coerente
 BLOQUEIO: depende de decisão do usuário.
 
 ENTREGA (02/10/2026): decisão do usuário, acrescentar a chave. Aplicada como `fk_outbox_entry (account_id, sequence)` para `ledger_entries`, que garante o lançamento e, por ele, a conta. ADR-0008 com a decisão e três alternativas rejeitadas. Teste novo com o papel da aplicação: mensagem sem lançamento é recusada (`23503`); reprovou antes da mudança. 103 verdes. ERD reconferido contra o catálogo, com 6 FK. Verificado no Docker após `down -v`: crédito gravado e publicado. L-12 encerrada.
+
+### 18.1. Inverter a política: o quadro passa a ser a fonte da fila
+
+`prioridade: Média` · `processo` · `doc`
+
+ÂNCORA: decisão do usuário em 02/10/2026, "todas as atividades deveriam estar no kanban, sendo ele a fonte de tudo". Altera o card 18. Escopo: PROCESSO-KANBAN 2.0 com o quadro como fonte da fila e de toda atividade; ESTADO §7 e KANBAN.md como espelhos; o disco continua fonte da verdade do código. CRITÉRIO: nenhum documento afirma mais que a ordem vem do ESTADO.md.
+
+ENTREGA (02/10/2026): `PROCESSO-KANBAN.md` 2.0: o quadro é a fonte de toda atividade e da ordem; `ESTADO.md §7` e este espelho em divergência perdem para o quadro. Regras novas: nenhum trabalho sem cartão; o bloco de trabalho começa lendo o quadro; commits só com os arquivos da entrega. Histórico de versões da política acrescentado. Ajustados: `ESTADO.md` §6-A, §7 e bloco de retomada; cabeçalho deste espelho; README; ordem de leitura e regra 10 do `CLAUDE.md`. VERIFICAÇÃO: busca no repositório por afirmações de que a ordem vem do `ESTADO.md`; as restantes são histórico de cartão, preservado pela regra append-only.

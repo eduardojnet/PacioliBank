@@ -3,7 +3,7 @@
 **Projeto:** PacioliBank Ledger
 **Quadro:** TickTick, projeto `PacioliBank`
 **Espelho versionado:** [`docs/KANBAN.md`](./KANBAN.md)
-**Versão:** 1.2 (2026-10-02)
+**Versão:** 2.0 (2026-10-02). Ver [histórico de versões](#8-histórico-de-versões)
 
 Este documento é a política do quadro, não um ADR. Nomenclatura e processo são convenção: não rastreiam a um requisito, e a regra 4 do [índice de ADRs](./adr/README.md) exige rastreabilidade.
 
@@ -16,7 +16,7 @@ O que justifica o documento é outra coisa: o quadro é a fila de execução do 
 O quadro responde a três perguntas, e só a elas:
 
 1. **O que está sendo feito agora?** Uma resposta, nunca três.
-2. **O que entra em seguida, e por quê?** A ordem é a da [fila do ESTADO.md §7](./ESTADO.md).
+2. **O que entra em seguida, e por quê?** A ordem é a da coluna A Fazer do próprio quadro, pela numeração da §4.
 3. **O que está impedido, e por quem ou pelo quê?**
 
 O quadro **não** é repositório de conhecimento, histórico de decisão nem documentação. Esses vivem em `docs/`. Cartão que explica arquitetura é ADR no lugar errado.
@@ -31,11 +31,15 @@ Esta seção existe porque os dois erros mais caros do projeto nasceram aqui.
 |---|---|
 | Qual a fonte da verdade do **código**? | O disco, verificado por leitura. Não o cartão, não o `ESTADO.md` |
 | Qual a fonte da verdade do **estado declarado**? | [`docs/ESTADO.md`](./ESTADO.md), seções 4, 5 e 6 |
-| Qual a fonte da verdade da **ordem de execução**? | `ESTADO.md §7`. O quadro reflete essa ordem; não a define |
-| O que o quadro é, então? | A superfície de gestão. Derivado, nunca primário |
+| Qual a fonte das **atividades e da ordem de execução**? | **O quadro**, no TickTick. Toda atividade existe primeiro como cartão |
+| O que são `ESTADO.md §7` e `KANBAN.md`, então? | Espelhos versionados do quadro, para quem lê o repositório sem acesso ao TickTick. Em divergência, vale o quadro, e o espelho é corrigido |
 
-### A regra
+**Até a versão 1.2, a ordem vinha do `ESTADO.md §7` e o quadro a refletia.** Invertido na 2.0 por decisão do usuário: o quadro já recebia cartões criados fora do terminal (o 20.1, no Cowork), e um espelho que manda acaba atrasado em relação ao que ele espelha.
 
+### As regras
+
+> **Nenhum trabalho começa sem cartão.** Trabalho descoberto durante outro vira cartão, numerado pela §4, antes de ser feito.
+>
 > **Nenhum cartão vai para Concluído sem verificação no disco.**
 > Nenhuma entrega fecha sem que `ESTADO.md` e `README.md` sejam atualizados na mesma passada (regra 9 do `CLAUDE.md`).
 
@@ -53,14 +57,14 @@ Nos dois casos o quadro estava coerente consigo mesmo e errado sobre a realidade
 Ordem fixa, sem ramificação:
 
 1. Ler o disco: existe o arquivo, compila, os testes passam
-2. Atualizar `ESTADO.md` seções 4, 5, 6, 7 e 11
-3. Atualizar a tabela de estado do `README.md`, coerente com a §4
-4. Commitar
-5. **Só então** mover o cartão e escrever o que foi entregue
+2. Atualizar `ESTADO.md` seções 4, 5, 6 e 11, e a tabela de estado do `README.md`, coerente com a §4
+3. Atualizar os espelhos, `ESTADO.md §7` e `KANBAN.md`, com a coluna que o cartão vai assumir
+4. Commitar, adicionando só os arquivos alterados na entrega
+5. **Só então** mover o cartão no quadro e escrever o que foi entregue
 
 Inverter a ordem produz quadro verde com repositório vermelho.
 
-**Limitação conhecida e aceita:** o quadro vive no ambiente de gestão, separado do terminal de desenvolvimento. Enquanto o trabalho corre no terminal, o quadro congela. A sincronização é manual, partindo deste documento e do `ESTADO.md`. Automatizar é item de backlog, não pré-requisito.
+**O quadro não congela mais.** Até a versão 1.2, o terminal de desenvolvimento não alcançava o TickTick, e a sincronização partia do `ESTADO.md`. Hoje o terminal lê e escreve no quadro diretamente, e cartões também são criados em outros ambientes. Por isso todo bloco de trabalho começa lendo o quadro (§5).
 
 ---
 
@@ -88,7 +92,7 @@ Backlog não é depósito. Cartão sem gatilho e sem valor sai do quadro.
 **Entra:** item do ciclo atual, com critério de conclusão escrito e sem dependência aberta.
 **Sai:** quando é o próximo da fila e Em Andamento está livre.
 
-A ordem dentro da coluna é a do `ESTADO.md §7`. Reordenar aqui sem reordenar lá quebra a sincronização, e a fila perde função.
+A ordem dentro da coluna é dada pela numeração (§4): o menor número da fila ativa sai primeiro, salvo antecipação registrada. O `ESTADO.md §7` reproduz essa ordem.
 
 **Antecipação:** mover um item à frente dos anteriores exige motivo registrado no cartão. Duas antecipações já ocorreram (repositório público e correção do README), ambas com motivo declarado. Uma terceira sem critério e a fila deixou de ser fila.
 
@@ -178,7 +182,7 @@ Todo cartão carrega um número no início do título, com dois dígitos e ponto
 | Faixa | Significado |
 |---|---|
 | 01 a 18 | Executado, na ordem em que de fato ocorreu |
-| 19 a 25 | Fila ativa, na ordem do [`ESTADO.md §7`](./ESTADO.md) |
+| 19 a 25 | Fila ativa, na ordem do quadro, espelhada no [`ESTADO.md §7`](./ESTADO.md) |
 | 26 a 28 | Previsto por ADR, fora da fila atual. Entra quando a fila esvazia |
 | 29 a 30 | Bloqueado sem desbloqueio previsto no desafio |
 | 31 a 38 | Backlog. **A ordem aqui é indicativa**, não compromisso: o que governa é o gatilho declarado no cartão |
@@ -197,7 +201,7 @@ O número do pai existe como cartão; não se criam cartões-pai apenas para abr
 3. **O número não muda quando o cartão muda de coluna.** Ele identifica a atividade, não o estado dela
 4. **Concluído conserva o número de execução.** É o que permite ler a ordem real em que o projeto aconteceu, e não a ordem que se planejou
 
-A numeração existe para que uma conversa, um commit ou este documento citem "o 19.1" sem ambiguidade. Não substitui a fila do `ESTADO.md §7`, que continua sendo a autoridade sobre a ordem.
+A numeração existe para que uma conversa, um commit ou este documento citem "o 19.1" sem ambiguidade, e é ela que ordena a fila do quadro.
 
 ### Prioridade
 
@@ -227,10 +231,11 @@ Dois momentos, ambos curtos. Não há reunião, cerimônia nem relatório.
 
 ### Ao abrir um bloco de trabalho
 
-1. Ler `ESTADO.md §7` e §10 (bloco de retomada). **O estado registrado é o ponto de partida, não a memória**
-2. Confirmar que Em Andamento está vazia ou tem o cartão esperado
-3. Mover um cartão de A Fazer para Em Andamento. Um
-4. Declarar o teto de tempo antes de começar
+1. Ler o quadro no TickTick e compará-lo com `KANBAN.md` e `ESTADO.md §7`. Divergência se resolve corrigindo o espelho a partir do quadro, antes de qualquer outro trabalho
+2. Ler `ESTADO.md` §4 a §6 e §10 (bloco de retomada). **O estado registrado é o ponto de partida, não a memória**
+3. Confirmar que Em Andamento está vazia ou tem o cartão esperado
+4. Mover um cartão de A Fazer para Em Andamento. Um
+5. Declarar o teto de tempo antes de começar
 
 ### Ao fechar um bloco de trabalho
 
@@ -256,12 +261,27 @@ Observados neste projeto ou previsíveis a partir dele.
 | Backlog crescendo sem gatilho de reabertura | Depósito, não backlog | Eliminar o que não tem gatilho |
 | Antecipação de item da fila sem motivo registrado | A fila deixou de governar | Registrar o motivo ou respeitar a ordem |
 | Cartão que explica arquitetura | ADR no lugar errado | Mover para `docs/adr/` e referenciar |
+| Trabalho executado sem cartão | O quadro deixa de ser a fonte e vira registro posterior | Criar o cartão antes de executar (§2) |
+| Espelho divergente do quadro | `KANBAN.md` ou `ESTADO.md §7` atrasados | Corrigir o espelho a partir do quadro, no início do bloco (§5) |
 
 ---
 
 ## 7. Gatilhos de revisão deste documento
 
+- Perda de acesso ao quadro a partir do terminal, que reabre a razão da versão 1.2 (o quadro congela e o espelho precisa mandar)
+
 - Limite de Em Andamento violado duas vezes no mesmo ciclo
 - Terceira antecipação de item da fila sem motivo registrado
 - Quadro passando de 50 cartões, o que indica granularidade errada
 - Entrada de segunda pessoa no projeto, que muda o significado de Em Revisão
+
+---
+
+## 8. Histórico de versões
+
+| Versão | Data | Mudança |
+|---|---|---|
+| 1.0 | 2026-10-02 | Política do quadro: colunas, limite de Em Andamento, anatomia do cartão, sincronização |
+| 1.1 | 2026-10-02 | Convenção de numeração |
+| 1.2 | 2026-10-02 | Subnível admite "mesmo item da fila", além de dependência real. Feita pelo usuário no Cowork; entrou por engano no commit `38eeb4f` (ver `ESTADO.md` §11) |
+| 2.0 | 2026-10-02 | **Inversão da fonte:** o quadro passa a ser a fonte de toda atividade e da ordem; `ESTADO.md §7` e `KANBAN.md` viram espelhos. Regra nova: nenhum trabalho sem cartão. Decisão do usuário, card 18.1 |

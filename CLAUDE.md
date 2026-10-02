@@ -21,11 +21,12 @@ O esquema é aplicado pelo entrypoint do PostgreSQL, que **só roda na primeira 
 
 ## Ordem de leitura
 
-1. `docs/ESTADO.md` — estado atual, lacunas por severidade, fila de execução
-2. `docs/adr/README.md` — índice das 11 decisões arquiteturais
-3. `docs/specs/EF-especificacao-funcional.md` — domínio, regras (RN-xxx) e contratos
-4. `docs/convencoes-de-nomenclatura.md`
-5. `docs/KANBAN.md` — espelho do quadro de projeto
+1. **O quadro no TickTick** (projeto PacioliBank) — fonte de toda atividade e da ordem. `docs/KANBAN.md` e `ESTADO.md §7` o espelham
+2. `docs/ESTADO.md` — estado atual, lacunas por severidade
+3. `docs/adr/README.md` — índice das 11 decisões arquiteturais
+4. `docs/specs/EF-especificacao-funcional.md` — domínio, regras (RN-xxx) e contratos
+5. `docs/convencoes-de-nomenclatura.md`
+6. `docs/PROCESSO-KANBAN.md` — política do quadro (versão 2.0)
 
 ---
 
@@ -52,6 +53,7 @@ Inversão de dependência é física: `PacioliBank.Ledger` não declara nenhum `
 7. **Teste de invariante de persistência roda contra PostgreSQL real** (Testcontainers). Repositório em memória passa na implementação ingênua, o que é pior que não testar.
 8. **Uma entrega por vez.** Build verde antes do próximo passo.
 9. **Ao concluir qualquer entrega, atualizar `docs/ESTADO.md` E o `README.md`** antes de começar a próxima. No ESTADO.md: seções 4 (implementado), 5 (não implementado), 6 (lacunas), 7 (fila) e 11 (histórico). No README: a tabela "Estado atual da implementação", que precisa ficar coerente com a §4 do ESTADO.md. Esse par é o contrato de sincronização com o ambiente de gestão do projeto, onde vive o quadro Kanban. ESTADO.md desatualizado significa quadro errado; README desatualizado significa entrega existente avaliada como ausente (ver L-09).
+10. **Nenhum trabalho começa sem cartão no quadro.** O quadro no TickTick é a fonte de toda atividade e da ordem; trabalho descoberto vira cartão, numerado pelo `PROCESSO-KANBAN.md` §4, antes de ser feito. Commits adicionam só os arquivos da entrega, nunca `git add -A`: o usuário edita arquivos em paralelo.
 
 ---
 
@@ -98,7 +100,7 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 19, 19.1, 19.4, 20, 20.1, 21, 22, 23 e 24 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011).  O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Cards 18.1, 19, 19.1, 19.4, 20, 20.1, 21, 22, 23, 24 e 24.1 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **21.1** (nomes dos eventos da EF §9 alinhados ao código); depois, o **25** (painel de evidência, condicional pelo ADR-0011).  O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 
