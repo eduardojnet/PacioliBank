@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PacioliBank.Ledger.Persistence</RootNamespace>
+    <AssemblyName>PacioliBank.Ledger.Persistence</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Versoes conferidas no nuget.org em 02/10/2026. -->
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Dapper" Version="2.1.89" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PacioliBank.Ledger\PacioliBank.Ledger.csproj" />
+  </ItemGroup>
+
+</Project>
