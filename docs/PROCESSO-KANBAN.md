@@ -3,7 +3,7 @@
 **Projeto:** PacioliBank Ledger
 **Quadro:** TickTick, projeto `PacioliBank`
 **Espelho versionado:** [`docs/KANBAN.md`](./KANBAN.md)
-**Versão:** 1.0 (2026-10-02)
+**Versão:** 1.1 (2026-10-02)
 
 Este documento é a política do quadro, não um ADR. Nomenclatura e processo são convenção: não rastreiam a um requisito, e a regra 4 do [índice de ADRs](./adr/README.md) exige rastreabilidade.
 
@@ -170,6 +170,29 @@ Formas aceitas de critério:
 | Artefato existindo e verificado | "Repositório público acessível, README renderizando" |
 | Hash ou igualdade de referência | "`origin/main` e `HEAD` local iguais" |
 | Resultado de experimento, com hipóteses declaradas antes | L-04: "saber qual das duas hipóteses é verdadeira e registrar no ADR-0005" |
+
+### Numeração
+
+Todo cartão carrega um número no início do título, com dois dígitos e ponto final: `19. Implementar a porta de entrada e os endpoints HTTP`.
+
+| Faixa | Significado |
+|---|---|
+| 01 a 18 | Executado, na ordem em que de fato ocorreu |
+| 19 a 25 | Fila ativa, na ordem do [`ESTADO.md §7`](./ESTADO.md) |
+| 26 a 28 | Previsto por ADR, fora da fila atual. Entra quando a fila esvazia |
+| 29 a 30 | Bloqueado sem desbloqueio previsto no desafio |
+| 31 a 38 | Backlog. **A ordem aqui é indicativa**, não compromisso: o que governa é o gatilho declarado no cartão |
+
+**Subníveis** marcam dependência real, não agrupamento temático: `19.1` só pode começar depois ou junto de `19`, e não faz sentido sozinho. O número do pai existe como cartão; não se criam cartões-pai apenas para abrigar filhos.
+
+**Regras de atribuição:**
+
+1. **O número não é reaproveitado.** Cartão eliminado deixa o número vago. Renumerar invalidaria toda referência externa, inclusive as deste documento
+2. **Cartão novo recebe o próximo número livre da faixa a que pertence**, ou um subnível do cartão de que depende. Não se renumera a faixa para abrir espaço
+3. **O número não muda quando o cartão muda de coluna.** Ele identifica a atividade, não o estado dela
+4. **Concluído conserva o número de execução.** É o que permite ler a ordem real em que o projeto aconteceu, e não a ordem que se planejou
+
+A numeração existe para que uma conversa, um commit ou este documento citem "o 19.1" sem ambiguidade. Não substitui a fila do `ESTADO.md §7`, que continua sendo a autoridade sobre a ordem.
 
 ### Prioridade
 
