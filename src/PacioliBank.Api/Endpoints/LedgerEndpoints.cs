@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using PacioliBank.Ledger.Application;
 using PacioliBank.Ledger.Domain;
@@ -70,7 +71,7 @@ public static class LedgerEndpoints
                 Correlation.Of(http)),
             cancellationToken);
 
-        return Written(result, reversalOf: null, http);
+        return Written(result, http);
     }
 
     private static async Task<IResult> ReverseAsync(
@@ -91,7 +92,7 @@ public static class LedgerEndpoints
             new ReversalCommand(accountId, entryId, body.OccurredAt.Value, idempotencyKey, Correlation.Of(http)),
             cancellationToken);
 
-        return Written(result, reversalOf: entryId, http);
+        return Written(result, http);
     }
 
     private static async Task<IResult> GetBalanceAsync(
@@ -134,18 +135,21 @@ public static class LedgerEndpoints
 
     /// <summary>
     /// 201 para lancamento novo; 200 com <c>Idempotency-Replayed: true</c> para
-    /// repeticao, com corpo identico ao original (EF secao 8.4).
+    /// repeticao (EF secao 8.4). Nos dois casos o corpo e o texto gravado no
+    /// registro de idempotencia, escrito sem reserializacao: a repeticao devolve
+    /// a resposta original byte a byte, e nao uma reconstrucao (ADR-0006).
     /// </summary>
-    private static IResult Written(PostEntryResult result, Guid? reversalOf, HttpContext http)
+    private static IResult Written(PostEntryResult result, HttpContext http)
     {
-        var body = EntryResponse.From(result, reversalOf);
-
         if (result.Replayed)
         {
             http.Response.Headers[LedgerHeaders.IdempotencyReplayed] = "true";
-            return Results.Ok(body);
         }
 
-        return Results.Created((string?)null, body);
+        return Results.Content(
+            result.ResponseBody,
+            "application/json",
+            Encoding.UTF8,
+            result.Replayed ? StatusCodes.Status200OK : StatusCodes.Status201Created);
     }
 }

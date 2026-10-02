@@ -26,36 +26,9 @@ public sealed record PostingBody(string? Amount, string? Currency, DateTimeOffse
 /// <summary>Corpo do estorno. O instante e obrigatorio para que o reenvio tenha a mesma impressao.</summary>
 public sealed record ReversalBody(DateTimeOffset? OccurredAt);
 
-/// <summary>Lancamento criado ou repetido. Valores monetarios como string (EF secao 8.2).</summary>
-public sealed record EntryResponse(
-    Guid EntryId,
-    Guid AccountId,
-    long Sequence,
-    string Direction,
-    string Amount,
-    string Currency,
-    string OccurredAt,
-    string RecordedAt,
-    string BalanceAfter,
-    Guid? ReversalOf)
-{
-    public static EntryResponse From(PostEntryResult result, Guid? reversalOf)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-
-        return new(
-            result.EntryId,
-            result.AccountId,
-            result.Sequence,
-            result.Direction.ToString(),
-            result.Amount.ToContractString(),
-            result.Amount.Currency.Code,
-            ContractFormat.Instant(result.OccurredAt),
-            ContractFormat.Instant(result.RecordedAt),
-            result.BalanceAfter.ToContractString(),
-            reversalOf);
-    }
-}
+// O corpo da resposta de escrita (EF secao 8.4) e PostingResponse, na camada
+// de aplicacao: e gravado no registro de idempotencia e devolvido como texto,
+// entao nao pode ser montado aqui (ADR-0006, card 19.5).
 
 /// <summary>Posicao consolidada (EF secao 8.5).</summary>
 public sealed record BalanceResponse(

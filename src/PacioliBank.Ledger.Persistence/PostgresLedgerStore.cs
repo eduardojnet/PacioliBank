@@ -32,8 +32,6 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
     private const int MaxAttempts = 3;
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     /// <summary>
     /// Payload de evento: campo nulo e omitido, para que <c>reversalOf</c> so
     /// apareca no estorno, como o contrato da EF secao 9 define.
@@ -137,9 +135,13 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         var recordedAt = ToStoredPrecision(DateTimeOffset.UtcNow);
 
+        // O corpo da resposta e montado uma vez: e o mesmo texto que vai para o
+        // registro de idempotencia e o que a repeticao devolve (ADR-0006).
+        var result = ToResult(entry, recordedAt, replayed: false);
+
         try
         {
-            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, cancellationToken)
+            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, result.ResponseBody, cancellationToken)
                 .ConfigureAwait(false);
 
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -152,7 +154,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
             return await ReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
         }
 
-        return ToResult(entry, recordedAt, replayed: false);
+        return result;
     }
 
     private async Task<PostEntryResult> ReverseOnceAsync(
@@ -200,9 +202,13 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         var recordedAt = ToStoredPrecision(DateTimeOffset.UtcNow);
 
+        // O corpo da resposta e montado uma vez: e o mesmo texto que vai para o
+        // registro de idempotencia e o que a repeticao devolve (ADR-0006).
+        var result = ToResult(entry, recordedAt, replayed: false);
+
         try
         {
-            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, cancellationToken)
+            await WriteAsync(connection, transaction, entry, requestHash, recordedAt, result.ResponseBody, cancellationToken)
                 .ConfigureAwait(false);
 
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -226,7 +232,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
             return replayed ?? throw new EntryAlreadyReversedException(entryId);
         }
 
-        return ToResult(entry, recordedAt, replayed: false);
+        return result;
     }
 
     /// <summary>
@@ -302,6 +308,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
         LedgerEntry entry,
         ReadOnlyMemory<byte> requestHash,
         DateTimeOffset recordedAt,
+        string responseBody,
         CancellationToken cancellationToken)
     {
         await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertEntry, new
@@ -332,7 +339,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
             idempotencyKey = entry.IdempotencyKey,
             requestHash = requestHash.ToArray(),
             responseStatus = (short)201,
-            responseBody = JsonSerializer.Serialize(ToResult(entry, recordedAt, replayed: false), JsonOptions),
+            responseBody,
             entryId = entry.EntryId,
         }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
 
@@ -426,7 +433,11 @@ public sealed class PostgresLedgerStore : ILedgerStore
             new DateTimeOffset(row.OccurredAt, TimeSpan.Zero),
             new DateTimeOffset(row.RecordedAt, TimeSpan.Zero),
             Money.Of(row.BalanceAfter, currency),
-            Replayed: true);
+            Replayed: true)
+        {
+            // O corpo devolvido e o gravado, nao uma reconstrucao (ADR-0006).
+            ResponseBody = row.ResponseBody,
+        };
     }
 
     /// <inheritdoc />
@@ -537,7 +548,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
     }
 
     private static PostEntryResult ToResult(LedgerEntry entry, DateTimeOffset recordedAt, bool replayed) =>
-        new(entry.EntryId,
+        new PostEntryResult(entry.EntryId,
             entry.AccountId,
             entry.Sequence,
             entry.Direction,
@@ -545,7 +556,10 @@ public sealed class PostgresLedgerStore : ILedgerStore
             ToStoredPrecision(entry.OccurredAt),
             recordedAt,
             entry.BalanceAfter,
-            replayed);
+            replayed)
+        {
+            ResponseBody = PostingResponse.From(entry, recordedAt).ToJson(),
+        };
 
     /// <summary>
     /// Trunca para microssegundos, a precisao do <c>timestamptz</c>.
@@ -673,6 +687,8 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
     private sealed class ReplayRow
     {
+        public string ResponseBody { get; set; } = string.Empty;
+
         public byte[] RequestHash { get; set; } = [];
 
         public Guid EntryId { get; set; }

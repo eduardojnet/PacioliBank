@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima revisão)
+**Última atualização:** 2026-10-02 (vigésima primeira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 105 passando (59 de domínio, 46 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 107 passando (59 de domínio, 48 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 105 passando |
+| Testes automatizados | Atendido, 107 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -98,6 +98,7 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 | `Application/ILedgerService.cs`, `LedgerService.cs` | **Porta de entrada** (L-03): conversão do valor, impressão do comando, validação de instante e de página, antes de qualquer I/O |
 | `Application/Commands.cs` | `PostingCommand`, `ReversalCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` |
 | `Application/PostEntryResult.cs`, `BalanceResult.cs` | Contratos de saída |
+| `Application/PostingResponse.cs` | Corpo da resposta de escrita (EF §8.4), gravado em `response_body` e devolvido como texto na primeira resposta e na repetição |
 | `Application/LedgerEntryEvent.cs`, `WireFormat.cs` | Payload dos eventos (EF §9), separado do resultado da API; formato de instante compartilhado com a API |
 | `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variante própria para estorno |
 
@@ -146,7 +147,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
-| `PacioliBank.Integration.Tests` | 46 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
+| `PacioliBank.Integration.Tests` | 48 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -317,7 +318,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
    - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
-   - **[19.5] Divergência entre o ADR-0006 e o uso de `response_body`**: o ADR afirma devolver a resposta gravada, "não uma reconstrução"; o código reconstrói do ledger e nunca lê a coluna. Aguarda decisão do usuário
+   - ~~**[19.5] Resposta da repetição devolvida do `response_body`**~~ concluído em 2026-10-02, opção (b) por decisão do usuário
    - ~~**[19.4] Repetição idempotente recusada quando o estado da conta mudou** (L-10)~~ concluído em 2026-10-02, antecipado ao 23 por decisão do usuário
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
@@ -338,7 +339,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 105 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 107 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -438,3 +439,4 @@ confirmação.
 | 2026-10-02 | Card 18.1 concluído: política do quadro invertida (PROCESSO-KANBAN 2.0). O quadro no TickTick é a fonte de toda atividade e da ordem; §7 e `KANBAN.md` passam a espelhos. Regra nova: nenhum trabalho sem cartão |
 | 2026-10-02 | Card 21.1 concluído: EF §9 (1.2), ENF (1.1) e convenções §8 alinhados ao código: `pacioli.ledger.*.v1` e `message_id`. Escopo ampliado com motivo: ENF R-06 descrevia o bloqueio consultivo, opção rejeitada no ADR-0005. Lendo eventos reais, achados defeitos no payload; viraram o card 24.2, declarados na EF |
 | 2026-10-02 | Card 24.2 concluído: payload dos eventos com tipo próprio (`LedgerEntryEvent`), valores como string, instantes em `Z`, sentido como texto e `reversalOf` no estorno; especificado na EF §9 (1.3), mantendo `v1` porque nenhum consumidor recebeu eventos. 2 testes leem o payload gravado e reprovaram antes. 105 verdes; verificado no Docker. Card 19.5 criado: o ADR-0006 diz devolver `response_body`, o código reconstrói do ledger |
+| 2026-10-02 | Card 19.5 concluído, opção (b): a repetição devolve o `response_body` gravado, no formato do contrato; coluna de `jsonb` para `json` para preservar o texto exato. ADR-0006 revisado. 2 testes novos (107 verdes); no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256 |

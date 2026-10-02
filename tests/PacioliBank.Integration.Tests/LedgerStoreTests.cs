@@ -177,6 +177,48 @@ public class LedgerStoreTests
     }
 
     [Fact]
+    public async Task Repeticao_devolve_o_corpo_gravado_no_registro_e_nao_uma_reconstrucao()
+    {
+        // ADR-0006, revisao do card 19.5: o reenvio recebe a resposta original
+        // GRAVADA. Para provar a origem, o registro e alterado por fora; se a
+        // resposta fosse reconstruida do ledger, a alteracao nao apareceria.
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 500.00m);
+        var comando = Comando(EntryDirection.Debit, 100.00m, "k-origem");
+
+        var primeira = await PostAsync(conta, comando);
+
+        const string Marcador = """{"marcador":"lido do registro"}""";
+        await using (var admin = new NpgsqlConnection(_fixture.MigratorConnectionString))
+        {
+            await admin.ExecuteAsync(
+                "UPDATE ledger.idempotency_records SET response_body = @corpo::json WHERE account_id = @conta AND idempotency_key = 'k-origem'",
+                new { corpo = Marcador, conta });
+        }
+
+        var segunda = await PostAsync(conta, comando);
+
+        Assert.True(segunda.Replayed);
+        Assert.Equal(Marcador, segunda.ResponseBody);
+        Assert.NotEqual(primeira.ResponseBody, segunda.ResponseBody);
+    }
+
+    [Fact]
+    public async Task Corpo_da_primeira_resposta_e_o_que_fica_gravado_byte_a_byte()
+    {
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 500.00m);
+
+        var primeira = await PostAsync(conta, Comando(EntryDirection.Debit, 100.00m, "k-bytes"));
+
+        await using var admin = new NpgsqlConnection(_fixture.MigratorConnectionString);
+        var gravado = await admin.ExecuteScalarAsync<string>(
+            "SELECT response_body::text FROM ledger.idempotency_records WHERE account_id = @conta AND idempotency_key = 'k-bytes'",
+            new { conta });
+
+        Assert.Equal(primeira.ResponseBody, gravado);
+        Assert.Contains("\"amount\":\"100.00\"", gravado, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Chave_reutilizada_com_conteudo_diferente_e_recusada()
     {
         var conta = await _fixture.CreateAccountAsync(openingCredit: 500.00m);

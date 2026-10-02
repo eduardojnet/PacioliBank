@@ -18,4 +18,12 @@ public sealed record PostEntryResult(
     DateTimeOffset OccurredAt,
     DateTimeOffset RecordedAt,
     Money BalanceAfter,
-    bool Replayed);
+    bool Replayed)
+{
+    /// <summary>
+    /// Corpo HTTP da resposta, no formato do contrato (EF secao 8.4). E o
+    /// texto gravado em <c>idempotency_records.response_body</c>: na repeticao,
+    /// vem do registro, byte a byte, e nao de reconstrucao (ADR-0006).
+    /// </summary>
+    public string ResponseBody { get; init; } = string.Empty;
+}

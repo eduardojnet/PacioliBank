@@ -63,7 +63,7 @@ erDiagram
         text idempotency_key PK
         bytea request_hash "SHA-256 do comando canônico"
         smallint response_status
-        jsonb response_body "resposta original"
+        json response_body "resposta original, texto exato: json, não jsonb"
         uuid entry_id FK
         timestamptz created_at "DEFAULT now(), indexado"
     }

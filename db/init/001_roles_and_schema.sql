@@ -103,7 +103,9 @@ CREATE TABLE ledger.idempotency_records (
     idempotency_key text        NOT NULL,
     request_hash    bytea       NOT NULL,
     response_status smallint    NOT NULL,
-    response_body   jsonb       NOT NULL,
+    -- json, e nao jsonb: jsonb reordena chaves e normaliza espacos, e a
+    -- repeticao precisa devolver o texto exato da resposta original (ADR-0006).
+    response_body   json        NOT NULL,
     entry_id        uuid        NOT NULL REFERENCES ledger.ledger_entries (entry_id),
     created_at      timestamptz NOT NULL DEFAULT now(),
 

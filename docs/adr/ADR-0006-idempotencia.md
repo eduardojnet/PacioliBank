@@ -43,7 +43,7 @@ CREATE TABLE idempotency_records (
     idempotency_key   text        NOT NULL,
     request_hash      bytea       NOT NULL,   -- SHA-256 do payload canônico
     response_status   smallint    NOT NULL,
-    response_body     jsonb       NOT NULL,
+    response_body     json        NOT NULL,   -- json, não jsonb: ver revisão do card 19.5
     entry_id          uuid        NOT NULL REFERENCES ledger_entries(entry_id),
     created_at        timestamptz NOT NULL DEFAULT now(),
 
@@ -89,7 +89,7 @@ Os registros expiram após **90 dias** (premissa de projeto, configurável), com
 **Positivas**
 
 - Duplicidade eliminada estruturalmente, inclusive sob envio simultâneo
-- Resposta devolvida é a original, byte a byte, não uma reconstrução
+- Resposta devolvida é a original, byte a byte, não uma reconstrução. *Até 2026-10-02 esta afirmação era falsa no código; tornada verdadeira pela revisão do card 19.5, ao fim deste documento*
 - Reuso indevido de chave é detectado em vez de produzir efeito silencioso
 - Nenhuma consulta adicional no caminho feliz: o custo é uma inserção na mesma transação
 - Nova tentativa legítima após rejeição de negócio permanece possível
@@ -174,6 +174,35 @@ O critério 2 desta ADR ("devolve exatamente a resposta original") estava violad
 - `ConcurrencyTests`, envios simultâneos com a mesma chave: continua produzindo exatamente um lançamento
 - Suíte completa: 97 testes verdes
 
-### Gatilho de revisão desta revisão
+### Revisão: a resposta devolvida vem do registro (2026-10-02, card 19.5)
+
+### Problema
+
+As consequências desta ADR afirmavam devolver "a resposta original, byte a byte, não uma reconstrução", guardada em `response_body`. O código gravava a coluna e **nunca a lia**: a repetição era reconstruída a partir de `ledger_entries`. O corpo coincidia com o original, e havia teste disso, mas por reconstrução. Além disso, o que se gravava em `response_body` era o resultado interno serializado, fora do formato do contrato. Achado no card 24.2.
+
+Havia ainda um impedimento técnico escondido: a coluna era `jsonb`, que reordena as chaves e normaliza os espaços. Mesmo lendo a coluna, a resposta não sairia byte a byte.
+
+### Opções consideradas
+
+1. **Devolver de fato o `response_body`, gravado no formato do contrato** (escolhida)
+2. Corrigir esta ADR: assumir a reconstrução a partir do ledger, que é imutável e portanto determinística, e reduzir `response_body` a registro de auditoria
+
+### Decisão
+
+**Opção 1**, por decisão do usuário. O corpo da resposta de escrita (EF §8.4) é montado uma única vez, por `PostingResponse` na camada de aplicação, gravado em `response_body` na transação do lançamento, e devolvido pela API como texto, sem reserializar, tanto na primeira resposta quanto na repetição. A coluna passa de `jsonb` para `json`, que valida o JSON e guarda o texto exatamente como recebido.
+
+### Opção rejeitada
+
+**Reconstruir a partir do ledger.** Correta enquanto o formato da resposta não mudar, e sem a cópia armazenada. Rejeitada pelo critério 2 desta ADR, tomado ao pé da letra: a resposta devolvida é a original, e não uma equivalente. Se o formato do contrato evoluir, a reconstrução passaria a devolver ao reenvio uma resposta diferente da que o cliente recebeu na primeira vez; a cópia gravada, não.
+
+### Consequências
+
+- Primeira resposta e repetição são o mesmo texto por construção: verificado no Docker, com o mesmo SHA-256 na primeira resposta, no reenvio e na coluna
+- O tipo do contrato de escrita sai do adaptador HTTP e vai para a aplicação, porque é gravado onde é produzido. Os contratos de leitura (posição, extrato) continuam no adaptador
+- As colunas do lançamento continuam alimentando o resultado interno da repetição; o **corpo HTTP** vem só do registro
+- Mudança de esquema (`jsonb` para `json`): no ambiente local, exige `docker compose down -v` até o card 27 (DbUp)
+- **Validação:** teste que altera o `response_body` por fora e verifica que a repetição devolve o texto alterado, o que uma reconstrução não conseguiria; e teste que compara a primeira resposta com o texto gravado
+
+## Gatilho de revisão desta revisão
 
 Qualquer caminho de escrita que não adquira o bloqueio da conta (operação em lote, transferência entre contas) invalida o argumento de ausência de janela e exige reavaliar a leitura prévia para esse caminho.

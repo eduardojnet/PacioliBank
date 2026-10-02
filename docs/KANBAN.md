@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 19.5, 25, 26, 27, 28 |
+| A Fazer | 6 | 19.2, 19.3, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 31 | 01 a 24, mais 18.1, 19.4, 20.1, 21.1, 24.1 e 24.2 |
+| Concluído | 32 | 01 a 24, mais 18.1, 19.4, 19.5, 20.1, 21.1, 24.1 e 24.2 |
 
 ---
 
@@ -101,12 +101,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 ---
 
 ## A Fazer
-
-### 19.5. Resolver a divergência entre o ADR-0006 e o uso de response_body
-
-`prioridade: Baixa` · `arquitetura` · `doc`
-
-ÂNCORA: ADR-0006, consequências; achado no card 24.2. `idempotency_records.response_body` é gravado e nunca lido: a repetição é reconstruída de `ledger_entries`. O corpo devolvido é idêntico ao original (há teste), mas por reconstrução, contra o que o ADR afirma. OPÇÕES: (a) corrigir o ADR; (b) devolver `response_body` de fato. BLOQUEIO: decisão do usuário.
 
 ### 19.2. Testar a API via Insomnia
 
@@ -662,3 +656,11 @@ ACHADO, item 2 do escopo: lendo eventos reais na outbox, o payload é o resultad
 ENTREGA (02/10/2026): tipo `LedgerEntryEvent` na aplicação do Ledger, separado do resultado da API; `WireFormat` como dono único do formato de instante, usado pela API e pelos eventos. Payload: valores como string na escala da moeda, instantes em `Z`, sentido `Credit`/`Debit`, `reversalOf` só no estorno, nenhum outro campo. EF 1.3, §9: tabela de campos, exemplo e o motivo de manter `v1`. VERIFICAÇÃO: 2 testes leem o payload gravado na outbox e conferem o conjunto exato de campos e o formato; reprovaram antes da mudança. 105 verdes. No Docker, crédito e estorno reais gravados e publicados no formato especificado.
 
 ACHADO: o ADR-0006 afirma devolver a resposta gravada em `response_body`, "não uma reconstrução"; o código nunca lê a coluna e reconstrói do ledger. Virou o card 19.5.
+
+### 19.5. Resolver a divergência entre o ADR-0006 e o uso de response_body
+
+`prioridade: Baixa` · `arquitetura` · `doc`
+
+ÂNCORA: ADR-0006, consequências; achado no card 24.2. `idempotency_records.response_body` é gravado e nunca lido: a repetição é reconstruída de `ledger_entries`. O corpo devolvido é idêntico ao original (há teste), mas por reconstrução, contra o que o ADR afirma. OPÇÕES: (a) corrigir o ADR; (b) devolver `response_body` de fato. BLOQUEIO: decisão do usuário.
+
+ENTREGA (02/10/2026), opção (b) por decisão do usuário: `PostingResponse` na aplicação monta o corpo da resposta de escrita uma vez; o store o grava em `response_body` e a API o devolve como texto, sem reserializar, na primeira resposta e na repetição. Coluna de `jsonb` para `json`, porque `jsonb` reordena chaves e normaliza espaços. ADR-0006 com a revisão e a alternativa rejeitada; ERD atualizado. VERIFICAÇÃO: teste que altera o `response_body` por fora e recebe o texto alterado na repetição; teste que compara a primeira resposta com o gravado; 107 verdes; no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256.

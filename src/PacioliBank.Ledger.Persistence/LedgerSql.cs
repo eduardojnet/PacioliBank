@@ -104,7 +104,7 @@ internal static class LedgerSql
              response_body, entry_id)
         VALUES
             (@accountId, @idempotencyKey, @requestHash, @responseStatus,
-             @responseBody::jsonb, @entryId)
+             @responseBody::json, @entryId)
         """;
 
     /// <summary>Evento de integracao, na mesma transacao (ADR-0008).</summary>
@@ -186,9 +186,14 @@ internal static class LedgerSql
          LIMIT @take
         """;
 
-    /// <summary>Lancamento e impressao originais, para a repeticao idempotente.</summary>
+    /// <summary>
+    /// Impressao e resposta originais, para a repeticao idempotente. A resposta
+    /// devolvida e response_body, o texto gravado; as colunas do lancamento
+    /// servem ao resultado interno, nao ao corpo HTTP (ADR-0006, card 19.5).
+    /// </summary>
     internal const string SelectForReplay = """
         SELECT i.request_hash  AS RequestHash,
+               i.response_body::text AS ResponseBody,
                e.entry_id      AS EntryId,
                e.account_id    AS AccountId,
                e.sequence      AS Sequence,
