@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (quinta revisão)
+**Última atualização:** 2026-10-02 (sexta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 57 passando (39 de domínio, 18 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Atenção:** os tipos que a L-07 dava como "escritos e não compilados" **não existem no disco**. Ver §6, L-07.
@@ -242,7 +242,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 37 cartões distribuídos em 7 colunas. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 41 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
@@ -252,16 +252,19 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 
 ## 7. Fila de execução
 
-Ordem fixa. Cada item só começa quando o anterior está verde.
+Ordem fixa. Cada item só começa quando o anterior está verde. O número em colchetes é o do cartão no quadro; subníveis (19.x) dependem do pai e não alteram a ordem.
 
-1. **Endpoints HTTP e tratamento de erro**: injeção de dependência, porta de entrada (L-03), endpoints de crédito, débito, estorno, posição e extrato, `ProblemDetails` com os códigos da EF §8.6, leitura do `Idempotency-Key`. Habilita teste via Insomnia
-2. ~~**Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
-3. **Diagramas em Mermaid no repositório** (L-02)
-4. **Correções documentais** (L-05)
-5. **Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
-6. **README final**
-7. **Despachante de outbox**
-8. **Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
+1. **[19] Endpoints HTTP e tratamento de erro**: injeção de dependência, porta de entrada (L-03), tipos de comando e exceções ausentes do disco (L-07), endpoints de crédito, débito, estorno, posição e extrato, `ProblemDetails` com os códigos da EF §8.6, leitura do `Idempotency-Key`
+   - **[19.1] Caminho de persistência do estorno** (L-08), junto ou depois do 19; pré-requisito do endpoint de estorno
+   - **[19.2] Teste via Insomnia**, bloqueado pelo 19
+   - **[19.3] Testes de contrato da API**, depois do 19
+2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
+3. **[20] Diagramas em Mermaid no repositório** (L-02)
+4. **[21] Correções documentais** (L-05)
+5. **[22] Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
+6. **[23] README final**
+7. **[24] Despachante de outbox**
+8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
 
 ---
 
@@ -346,3 +349,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Repositório público criado e publicado: L-01 encerrada, item 2 da fila concluído antes do item 1. Cartão movido para Concluído em `KANBAN.md` |
 | 2026-10-02 | L-09 registrada e encerrada: o README público subdeclarava domínio, persistência, idempotência e testes de integração como pendentes. README corrigido; a regra 9 passa a cobri-lo |
 | 2026-10-02 | Correções da L-09 commitadas e publicadas (3 commits, `origin/main` em `c8d90ff`). `CLAUDE.md` retirado do `.gitignore` e versionado; decisão registrada na §3 |
+| 2026-10-02 | Quadro sincronizado com a numeração aplicada no TickTick (41 cartões, 01 a 38 com subníveis 19.1 a 19.3). `KANBAN.md` regenerado por leitura direta do quadro; §6-A e §7 passam a citar o número do cartão. Push dos commits 12 e 13 confirmado (`origin/main` em `99924c4`) |
