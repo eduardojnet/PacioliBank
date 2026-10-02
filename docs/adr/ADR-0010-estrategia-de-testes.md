@@ -51,7 +51,7 @@ A decisão, portanto, não é "quais ferramentas usar". É **onde cada invariant
 
 **Toda invariante que depende do banco é testada contra o banco.** Testcontainers sobe um PostgreSQL real por execução, aplica as migrações reais ([ADR-0002](./ADR-0002-plataforma-e-armazenamento.md)) e cria os papéis reais com os privilégios reais ([ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md)).
 
-Consequência direta: o teste que verifica que `UPDATE` em `ledger_entries` é recusado só tem significado se executado com o papel `app_runtime` contra um PostgreSQL de verdade. Contra um simulador, ele testaria o simulador.
+Consequência direta: o teste que verifica que `UPDATE` em `ledger_entries` é recusado só tem significado se executado com o papel `pacioli_runtime` contra um PostgreSQL de verdade. Contra um simulador, ele testaria o simulador.
 
 ### Teste de concorrência com significado
 
@@ -86,13 +86,17 @@ A expressão "sem exceção" é a parte relevante. Critério de bloqueio que adm
 
 ```
 tests/
-├── Ledger.Domain.Tests/          # rápido, sem I/O
-├── Ledger.Integration.Tests/     # Reqnroll + Testcontainers
-│   └── Features/                 # arquivos .feature do BDD
-├── Ledger.Concurrency.Tests/     # paralelismo real
-├── Ledger.Architecture.Tests/    # NetArchTest
-└── Ledger.Contract.Tests/        # instantâneo do OpenAPI
+├── PacioliBank.Domain.Tests/          # rápido, sem I/O
+├── PacioliBank.Integration.Tests/     # Reqnroll + Testcontainers
+│   └── Features/                      # arquivos .feature do BDD
+├── PacioliBank.Concurrency.Tests/     # paralelismo real
+├── PacioliBank.Architecture.Tests/    # NetArchTest
+└── PacioliBank.Contract.Tests/        # instantâneo do OpenAPI
 ```
+
+> **Revisão de 2026-10-02 (lacuna L-05).** O prefixo era `Ledger.`. Substituído por `PacioliBank.`, porque `Ledger` passou a designar um módulo, não o sistema ([convenções](../convencoes-de-nomenclatura.md) §3).
+
+> **Estado da implementação em 2026-10-02.** A organização acima é a alvo. Existem hoje dois projetos: `PacioliBank.Domain.Tests` (59 testes) e `PacioliBank.Integration.Tests` (35 testes), este com xUnit e Testcontainers, **sem Reqnroll**: os cenários do BDD foram traduzidos para testes xUnit nomeados em português, e não executados a partir dos `.feature`. A concorrência está dentro de `Integration.Tests` (`ConcurrencyTests`), não em projeto próprio. `Architecture.Tests` e `Contract.Tests` não existem (cards 26 e 19.3). Consequência a declarar: a frase abaixo, "a especificação é o teste", vale como alvo; hoje existe tradução intermediária, e ela pode divergir do BDD.
 
 Os arquivos `.feature` são os do [BDD](../specs/BDD-comportamento.md), copiados sem adaptação. A especificação é o teste; não existe tradução intermediária que possa divergir.
 

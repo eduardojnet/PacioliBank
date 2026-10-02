@@ -60,9 +60,11 @@ pacioli-bank-ledger/
 └── README.md
 ```
 
+> **Estado em 2026-10-02.** A árvore acima é a alvo. Existem hoje `PacioliBank.Ledger`, `PacioliBank.Ledger.Persistence` (ausente da árvore: o adaptador de dados virou projeto próprio para que a inversão de dependência seja garantida pelo compilador), `PacioliBank.Api`, `PacioliBank.Domain.Tests` e `PacioliBank.Integration.Tests`. `Balances`, `Accounts`, `Events`, `Migrations`, `Concurrency.Tests`, `Architecture.Tests` e `Contract.Tests` não existem; ver [ADR-0001](./adr/ADR-0001-estilo-arquitetural.md) e [ADR-0010](./adr/ADR-0010-estrategia-de-testes.md), notas de estado.
+
 ### Correções aos ADRs decorrentes desta convenção
 
-Duas, registradas aqui e a aplicar na próxima revisão dos documentos afetados:
+Duas, registradas aqui e **aplicadas em 2026-10-02** nos documentos afetados (lacuna L-05), cada uma com nota de revisão no próprio ADR:
 
 1. **O [ADR-0001](./adr/ADR-0001-estilo-arquitetural.md) nomeia o módulo de publicação como `Integration`.** Renomeado para `Events`, porque `PacioliBank.Integration` colidiria semanticamente com `PacioliBank.Integration.Tests`, que são testes de integração e não testes do módulo de integração. Colisão de vocabulário dentro da mesma solution é fonte permanente de confusão.
 
@@ -98,7 +100,7 @@ A camada `Domain` de cada módulo é a fronteira verificada pelo teste de arquit
 | Papel de execução | `pacioli_runtime` |
 | Papel de leitura | `pacioli_readonly` |
 
-Substitui `app_migrator`, `app_runtime` e `app_readonly` usados nos exemplos do [ADR-0009](./adr/ADR-0009-seguranca-e-privilegio-minimo.md). O prefixo evita colisão em instância compartilhada com outros sistemas.
+Substitui `app_migrator`, `app_runtime` e `app_readonly` usados nos exemplos do [ADR-0009](./adr/ADR-0009-seguranca-e-privilegio-minimo.md), corrigidos lá em 2026-10-02. O prefixo evita colisão em instância compartilhada com outros sistemas.
 
 Tabelas em `snake_case` plural: `ledger_entries`, `balance_snapshots`, `idempotency_records`, `outbox_messages`, `accounts`.
 
@@ -133,7 +135,7 @@ urn:pacioli:problem:idempotency-key-conflict
 urn:pacioli:problem:account-inactive
 ```
 
-**URN, não URL.** A [EF](./specs/EF-especificacao-funcional.md) §8.4 usa `https://api.banco.example/problems/...` como ilustração. Adotar URL exigiria um domínio real e resolvível, sob pena de o campo `type` apontar para lugar nenhum, o que é pior que não apontar. A RFC admite qualquer URI, e URN é estável sem depender de infraestrutura.
+**URN, não URL.** A [EF](./specs/EF-especificacao-funcional.md) §8.4 usava `https://api.banco.example/problems/...` como ilustração, corrigida para URN na versão 1.1. Adotar URL exigiria um domínio real e resolvível, sob pena de o campo `type` apontar para lugar nenhum, o que é pior que não apontar. A RFC admite qualquer URI, e URN é estável sem depender de infraestrutura.
 
 ---
 

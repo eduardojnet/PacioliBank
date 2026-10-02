@@ -36,22 +36,24 @@ Há duas perguntas de arquitetura a responder, e nenhuma delas é "qual bibliote
 
 Três papéis distintos no banco de dados:
 
+> **Revisão de 2026-10-02 (lacuna L-05).** Os exemplos usavam o prefixo `app_*`. Substituído por `pacioli_*`, o nome efetivo em `db/init/001_roles_and_schema.sql`, para evitar colisão em instância compartilhada ([convenções](../convencoes-de-nomenclatura.md) §5).
+
 ```sql
 -- Migrações, exclusivamente. Nunca usado pela aplicação em execução.
-CREATE ROLE app_migrator;
-GRANT ALL ON SCHEMA ledger TO app_migrator;
+CREATE ROLE pacioli_migrator;
+GRANT ALL ON SCHEMA ledger TO pacioli_migrator;
 
 -- Aplicação. Não possui UPDATE nem DELETE sobre o ledger.
-CREATE ROLE app_runtime;
-GRANT SELECT, INSERT ON ledger.ledger_entries     TO app_runtime;
-GRANT SELECT, INSERT ON ledger.balance_snapshots  TO app_runtime;
-GRANT SELECT, INSERT ON ledger.idempotency_records TO app_runtime;
-GRANT SELECT, INSERT, UPDATE ON ledger.outbox_messages TO app_runtime;
-GRANT SELECT, UPDATE (last_sequence) ON ledger.accounts TO app_runtime;
+CREATE ROLE pacioli_runtime;
+GRANT SELECT, INSERT ON ledger.ledger_entries     TO pacioli_runtime;
+GRANT SELECT, INSERT ON ledger.balance_snapshots  TO pacioli_runtime;
+GRANT SELECT, INSERT ON ledger.idempotency_records TO pacioli_runtime;
+GRANT SELECT, INSERT, UPDATE ON ledger.outbox_messages TO pacioli_runtime;
+GRANT SELECT, UPDATE (last_sequence) ON ledger.accounts TO pacioli_runtime;
 
 -- Consulta operacional e auditoria. Somente leitura.
-CREATE ROLE app_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO app_readonly;
+CREATE ROLE pacioli_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA ledger TO pacioli_readonly;
 ```
 
 `UPDATE` na tabela `accounts` é concedido **apenas sobre a coluna `last_sequence`**. Nem mesmo o status da conta pode ser alterado por este sistema, porque o ciclo de vida da conta pertence a outro contexto ([EF](../specs/EF-especificacao-funcional.md) §3.2). O privilégio reflete a fronteira de escopo, o que faz do banco de dados mais um guardião do risco R-07.
@@ -77,7 +79,7 @@ Para o cliente final, as duas situações são indistinguíveis, o que impede en
 
 A tentativa negada é sempre registrada em auditoria com identificação do chamador, ainda que a resposta não revele nada.
 
-> **Correção aos documentos de especificação.** A [EF](../specs/EF-especificacao-funcional.md) §8.6 e o [BDD](../specs/BDD-comportamento.md) F09 descrevem `403 FORBIDDEN` para acesso a conta de terceiro, enquanto o cenário exige que a existência não seja revelada. A regra acima resolve a contradição, e os dois documentos devem ser atualizados na próxima revisão. O registro desta divergência é intencional: especificação corrigida em silêncio perde a rastreabilidade de por que mudou.
+> **Correção aos documentos de especificação.** A [EF](../specs/EF-especificacao-funcional.md) §8.6 e o [BDD](../specs/BDD-comportamento.md) F09 descrevem `403 FORBIDDEN` para acesso a conta de terceiro, enquanto o cenário exige que a existência não seja revelada. A regra acima resolve a contradição, e os dois documentos devem ser atualizados na próxima revisão. O registro desta divergência é intencional: especificação corrigida em silêncio perde a rastreabilidade de por que mudou. **Aplicada em 2026-10-02:** EF §8.6 e BDD F09 atualizados (lacuna L-05).
 
 ### 4. Minimização de dado pessoal
 
@@ -142,7 +144,7 @@ A verificação é automatizada: um teste exercita o caminho completo com dados 
 ## Validação
 
 - [BDD](../specs/BDD-comportamento.md) F09, todos os cenários
-- Teste de integração que tenta `UPDATE` e `DELETE` em `ledger_entries` com o papel `app_runtime` e espera recusa por privilégio
+- Teste de integração que tenta `UPDATE` e `DELETE` em `ledger_entries` com o papel `pacioli_runtime` e espera recusa por privilégio
 - Teste de matriz de autorização cobrindo todas as combinações de papel e endpoint
 - Varredura automatizada da saída de log em busca de dados sintéticos reconhecíveis
 - Varredura de segredos e auditoria de dependências no pipeline

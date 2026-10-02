@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.0
+**Versão:** 1.1
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -407,7 +407,7 @@ Content-Type: application/json
 
 ```json
 {
-  "type": "https://api.banco.example/problems/insufficient-funds",
+  "type": "urn:pacioli:problem:insufficient-funds",
   "title": "Saldo insuficiente",
   "status": 422,
   "code": "INSUFFICIENT_FUNDS",
@@ -442,13 +442,15 @@ O campo `computedFrom` assume `snapshot` ou `ledger` e é instrumento de observa
 | Código | HTTP | Repetível | Regra |
 |---|---|---|---|
 | `INVALID_AMOUNT` | 400 | Não | RN-002 |
+| `INVALID_REQUEST` | 400 | Não | §8.1 `[INFERIDO]` §8.7 |
 | `CURRENCY_MISMATCH` | 400 | Não | RN-007 |
 | `INVALID_POINT_IN_TIME` | 400 | Não | RN-009 |
 | `PAGE_SIZE_EXCEEDED` | 400 | Não | RF-005 |
 | `IDEMPOTENCY_KEY_REQUIRED` | 400 | Não | RN-005 |
 | `UNAUTHENTICATED` | 401 | Não | RF-009 |
-| `FORBIDDEN` | 403 | Não | RF-009 |
-| `ACCOUNT_NOT_FOUND` | 404 | Não | RF-003 |
+| `FORBIDDEN` | 403 | Não | RF-009. **Só para serviço interno com escopo amplo.** Cliente final recebe `404 ACCOUNT_NOT_FOUND` também para conta de terceiro ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3) |
+| `ACCOUNT_NOT_FOUND` | 404 | Não | RF-003, RF-009 |
+| `ENTRY_NOT_FOUND` | 404 | Não | RF-007 `[INFERIDO]` §8.7 |
 | `IDEMPOTENCY_KEY_CONFLICT` | 409 | Não | RN-005 |
 | `ENTRY_ALREADY_REVERSED` | 409 | Não | RN-004 |
 | `CANNOT_REVERSE_REVERSAL` | 409 | Não | RN-004 |
@@ -458,6 +460,22 @@ O campo `computedFrom` assume `snapshot` ou `ledger` e é instrumento de observa
 | `SERVICE_UNAVAILABLE` | 503 | Sim | RF-008 |
 
 A coluna **Repetível** é contratual: define quais erros o chamador pode reenviar com a mesma chave de idempotência. Sem essa definição explícita, cada integrador adota política própria, e a política errada gera duplicidade ou perda de transação.
+
+**`type` do problema:** `urn:pacioli:problem:<código em minúsculas, com hífen>`, por exemplo `urn:pacioli:problem:insufficient-funds`. URN, não URL ([convenções](../convencoes-de-nomenclatura.md) §7). A versão 1.0 desta seção ilustrava com URL.
+
+### 8.7 Decisões de contrato tomadas na implementação `[INFERIDO]`
+
+A escrita dos endpoints encontrou pontos que esta especificação não respondia. Cada um recebeu conduta provisória, registrada aqui em vez de decidida em silêncio no código (lacuna L-11 do [ESTADO](../ESTADO.md)). Todas são reversíveis sem migração de dados.
+
+| Ponto | Conduta | Razão |
+|---|---|---|
+| Estorno de lançamento inexistente ou de outra conta | `404 ENTRY_NOT_FOUND` nos dois casos | Responder diferente para "de outra conta" revelaria a existência do lançamento: mesmo princípio do ADR-0009 para contas |
+| Corpo malformado, campo obrigatório ausente, cursor ilegível | `400 INVALID_REQUEST` | Erro de protocolo sem regra de negócio correspondente; sem código estável, o chamador não distingue causas |
+| Moeda fora do catálogo (ex.: `USD`) | `400 CURRENCY_MISMATCH` | Para o chamador, é moeda divergente da conta; o BDD F01 espera esse código (QA-005) |
+| Corpo do estorno | `{ "occurredAt": "..." }`, obrigatório | Sem ele, o padrão "agora" mudaria a cada reenvio, a impressão do comando mudaria junto e a repetição viraria conflito de chave (ADR-0006) |
+| `X-Correlation-Id` que não é GUID | Substituído por GUID gerado, devolvido no cabeçalho | O identificador interno é GUID; §8.1 não fixava formato |
+| Cursor do extrato | Parâmetro `cursor`, valor `nextCursor` da página anterior; ausente na última página | A sequência é estável e sem lacunas (RN-006): serve de cursor sem repetir nem omitir |
+| `description` e `metadata` do corpo (§8.4) | Aceitos e **não persistidos** | O lançamento ainda não carrega esses campos; declarado no ESTADO §5 como não implementado |
 
 ---
 
@@ -485,6 +503,7 @@ A coluna **Repetível** é contratual: define quais erros o chamador pode reenvi
 | QA-005 | Há exigência multimoeda? | Altera RN-007 e `Money` | Produto | BRL, com `Money` portando moeda desde o início |
 | QA-006 | Volume esperado: lançamentos por segundo, contas, taxa de leitura? | Dimensiona toda a ENF | Dados do legado | Premissa declarada na [ENF](./ENF-especificacao-nao-funcional.md) §3, explicitamente marcada como premissa |
 | QA-007 | Quem são os originadores e qual o modelo de autenticação vigente? | Altera RF-009 | Arquitetura corporativa | JWT validado contra emissor externo |
+| QA-008 | Qual o tamanho máximo de página do extrato? | Altera RF-005 e a proteção contra abuso (RNF-012) | Produto e canais | Padrão 50, máximo 200, acima disso `400 PAGE_SIZE_EXCEEDED`. Número escolhido na implementação, não informado pelo negócio |
 
 **Compromisso de método:** nenhuma destas lacunas foi preenchida com número apresentado como fato. Cada conduta provisória é reversível e está isolada em ponto de extensão, de modo que a resposta do negócio altere configuração ou uma política, não o núcleo do domínio.
 
@@ -513,3 +532,4 @@ A coluna **Repetível** é contratual: define quais erros o chamador pode reenvi
 | Versão | Data | Autor | Alteração |
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
+| 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | Lacuna L-05: `FORBIDDEN` restrito a serviço interno (ADR-0009); `type` de problema como URN. Lacuna L-11: §8.7 com as decisões de contrato tomadas na implementação, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 |

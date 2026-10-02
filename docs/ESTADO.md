@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (nona revisão)
+**Última atualização:** 2026-10-02 (décima revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 94 passando (59 de domínio, 35 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -200,18 +200,26 @@ Experimento pendente: remover `FOR NO KEY UPDATE`, rodar só a suíte de concorr
 
 Qualquer resultado vai para o ADR-0005 como validação empírica.
 
-### L-05: Correções pendentes nos documentos (MÉDIA)
+### L-05: Correções pendentes nos documentos (ENCERRADA em 2026-10-02, card 21)
 
-Divergências já identificadas e registradas, ainda não aplicadas nos documentos de origem:
+Quatro divergências estavam registradas e não aplicadas. Todas aplicadas, cada uma com nota de revisão no documento de origem dizendo o que mudou e por quê, em vez de edição silenciosa:
 
-| Documento | Correção | Registrada em |
+| Documento | Correção | Origem da regra |
 |---|---|---|
-| EF §8.6 e BDD F09 | `403` para conta de terceiro revela existência; deve ser `404` para cliente final | ADR-0009 |
-| ADR-0001 | Módulo `Integration` renomeado para `Events`, por colisão com os testes de integração | convenções §3 |
-| ADR-0010 | Projetos de teste com prefixo `Ledger.`, substituído por `PacioliBank.` | convenções §3 |
-| ADR-0009 | Papéis `app_*` nos exemplos, substituídos por `pacioli_*` | convenções §5 |
+| EF §8.6 e BDD F09 | Conta de terceiro responde `404 ACCOUNT_NOT_FOUND` ao cliente final; `403 FORBIDDEN` fica restrito a serviço interno | ADR-0009 §3 |
+| ADR-0001 | Módulo `Integration` renomeado para `Events` | convenções §3 |
+| ADR-0010 | Prefixo `Ledger.` dos projetos de teste substituído por `PacioliBank.` | convenções §3 |
+| ADR-0009 | Papéis `app_*` substituídos por `pacioli_*` nos exemplos e na validação | convenções §5 |
 
-Registrar em vez de corrigir em silêncio preserva a rastreabilidade de por que mudou. Mas as correções precisam ser aplicadas antes da entrega.
+**Achadas ao verificar o critério "coerentes com o código"**, e tratadas no mesmo card, com o escopo ampliado registrado no cartão:
+
+| Documento | Divergência | Tratamento |
+|---|---|---|
+| ADR-0010 | Árvore de testes com Reqnroll, `.feature` executáveis e projeto próprio de concorrência; nada disso existe | Nota de estado: hoje há tradução dos cenários para xUnit, e ela pode divergir do BDD. A decisão não muda |
+| ADR-0001 e convenções §3 | Módulos `Balances`, `Accounts`, `Events` e o projeto `Migrations` descritos como se existissem; `Persistence`, que existe, ausente | Nota de estado nos dois documentos. Árvore e tabela permanecem como alvo |
+| EF §8.4 | `type` do problema ilustrado com URL; o código e as convenções usam URN | Exemplo corrigido para URN |
+
+Notas de estado não alteram decisão: separam o alvo do que existe, pela regra 5 do `CLAUDE.md`.
 
 ### L-07: Código dado como escrito, mas ausente do disco (ENCERRADA em 2026-10-02, cards 19.1 e 19)
 
@@ -253,7 +261,7 @@ Detectada ao verificar o repositório recém-publicado. A tabela "Estado atual d
 
 **Correção provável, a decidir em ADR:** sob o bloqueio da conta, consultar o registro de idempotência antes de o agregado decidir. Sob bloqueio, a consulta prévia não tem a janela de corrida que o ADR-0006 rejeita, porque o registro é gravado pela mesma conta serializada. Contraria a letra do ADR-0006 ("nunca por consulta prévia"), por isso exige revisão do ADR, e não correção silenciosa. Fora do escopo do card 19.
 
-### L-11: Decisões de contrato tomadas na implementação, sem respaldo na EF (MÉDIA)
+### L-11: Decisões de contrato tomadas na implementação, sem respaldo na EF (ENCERRADA em 2026-10-02, card 21)
 
 Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebeu conduta provisória, registrada aqui para não virar suposição silenciosa. Todas são reversíveis sem migração de dados.
 
@@ -266,7 +274,7 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 | `occurredAt` no estorno | Obrigatório no corpo | Sem ele, o padrão "agora" mudaria a cada reenvio e a repetição viraria conflito de chave |
 | `X-Correlation-Id` que não é GUID | Substituído por um GUID gerado, devolvido no cabeçalho | O domínio usa GUID; a EF não define formato |
 
-Destino: incorporar à EF §8 na revisão documental (card 21), ou reverter o que o negócio decidir diferente.
+**Incorporado à EF 1.1:** §8.7 com as decisões de contrato, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST` no catálogo da §8.6, e o tamanho de página como questão aberta QA-008 na §10, por ser decisão de produto e não de engenharia. Continuam provisórias e marcadas `[INFERIDO]`: encerrar a lacuna significa que deixaram de ser silenciosas, não que foram validadas pelo negócio.
 
 ### L-06: `AnalysisMode` ainda em `Default` (BAIXA)
 
@@ -294,7 +302,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
-4. **[21] Correções documentais** (L-05)
+4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
 5. **[22] Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
 6. **[23] README final**
 7. **[24] Despachante de outbox**
@@ -393,3 +401,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 19.1 concluído: `ReverseAsync` no store, sob o mesmo bloqueio por conta, com 9 testes de integração (66 verdes). L-08 encerrada. L-10 registrada e verificada por execução: reenvio idempotente recusado quando o saldo mudou |
 | 2026-10-02 | Card 19 concluído: porta de entrada `ILedgerService`, os 5 endpoints da EF §8.3, `ProblemDetails` com o catálogo da §8.6, correlação, prontidão ligada ao PostgreSQL. L-03 e L-07 encerradas; L-11 registrada (6 decisões de contrato provisórias). O teste via curl achou 2 defeitos que a suíte não via (corpo da repetição diferente por precisão de instante; estorno duplicado saindo como saldo insuficiente), corrigidos com teste que reprova sem a correção. 94 verdes. `.dockerignore` criado: sem ele a imagem não compilava |
 | 2026-10-02 | Card 20 concluído: modelo C4 em Mermaid em `docs/diagrams/` (C1, C2, C3, sequência do débito), com estado por elemento. L-02 encerrada; requisito "documentação no repositório" passa a atendido. C3 e sequência redesenhados a partir do código, com correspondência explícita ao Lucid |
+| 2026-10-02 | Card 21 concluído: as 4 correções da L-05 aplicadas com nota de revisão; 3 divergências novas achadas ao conferir os documentos contra o código (ADR-0010, ADR-0001 e convenções, EF §8.4) e tratadas; L-11 incorporada à EF 1.1 (§8.7, QA-008). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas |

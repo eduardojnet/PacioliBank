@@ -12,9 +12,9 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 | Backlog/Ideias | 10 | 24, 25, 31 a 38 |
 | A Fazer | 6 | 19.2, 19.3, 23, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
-| Em Revisão | 2 | 21, 22 |
+| Em Revisão | 1 | 22 |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 21 | 01 a 20 |
+| Concluído | 22 | 01 a 21 |
 
 ---
 
@@ -189,24 +189,11 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 21, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 22, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
 ## Em Revisão
-
-### 21. Aplicar as correções documentais pendentes
-
-`prioridade: Média` · `doc` · `risco`
-
-LACUNA L-05. Quatro divergências já identificadas e registradas, ainda não aplicadas nos documentos de origem:
-
-1. EF 8.6 e BDD F09: 403 para conta de terceiro revela a existência da conta; deve ser 404 para cliente final (registrado no ADR-0009).
-2. ADR-0001: módulo Integration renomeado para Events, por colisão com os testes de integração.
-3. ADR-0010: projetos de teste com prefixo Ledger., substituído por PacioliBank.
-4. ADR-0009: papéis app_* nos exemplos, substituídos por pacioli_*.
-
-CRITÉRIO: os quatro documentos coerentes entre si e com o código.
 
 ### 22. Verificar o poder de detecção do teste de concorrência
 
@@ -539,3 +526,22 @@ ENTREGA (02/10/2026): quatro diagramas em `docs/diagrams/` (C1 contexto, C2 cont
 VERIFICAÇÃO: os quatro renderizados localmente com `mermaid-cli` e conferidos visualmente antes do commit; o C3 foi reorganizado duas vezes até eliminar sobreposição.
 
 DIVERGÊNCIA REGISTRADA: o C3 do Lucid não corresponde ao código. O do repositório segue o código, com tabela de correspondência. L-02 encerrada; o requisito obrigatório "documentação no repositório" passa a atendido.
+
+### 21. Aplicar as correções documentais pendentes
+
+`prioridade: Média` · `doc` · `risco`
+
+LACUNA L-05. Quatro divergências já identificadas e registradas, ainda não aplicadas nos documentos de origem:
+
+1. EF 8.6 e BDD F09: 403 para conta de terceiro revela a existência da conta; deve ser 404 para cliente final (registrado no ADR-0009).
+2. ADR-0001: módulo Integration renomeado para Events, por colisão com os testes de integração.
+3. ADR-0010: projetos de teste com prefixo Ledger., substituído por PacioliBank.
+4. ADR-0009: papéis app_* nos exemplos, substituídos por pacioli_*.
+
+CRITÉRIO: os quatro documentos coerentes entre si e com o código.
+
+ESCOPO AMPLIADO em 02/10, com motivo: o critério pede coerência "com o código", e a verificação achou mais 3 divergências da mesma natureza (ADR-0010 sem Reqnroll nem projeto de concorrência no código; ADR-0001 e convenções com módulos inexistentes; EF §8.4 com URL em vez de URN). Mais a L-11, cujo destino proposto era este card. Total de 7 itens, dentro do limite da política.
+
+ENTREGA (02/10/2026): as 4 correções aplicadas, cada uma com nota de revisão no documento de origem. As 3 divergências novas tratadas com nota "Estado da implementação", sem alterar decisão. L-11 incorporada à EF: §8.7, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 (tamanho de página). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas.
+
+VERIFICAÇÃO: busca no repositório por `app_`, `FORBIDDEN`, `Integration` como módulo, prefixo `Ledger.` e `api.banco.example`; as ocorrências restantes são as próprias notas de revisão.

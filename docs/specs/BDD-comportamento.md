@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 1 de 3 do pacote de especificação
-**Versão:** 1.0
+**Versão:** 1.1
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -542,8 +542,8 @@ Funcionalidade: Controle de acesso e proteção de dados sensíveis
     Dado que o cliente "CLIENTE-1" é titular da conta "CONTA-A"
     E que o cliente "CLIENTE-2" é titular da conta "CONTA-B"
     Quando o cliente "CLIENTE-2" consultar a posição consolidada de "CONTA-A"
-    Então a requisição deve ser recusada com o código "FORBIDDEN"
-    E a resposta não deve revelar se a conta existe
+    Então a requisição deve ser recusada com o código "ACCOUNT_NOT_FOUND"
+    E a resposta deve ser idêntica à de uma conta inexistente
 
   @RF-009 @RNF-021 @critico @integracao
   Cenário: Dados sensíveis não aparecem em log
@@ -672,3 +672,4 @@ Nenhuma destas lacunas foi preenchida com número ou política inventada. Todas 
 | Versão | Data | Autor | Alteração |
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
+| 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | F09: conta de terceiro responde `ACCOUNT_NOT_FOUND`, e não `FORBIDDEN`, para não revelar existência ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3; lacuna L-05) |

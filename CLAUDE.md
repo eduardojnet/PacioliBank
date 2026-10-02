@@ -97,7 +97,7 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 19, 19.1 e 20 concluídos: endpoints de negócio no ar e modelo C4 em Mermaid em `docs/diagrams/`. O próximo da fila é o **21** (correções documentais; a L-11 tem esse card como destino proposto, ainda não incorporado ao escopo dele). Ver `docs/ESTADO.md §7`.
+Cards 19, 19.1, 20 e 21 concluídos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **22** (experimento de detecção do teste de concorrência, L-04). Ver `docs/ESTADO.md §7`.
 
 Lacuna aberta de severidade ALTA fora da fila: **L-10** (reenvio idempotente recusado quando o saldo mudou), que exige revisão do ADR-0006.
 
