@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 10 | Evoluções com gatilho de adoção declarado. Nenhuma entra sem ADR. |
-| A Fazer | 8 | Fila ordenada. Três são requisito obrigatório do enunciado. |
+| A Fazer | 7 | Fila ordenada. Duas são requisito obrigatório do enunciado. |
 | Em Andamento | 1 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 2 | Entregue, porém sob verificação ou com divergência conhecida. |
 | Bloqueado | 3 | Dois bloqueios legítimos e um que é, ele próprio, parte da entrega. |
-| Concluído | 13 | Especificação, decisões, domínio, persistência e testes. |
+| Concluído | 14 | Especificação, decisões, domínio, persistência, testes e repositório público. |
 
 ---
 
@@ -137,16 +137,6 @@ ESCOPO:
 
 CRITÉRIO: build sem avisos, 57 testes ainda verdes, docker compose up servindo os endpoints, e um crédito seguido de consulta de posição funcionando via curl.
 
-### Criar o repositório público no GitHub
-
-`prioridade: Alta` · `requisito-obrigatorio` · `risco`
-
-LACUNA L-01, BLOQUEANTE. Requisito obrigatório explícito do enunciado: sem repositório público, o teste é desconsiderado.
-
-ATENÇÃO AO PROCESSO: o enunciado avalia como se pensa e prioriza. Um push único com todo o código sinaliza ausência de processo. Preferir commits incrementais com mensagens descritivas, agrupados por decisão.
-
-CRITÉRIO: repositório público acessível, README renderizando, histórico legível.
-
 ### Converter os diagramas C4 para Mermaid no repositório
 
 `prioridade: Alta` · `doc` · `requisito-obrigatorio`
@@ -205,15 +195,17 @@ DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
 ## Em Andamento
 
-### Migrar o ciclo de desenvolvimento para Claude Code
+### Migrar o ciclo de desenvolvimento para o terminal local
 
 `prioridade: Alta` · `processo`
 
-MOTIVO: nesta sessão não há shell na máquina, então todo build e teste depende de execução manual e cada erro custa um ciclo completo. Um aviso de compilação consumiu 3 turnos.
+MOTIVO: no ambiente anterior não havia shell na máquina, então todo build e teste dependia de execução manual e cada erro custava um ciclo completo. Um aviso de compilação consumiu 3 turnos.
 
-GANHO: ciclo fechado de código, git nativo com commits incrementais, gh CLI para o repositório público, Docker e Testcontainers executados diretamente.
+GANHO: ciclo fechado de código, git nativo com commits incrementais, Docker e Testcontainers executados diretamente.
 
-PROCEDIMENTO: cd no repositório, executar claude, colar o bloco de retomada da seção 10 do ESTADO.md.
+PROCEDIMENTO: abrir o terminal no repositório e retomar pelo bloco da seção 10 do ESTADO.md.
+
+ANDAMENTO (2026-10-02): build, suíte e push ao GitHub já executados no terminal local. Falta o critério abaixo, que exige uma alteração de código.
 
 CRITÉRIO: primeira alteração de código compilada e testada sem intervenção manual.
 
@@ -403,3 +395,15 @@ RESULTADO: 57 testes verdes no total.
 docs/ESTADO.md: documento vivo com o que existe, o que falta, 6 lacunas por severidade, fila de execução e bloco de retomada para nova sessão.
 
 Seção 5 lista explicitamente o que NÃO está implementado.
+
+### Criar o repositório público no GitHub
+
+`prioridade: Alta` · `requisito-obrigatorio` · `risco`
+
+LACUNA L-01, BLOQUEANTE. Requisito obrigatório explícito do enunciado: sem repositório público, o teste é desconsiderado.
+
+ATENÇÃO AO PROCESSO: o enunciado avalia como se pensa e prioriza. Um push único com todo o código sinaliza ausência de processo. Preferir commits incrementais com mensagens descritivas, agrupados por decisão.
+
+CRITÉRIO: repositório público acessível, README renderizando, histórico legível.
+
+RESULTADO (2026-10-02): https://github.com/eduardojnet/PacioliBank, público, branch main, histórico em 7 commits agrupados por área. Os commits foram criados no mesmo dia, ao versionar o trabalho já existente; não refletem a cronologia original. Compilação de cada commit isolado não verificada [NVI].

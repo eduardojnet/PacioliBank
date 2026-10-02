@@ -33,9 +33,9 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido, precisa da revisão final |
 | Toda documentação no próprio repositório | **Parcial**: diagramas estão fora (ver §6, L-02) |
-| **Repositório público no GitHub** | **NÃO ATENDIDO** (ver §6, L-01) |
+| Repositório público no GitHub | Atendido: https://github.com/eduardojnet/PacioliBank (ver §6, L-01) |
 
-> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Dois itens acima impedem a entrega hoje.
+> O enunciado declara que o teste é desconsiderado se os requisitos obrigatórios não forem minimamente atendidos. Um item acima ainda impede a entrega hoje: os diagramas fora do repositório (L-02).
 
 ---
 
@@ -144,9 +144,11 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 
 ## 6. Lacunas conhecidas, por severidade
 
-### L-01: Repositório público no GitHub não existe (BLOQUEANTE)
+### L-01: Repositório público no GitHub (ENCERRADA em 2026-10-02)
 
-Requisito obrigatório explícito. Sem ele, o teste é desconsiderado. É barato e fácil de esquecer na correria final.
+Requisito obrigatório explícito. Atendido: https://github.com/eduardojnet/PacioliBank, público, branch `main`.
+
+O histórico tem 7 commits agrupados por área (base, banco, domínio, persistência, API, decisões, estado). Foram criados no mesmo dia, ao versionar o trabalho já existente, e não reproduzem a cronologia original; nenhuma data foi alterada. A partir daqui cada entrega vira commit próprio. Que cada um dos 7 commits compile isoladamente não foi verificado [NVI].
 
 ### L-02: Diagramas fora do repositório (BLOQUEANTE PARCIAL)
 
@@ -221,7 +223,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 37 cartões distribuídos em 7 colunas. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
-**Limitação a conhecer:** o conector do TickTick existe apenas no ambiente Cowork. Uma sessão de Claude Code no terminal **não alcança o quadro**. Enquanto o trabalho correr por lá, o quadro fica congelado e precisa ser atualizado manualmente, ou sincronizado em uma passagem posterior pelo Cowork.
+**Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
 Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um cartão ali significa trabalho registrado sem critério, e a ação é triá-lo, não executá-lo. O limite de **Em Andamento é um cartão**.
 
@@ -230,7 +232,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 Ordem fixa. Cada item só começa quando o anterior está verde.
 
 1. **Endpoints HTTP e tratamento de erro**: injeção de dependência, porta de entrada (L-03), endpoints de crédito, débito, estorno, posição e extrato, `ProblemDetails` com os códigos da EF §8.6, leitura do `Idempotency-Key`. Habilita teste via Insomnia
-2. **Repositório público no GitHub** (L-01)
+2. ~~**Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. **Diagramas em Mermaid no repositório** (L-02)
 4. **Correções documentais** (L-05)
 5. **Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
@@ -316,5 +318,6 @@ por quê. Não avance sem minha confirmação.
 | Data | Alteração |
 |---|---|
 | 2026-10-02 | Criação. Domínio e persistência completos, 57 testes verdes, 11 ADRs, 3 diagramas no Lucid |
-| 2026-10-02 | Quadro Kanban criado no TickTick com 37 cartões; `KANBAN.md` e `CLAUDE.md` acrescentados; lacuna L-07 registrada (código não compilado) |
+| 2026-10-02 | Quadro Kanban criado no TickTick com 37 cartões; `KANBAN.md` acrescentado; lacuna L-07 registrada (código não compilado) |
 | 2026-10-02 | Build e suíte verificados (0 avisos, 57 verdes). L-07 encerrada: os tipos descritos não existiam no disco. L-08 registrada (estorno sem caminho de persistência). Contagem de exceções corrigida para 12 |
+| 2026-10-02 | Repositório público criado e publicado: L-01 encerrada, item 2 da fila concluído antes do item 1. Cartão movido para Concluído em `KANBAN.md` |
