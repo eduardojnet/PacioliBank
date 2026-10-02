@@ -18,6 +18,7 @@ namespace PacioliBank.Ledger.Persistence;
 /// <list type="number">
 ///   <item>bloqueia a linha da conta;</item>
 ///   <item>so entao le a posicao;</item>
+///   <item>reconhece a repeticao de comando ja efetivado (L-10);</item>
 ///   <item>o agregado decide;</item>
 ///   <item>lancamento, sequencia, idempotencia e outbox sao gravados juntos.</item>
 /// </list>
@@ -112,6 +113,15 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         var account = await LockAndLoadAsync(connection, transaction, accountId, cancellationToken).ConfigureAwait(false);
 
+        var earlier = await ReplayUnderLockAsync(
+            connection, transaction, accountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
+
+        if (earlier is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return earlier;
+        }
+
         // O dominio decide. Qualquer rejeicao sai daqui como excecao, antes de
         // qualquer gravacao e antes de a sequencia ser consumida (RN-006).
         var entry = account.Post(request);
@@ -151,6 +161,18 @@ public sealed class PostgresLedgerStore : ILedgerStore
         // precisa da mesma serializacao por conta (ADR-0005).
         var account = await LockAndLoadAsync(connection, transaction, accountId, cancellationToken).ConfigureAwait(false);
 
+        // A repeticao tem precedencia sobre qualquer rejeicao, inclusive sobre
+        // "ja estornado": o reenvio do proprio estorno encontra o original
+        // estornado, e precisa receber o resultado original (ADR-0006).
+        var earlier = await ReplayUnderLockAsync(
+            connection, transaction, accountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
+
+        if (earlier is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return earlier;
+        }
+
         // O original e imutavel (RN-003), entao le-lo sem bloqueio proprio e seguro.
         var row = await connection.QuerySingleOrDefaultAsync<EntryRow>(new CommandDefinition(
             LedgerSql.SelectEntry, new { entryId }, transaction, cancellationToken: cancellationToken))
@@ -159,21 +181,6 @@ public sealed class PostgresLedgerStore : ILedgerStore
         if (row is null)
         {
             throw new EntryNotFoundException(entryId);
-        }
-
-        if (row.AlreadyReversed)
-        {
-            // O reenvio do proprio estorno encontra o original ja estornado. A
-            // repeticao legitima tem precedencia sobre qualquer rejeicao; a
-            // impressao inclui conta e lancamento, entao so casa com o mesmo
-            // comando (ADR-0006).
-            var replayed = await TryReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (replayed is not null)
-            {
-                return replayed;
-            }
         }
 
         // Titularidade, estorno de estorno, duplicidade e saldo sao decididos
@@ -212,6 +219,33 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
         return ToResult(entry, recordedAt, replayed: false);
     }
+
+    /// <summary>
+    /// Reconhece a repeticao de um comando ja efetivado, ANTES de o agregado
+    /// decidir (lacuna L-10, revisao do ADR-0006).
+    /// </summary>
+    /// <remarks>
+    /// Sem este passo, o agregado julgaria o reenvio pelo estado ATUAL da conta:
+    /// um debito ja efetivado seria recusado por saldo se o saldo tivesse caido
+    /// depois, e o chamador receberia rejeicao para um pagamento consumado.
+    /// <para>
+    /// A consulta previa que o ADR-0006 proibe e a feita FORA de serializacao,
+    /// com janela entre o SELECT e o INSERT. Esta e feita sob o bloqueio da
+    /// conta: o registro de uma chave so e gravado por quem detem esse mesmo
+    /// bloqueio, e em READ COMMITTED a leitura apos adquiri-lo enxerga tudo o
+    /// que o detentor anterior confirmou. Nao ha janela. A violacao de chave
+    /// primaria continua como segunda barreira, para qualquer caminho futuro
+    /// que grave sem o bloqueio.
+    /// </para>
+    /// </remarks>
+    private static Task<PostEntryResult?> ReplayUnderLockAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid accountId,
+        string idempotencyKey,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken) =>
+        ReadReplayAsync(connection, transaction, accountId, idempotencyKey, requestHash, cancellationToken);
 
     /// <summary>
     /// Bloqueia a linha da conta e, so entao, carrega a posicao e reidrata o
@@ -346,9 +380,22 @@ public sealed class PostgresLedgerStore : ILedgerStore
     {
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
 
+        return await ReadReplayAsync(connection, transaction: null, accountId, idempotencyKey, requestHash, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<PostEntryResult?> ReadReplayAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        Guid accountId,
+        string idempotencyKey,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
         var row = await connection.QuerySingleOrDefaultAsync<ReplayRow>(new CommandDefinition(
             LedgerSql.SelectForReplay,
             new { accountId, idempotencyKey },
+            transaction,
             cancellationToken: cancellationToken)).ConfigureAwait(false);
 
         if (row is null)

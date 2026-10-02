@@ -3,7 +3,7 @@
 **Projeto:** PacioliBank Ledger
 **Quadro:** TickTick, projeto `PacioliBank`
 **Espelho versionado:** [`docs/KANBAN.md`](./KANBAN.md)
-**Versão:** 1.1 (2026-10-02)
+**Versão:** 1.2 (2026-10-02)
 
 Este documento é a política do quadro, não um ADR. Nomenclatura e processo são convenção: não rastreiam a um requisito, e a regra 4 do [índice de ADRs](./adr/README.md) exige rastreabilidade.
 
@@ -183,7 +183,12 @@ Todo cartão carrega um número no início do título, com dois dígitos e ponto
 | 29 a 30 | Bloqueado sem desbloqueio previsto no desafio |
 | 31 a 38 | Backlog. **A ordem aqui é indicativa**, não compromisso: o que governa é o gatilho declarado no cartão |
 
-**Subníveis** marcam dependência real, não agrupamento temático: `19.1` só pode começar depois ou junto de `19`, e não faz sentido sozinho. O número do pai existe como cartão; não se criam cartões-pai apenas para abrigar filhos.
+**Subníveis** marcam uma de duas coisas, nunca agrupamento temático:
+
+1. **Dependência real:** `19.1` só pode começar depois ou junto de `19`, e não faz sentido sozinho
+2. **Mesmo item da fila `§7`:** `20.1` não depende de `20`, mas realiza o mesmo item e entrega no mesmo diretório. Pode ser executado antes, depois ou junto
+
+O número do pai existe como cartão; não se criam cartões-pai apenas para abrigar filhos.
 
 **Regras de atribuição:**
 

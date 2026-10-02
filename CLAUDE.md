@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 94 testes; os de integração exigem Docker
+dotnet test                   # 97 testes; os de integração exigem Docker
 docker compose up --build     # API em http://localhost:8080
 docker compose down -v        # obrigatório após qualquer mudança de esquema
 ```
@@ -66,7 +66,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
-  PacioliBank.Integration.Tests/   35 testes, PostgreSQL real, inclui concorrencia, estorno e extrato
+  PacioliBank.Integration.Tests/   38 testes, PostgreSQL real, inclui concorrencia, estorno e extrato
 db/init/                           esquema, papeis e privilegios
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
 ```
@@ -97,8 +97,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 19, 19.1, 20, 21 e 22 concluídos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **23** (README final). Ver `docs/ESTADO.md §7`.
+Cards 19, 19.1, 19.4, 20, 21 e 22 concluídos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **23** (README final). Ver `docs/ESTADO.md §7`.
 
-Lacuna aberta de severidade ALTA fora da fila: **L-10** (reenvio idempotente recusado quando o saldo mudou), que exige revisão do ADR-0006.
+Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 
-Antes de começar, rode `dotnet test`. Esperado: 94 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 97 passando, sem avisos.

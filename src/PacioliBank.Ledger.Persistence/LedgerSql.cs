@@ -92,10 +92,11 @@ internal static class LedgerSql
 
     /// <summary>
     /// Registro de idempotencia, na MESMA transacao do lancamento.
-    /// A violacao da chave primaria aqui e o mecanismo de deteccao, nao um caso
-    /// excepcional: consulta previa abriria a janela de corrida entre o SELECT e
-    /// o INSERT, e e exatamente nessa janela que as requisicoes simultaneas
-    /// chegam (ADR-0006).
+    /// A repeticao e reconhecida antes, por SelectForReplay sob o bloqueio da
+    /// conta, onde nao ha janela de corrida (revisao do ADR-0006, L-10). A
+    /// violacao da chave primaria aqui continua como segunda barreira: consulta
+    /// previa FORA do bloqueio abriria a janela entre o SELECT e o INSERT, e e
+    /// nessa janela que as requisicoes simultaneas chegam.
     /// </summary>
     internal const string InsertIdempotency = """
         INSERT INTO ledger.idempotency_records

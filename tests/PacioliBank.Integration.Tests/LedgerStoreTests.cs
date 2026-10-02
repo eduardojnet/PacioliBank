@@ -124,6 +124,58 @@ public class LedgerStoreTests
         Assert.Equal(primeira with { Replayed = true }, segunda);
     }
 
+    // L-10: a repeticao precisa ser reconhecida antes de o agregado decidir.
+    // Sem isso, o estado atual da conta, que mudou desde o envio original,
+    // recusa um comando que ja foi efetivado.
+
+    [Fact]
+    public async Task Reenvio_de_debito_ja_efetivado_devolve_o_original_mesmo_com_o_saldo_tendo_caido()
+    {
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 150.00m);
+        var debito = Comando(EntryDirection.Debit, 100.00m, "k-pagamento");
+
+        var original = await PostAsync(conta, debito);
+        await PostAsync(conta, Comando(EntryDirection.Debit, 50.00m, "k-outro"));
+
+        // Saldo agora e zero: reexecutado, o debito seria recusado por saldo.
+        var reenvio = await PostAsync(conta, debito);
+
+        Assert.Equal(original with { Replayed = true }, reenvio);
+        Assert.Equal(3, await ContarLancamentosAsync(conta));
+    }
+
+    [Fact]
+    public async Task Reenvio_de_comando_ja_efetivado_devolve_o_original_mesmo_com_a_conta_bloqueada()
+    {
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 150.00m);
+        var credito = Comando(EntryDirection.Credit, 10.00m, "k-credito");
+
+        var original = await PostAsync(conta, credito);
+
+        await using (var admin = new NpgsqlConnection(_fixture.MigratorConnectionString))
+        {
+            await admin.ExecuteAsync(
+                "UPDATE ledger.accounts SET status = 2 WHERE account_id = @conta", new { conta });
+        }
+
+        var reenvio = await PostAsync(conta, credito);
+
+        Assert.Equal(original with { Replayed = true }, reenvio);
+    }
+
+    [Fact]
+    public async Task Chave_reutilizada_e_conflito_mesmo_quando_o_novo_conteudo_seria_recusado_por_saldo()
+    {
+        // O conflito de chave descreve o que o chamador fez de errado; o saldo
+        // insuficiente descreveria uma operacao que nunca deveria ter sido avaliada.
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 150.00m);
+
+        await PostAsync(conta, Comando(EntryDirection.Debit, 100.00m, "k-reuso"));
+
+        await Assert.ThrowsAsync<IdempotencyConflictException>(
+            () => PostAsync(conta, Comando(EntryDirection.Debit, 999.00m, "k-reuso")));
+    }
+
     [Fact]
     public async Task Chave_reutilizada_com_conteudo_diferente_e_recusada()
     {

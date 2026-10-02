@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima primeira revisão)
+**Última atualização:** 2026-10-02 (décima segunda revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 94 passando (59 de domínio, 35 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 97 passando (59 de domínio, 38 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 94 passando |
+| Testes automatizados | Atendido, 97 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido, precisa da revisão final |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -136,7 +136,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
-| `PacioliBank.Integration.Tests` | 35 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06) e extrato (F05) |
+| `PacioliBank.Integration.Tests` | 38 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05) e reenvio após mudança de estado (L-10) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -250,17 +250,15 @@ Detectada ao verificar o repositório recém-publicado. A tabela "Estado atual d
 
 **Controle adotado:** o README entra na mesma verificação da regra 9. Nenhuma entrega fecha com README divergente da §4 deste documento.
 
-### L-10: Reenvio idempotente recusado quando o estado da conta mudou (ALTA)
+### L-10: Reenvio idempotente recusado quando o estado da conta mudou (ENCERRADA em 2026-10-02, card 19.4)
 
-**Verificado por execução**, não só por leitura: crédito de 150, débito de 100 com chave `k`, reenvio do mesmo débito com a mesma chave. Esperado pela RN-005: o resultado original, com `Replayed`. Obtido: `InsufficientFundsException`.
+**Situação registrada, verificada por execução:** crédito de 150, débito de 100 com chave `k`, reenvio do mesmo débito. Esperado pela RN-005: o resultado original. Obtido: `422 INSUFFICIENT_FUNDS`. O agregado decidia antes de a repetição ser reconhecida, e a repetição só era reconhecida na gravação. Valia também para conta bloqueada depois do envio original, e reusar a chave com outro conteúdo devolvia `422` em vez de `409`.
 
-**Causa:** dentro da transação, o agregado decide **antes** da gravação, e a repetição só é detectada **na** gravação, pela violação de chave (ADR-0006). Se o saldo caiu depois do envio original, o reenvio é rejeitado pelo domínio e nunca chega à colisão de chave. Vale também para conta bloqueada depois do envio original (`ACCOUNT_INACTIVE`) e para o estorno.
+**Corrigido:** sob o bloqueio da conta e antes do agregado, o registro da chave é lido; existindo, o reenvio recebe o resultado original, ou `409` se o conteúdo difere. Sob o bloqueio não há a janela de corrida que o ADR-0006 rejeitava, porque o registro de uma chave só é gravado por quem detém o mesmo bloqueio. A violação de chave primária continua como segunda barreira.
 
-**Impacto:** o cliente que reenvia após timeout, exatamente o caso que a idempotência existe para proteger, recebe 422 para um débito que foi efetivado. Pode levar o originador a tratar como recusado um pagamento consumado.
+**Decisão registrada:** revisão do ADR-0006 com três alternativas rejeitadas (ler só quando o agregado rejeita; gravar registro também para rejeições; manter e documentar) e gatilho de revisão próprio: qualquer caminho de escrita sem o bloqueio da conta invalida o argumento.
 
-**Situação após o card 19:** o estorno deixou de ser afetado no caso mais comum. Quando o original já está estornado, o adaptador tenta a repetição antes de o agregado decidir, e o reenvio do estorno devolve o resultado original mesmo com a conta zerada (coberto por teste). Crédito e débito continuam afetados.
-
-**Correção provável, a decidir em ADR:** sob o bloqueio da conta, consultar o registro de idempotência antes de o agregado decidir. Sob bloqueio, a consulta prévia não tem a janela de corrida que o ADR-0006 rejeita, porque o registro é gravado pela mesma conta serializada. Contraria a letra do ADR-0006 ("nunca por consulta prévia"), por isso exige revisão do ADR, e não correção silenciosa. Fora do escopo do card 19.
+**Verificado:** três testes de integração novos, que reprovaram antes da correção e passam depois; suíte com 97 verdes; o cenário original reproduzido via curl no ambiente Docker, agora com `200` e corpo idêntico. Diagrama de sequência redesenhado com o passo novo.
 
 ### L-11: Decisões de contrato tomadas na implementação, sem respaldo na EF (ENCERRADA em 2026-10-02, card 21)
 
@@ -285,7 +283,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 41 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 42 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
@@ -301,6 +299,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
    - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
+   - ~~**[19.4] Repetição idempotente recusada quando o estado da conta mudou** (L-10)~~ concluído em 2026-10-02, antecipado ao 23 por decisão do usuário
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
@@ -316,7 +315,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 94 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 97 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -404,3 +403,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 20 concluído: modelo C4 em Mermaid em `docs/diagrams/` (C1, C2, C3, sequência do débito), com estado por elemento. L-02 encerrada; requisito "documentação no repositório" passa a atendido. C3 e sequência redesenhados a partir do código, com correspondência explícita ao Lucid |
 | 2026-10-02 | Card 21 concluído: as 4 correções da L-05 aplicadas com nota de revisão; 3 divergências novas achadas ao conferir os documentos contra o código (ADR-0010, ADR-0001 e convenções, EF §8.4) e tratadas; L-11 incorporada à EF 1.1 (§8.7, QA-008). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas |
 | 2026-10-02 | Card 22 concluído: experimento sem `FOR NO KEY UPDATE`. O teste reprova, mas por perda de disponibilidade (24% a 78% de `503`), não por saldo negativo: a constraint de sequência preserva a invariante sem o bloqueio. Resultado no ADR-0005. L-04 encerrada |
+| 2026-10-02 | Card 19.4 criado e concluído: repetição reconhecida sob o bloqueio da conta, antes do agregado. ADR-0006 revisado com alternativas rejeitadas. 3 testes novos (97 verdes), cenário reproduzido via curl. L-10 encerrada; nenhuma lacuna ALTA aberta |

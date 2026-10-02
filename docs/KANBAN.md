@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 41 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 42 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -14,7 +14,7 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 23 | 01 a 22 |
+| Concluído | 24 | 01 a 22, mais 19.4 |
 
 ---
 
@@ -549,3 +549,13 @@ DUAS HIPÓTESES DECLARADAS ANTES DO RESULTADO:
 CRITÉRIO: saber qual hipótese é verdadeira e registrar o resultado no ADR-0005 como validação empírica. Custo: 2 minutos.
 
 ENTREGA (02/10/2026): o teste REPROVA sem o bloqueio, mas por perda de disponibilidade (24% a 78% dos comandos com `503` por tentativas esgotadas), não por saldo negativo. Sem o bloqueio, a constraint de sequência mais a nova tentativa preservaram a invariante: nenhuma posição negativa, nenhuma lacuna. Nenhuma das duas hipóteses estava certa como escrita. Registrado no ADR-0005 como validação empírica.
+
+### 19.4. Corrigir a repetição idempotente recusada quando o estado da conta mudou
+
+`prioridade: Alta` · `codigo` · `risco` · `arquitetura`
+
+ÂNCORA: lacuna L-10 (ALTA), RN-005, ADR-0006. Criado em 02/10 como subnível do 19, porque o defeito está no caminho de idempotência que o card 19 expôs pela API; a faixa da fila ativa não tinha número livre. Antecipado ao 23 por decisão do usuário.
+
+SITUAÇÃO: o reenvio de um débito já efetivado, depois de o saldo cair, recebia 422 em vez do resultado original.
+
+ENTREGA (02/10/2026): repetição reconhecida sob o bloqueio da conta, antes do agregado; violação de chave mantida como segunda barreira. ADR-0006 revisado com 3 alternativas rejeitadas e gatilho de revisão. 3 testes de integração novos, que reprovaram antes da correção. 97 verdes. Cenário original reproduzido via curl: agora 200 com corpo idêntico. Diagrama de sequência redesenhado.

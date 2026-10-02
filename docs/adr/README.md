@@ -15,7 +15,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | [0003](./ADR-0003-ledger-append-only.md) | Ledger append-only como única fonte da verdade | Aceito | RN-003, RNF-003, RNF-016 |
 | [0004](./ADR-0004-representacao-monetaria.md) | `decimal` e `numeric(19,4)`, com Value Object `Money` | Aceito | RN-002, EF §8.2 |
 | [0005](./ADR-0005-controle-de-concorrencia.md) | Bloqueio pessimista de linha por conta | Aceito | RN-001, RNF-004, CQ-02 |
-| [0006](./ADR-0006-idempotencia.md) | Chave obrigatória com unicidade no banco | Aceito | RN-005, RNF-011, CQ-04 |
+| [0006](./ADR-0006-idempotencia.md) | Chave obrigatória com unicidade no banco | Aceito, revisado em 2026-10-02 | RN-005, RNF-011, CQ-04 |
 | [0007](./ADR-0007-snapshot-e-projecao.md) | Snapshot inline amortizado por sequência | Aceito | RNF-002, RNF-003, RNF-006 |
 | [0008](./ADR-0008-outbox-transacional.md) | Outbox transacional com entrega ao menos uma vez | Aceito | RF-011, RNF-010, CQ-03 |
 | [0009](./ADR-0009-seguranca-e-privilegio-minimo.md) | Privilégio mínimo no banco e resposta opaca | Aceito | RNF-020 a RNF-025, CQ-05 |
