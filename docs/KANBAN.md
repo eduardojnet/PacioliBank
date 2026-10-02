@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 44 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 46 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 24.1, 25, 26, 27, 28 |
+| A Fazer | 8 | 18.1, 19.2, 19.3, 21.1, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 27 | 01 a 24, mais 19.4 e 20.1 |
+| Concluído | 28 | 01 a 24, mais 19.4, 20.1 e 24.1 |
 
 ---
 
@@ -102,6 +102,18 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
+### 18.1. Inverter a política: o quadro passa a ser a fonte da fila
+
+`prioridade: Média` · `processo` · `doc`
+
+ÂNCORA: decisão do usuário em 02/10/2026, "todas as atividades deveriam estar no kanban, sendo ele a fonte de tudo". Altera o card 18. Escopo: PROCESSO-KANBAN 2.0 com o quadro como fonte da fila e de toda atividade; ESTADO §7 e KANBAN.md como espelhos; o disco continua fonte da verdade do código. CRITÉRIO: nenhum documento afirma mais que a ordem vem do ESTADO.md.
+
+### 21.1. Alinhar os nomes dos eventos da EF §9 ao código
+
+`prioridade: Média` · `doc` · `risco`
+
+ÂNCORA: EF §9, convenções §8, ADR-0008; achado no card 24. A EF nomeia `LedgerEntryRecorded`, `EntryReversed` e `eventId`; o código grava `pacioli.ledger.entry-recorded.v1`, `pacioli.ledger.entry-reversed.v1` e usa `message_id`. Subnível do 21 por ser correção documental; à frente do 25 por prioridade. CRITÉRIO: EF, convenções, ADR-0008 e código com os mesmos nomes.
+
 ### 19.2. Testar a API via Insomnia
 
 `prioridade: Média` · `teste`
@@ -121,18 +133,6 @@ ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI a
 Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que alteração acidental de contrato seja detectada antes da publicação (RNF-039).
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
-
-### 24.1. Decidir e registrar a ausência de chave estrangeira na outbox
-
-`prioridade: Baixa` · `arquitetura` · `doc`
-
-ÂNCORA: lacuna L-12 (BAIXA), ADR-0008, regra 2 do CLAUDE.md. Criado em 02/10 no card 20.1, quando a justificativa atribuída ao ADR-0008 não foi encontrada nele.
-
-ESCOPO: decisão do usuário (manter sem FK ou acrescentar); registrar no ADR-0008 com alternativa rejeitada; ajustar a nota 3 do ERD.
-
-CRITÉRIO: ADR-0008 com a decisão e a alternativa rejeitada; ERD e ADR coerentes; L-12 encerrada.
-
-BLOQUEIO: depende de decisão do usuário.
 
 ### 25. Implementar o painel de evidência
 
@@ -624,3 +624,17 @@ ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuári
 CRITÉRIO ACRESCENTADO AO INICIAR (o cartão não tinha): despachante hospedado na API, `SKIP LOCKED`, publicação por abstração com implementação em log, recuo exponencial, limite de tentativas com alerta; testes contra PostgreSQL real de publicação, retomada com `message_id` estável (F08), paralelismo sem duplicidade e estacionamento; no Docker, crédito via curl publicado. Fora do escopo: expurgo, barramento real, conciliação (RNF-033).
 
 ENTREGA (02/10/2026): módulo `PacioliBank.Events` (sem referência ao `Ledger`), `OutboxDispatcherService` e `LoggingEventPublisher` na API. 5 testes de integração, 102 verdes. O teste de paralelismo reprova quando `FOR UPDATE SKIP LOCKED` é removido (medido). No Docker, crédito via curl publicado em menos de 3 s, com `published_at` preenchido e registro no log. ADR-0008 com nota de implementação (ordem por sequência, estacionamento sem coluna nova); C1, C2 e C3 atualizados.
+
+### 24.1. Decidir e registrar a ausência de chave estrangeira na outbox
+
+`prioridade: Baixa` · `arquitetura` · `doc`
+
+ÂNCORA: lacuna L-12 (BAIXA), ADR-0008, regra 2 do CLAUDE.md. Criado em 02/10 no card 20.1, quando a justificativa atribuída ao ADR-0008 não foi encontrada nele.
+
+ESCOPO: decisão do usuário (manter sem FK ou acrescentar); registrar no ADR-0008 com alternativa rejeitada; ajustar a nota 3 do ERD.
+
+CRITÉRIO: ADR-0008 com a decisão e a alternativa rejeitada; ERD e ADR coerentes; L-12 encerrada.
+
+BLOQUEIO: depende de decisão do usuário.
+
+ENTREGA (02/10/2026): decisão do usuário, acrescentar a chave. Aplicada como `fk_outbox_entry (account_id, sequence)` para `ledger_entries`, que garante o lançamento e, por ele, a conta. ADR-0008 com a decisão e três alternativas rejeitadas. Teste novo com o papel da aplicação: mensagem sem lançamento é recusada (`23503`); reprovou antes da mudança. 103 verdes. ERD reconferido contra o catálogo, com 6 FK. Verificado no Docker após `down -v`: crédito gravado e publicado. L-12 encerrada.

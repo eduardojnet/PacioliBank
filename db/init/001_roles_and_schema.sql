@@ -115,6 +115,12 @@ CREATE INDEX ix_idempotency_created ON ledger.idempotency_records (created_at);
 -- ---------------------------------------------------------------------
 -- Outbox. Gravado na transacao do lancamento, publicado depois (ADR-0008).
 -- O indice parcial mantem a varredura proporcional a fila, nao ao historico.
+--
+-- fk_outbox_entry: toda mensagem corresponde a um lancamento existente. A
+-- chave e o par (account_id, sequence), unico no ledger por
+-- uq_entries_sequence; garante o lancamento e, por ele, a conta. Sem indice
+-- proprio do lado da outbox: o ledger e append-only, entao a chave nunca e
+-- verificada por exclusao ou alteracao do lado referenciado (ADR-0008, L-12).
 -- ---------------------------------------------------------------------
 CREATE TABLE ledger.outbox_messages (
     message_id      uuid        PRIMARY KEY,
@@ -125,7 +131,10 @@ CREATE TABLE ledger.outbox_messages (
     occurred_at     timestamptz NOT NULL,
     published_at    timestamptz NULL,
     attempts        smallint    NOT NULL DEFAULT 0,
-    next_attempt_at timestamptz NOT NULL DEFAULT now()
+    next_attempt_at timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT fk_outbox_entry FOREIGN KEY (account_id, sequence)
+        REFERENCES ledger.ledger_entries (account_id, sequence)
 );
 
 CREATE INDEX ix_outbox_pending

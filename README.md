@@ -125,7 +125,7 @@ Catálogo completo, com a regra de negócio de cada código, na [EF §8.6](./doc
 ## Testes
 
 ```bash
-dotnet test        # 102 testes, sem erro e sem aviso
+dotnet test        # 103 testes, sem erro e sem aviso
 ```
 
 Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integração sobem um PostgreSQL real por execução (Testcontainers) e aplicam o mesmo script de esquema do ambiente local, com os mesmos papéis e privilégios.
@@ -133,7 +133,7 @@ Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integra
 | Projeto | Testes | O que verifica |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes do agregado, `Money`, validações da porta de entrada. Sem I/O, menos de um segundo |
-| `PacioliBank.Integration.Tests` | 43 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real e despachante de outbox |
+| `PacioliBank.Integration.Tests` | 44 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real e despachante de outbox |
 
 ```bash
 dotnet test tests/PacioliBank.Domain.Tests                                 # só domínio, sem Docker
@@ -185,7 +185,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP: endpoints, problem+json, correlação; hospeda o despachante
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
-  PacioliBank.Integration.Tests/   43 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
+  PacioliBank.Integration.Tests/   44 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
 db/init/                           esquema, papéis, privilégios e contas de exemplo
 docs/                              diagramas, ADRs, especificações, estado do projeto
 requests.http                      chamadas prontas para todos os endpoints

@@ -46,7 +46,11 @@ CREATE TABLE outbox_messages (
     occurred_at    timestamptz  NOT NULL,
     published_at   timestamptz  NULL,
     attempts       smallint     NOT NULL DEFAULT 0,
-    next_attempt_at timestamptz NOT NULL DEFAULT now()
+    next_attempt_at timestamptz NOT NULL DEFAULT now(),
+
+    -- Acrescentada na revisão de 2026-10-02 (L-12), ao fim deste documento
+    CONSTRAINT fk_outbox_entry FOREIGN KEY (account_id, sequence)
+        REFERENCES ledger_entries (account_id, sequence)
 );
 
 CREATE INDEX ix_outbox_pending
@@ -141,6 +145,39 @@ Implementado em `src/PacioliBank.Events/OutboxDispatcher.cs`, executado por `Out
 - **Recuo:** `2^tentativas` segundos, com teto de 300, calculado no próprio `UPDATE`
 
 Validação feita, contra PostgreSQL real (`OutboxDispatcherTests`): publicação e marcação; falha e retomada com `message_id` estável (F08); 6 despachantes em paralelo sem publicação duplicada, teste que reprova quando `FOR UPDATE SKIP LOCKED` é removido; mensagem estacionada sem bloquear as demais. **Não feito:** o teste de falha *entre* a confirmação no barramento e a marcação no banco (exige barramento real), a conciliação periódica ledger × outbox (RNF-033) e o expurgo das mensagens publicadas.
+
+## Revisão: chave estrangeira da outbox (2026-10-02, lacuna L-12)
+
+### Problema
+
+A tabela foi definida sem chave estrangeira, e esta ADR não dizia por quê. Achado ao desenhar o diagrama de entidades (card 20.1): nada no banco impedia uma mensagem de outbox sem lançamento correspondente. Na prática a mensagem é gravada na mesma transação do lançamento, então não havia órfã; mas a garantia dependia de o código gravar certo, contra a regra de que invariante é garantida pelo banco, não por disciplina.
+
+### Opções consideradas
+
+1. **Chave composta `(account_id, sequence)` para `ledger_entries`** (escolhida)
+2. Chave simples `account_id` para `accounts`
+3. Coluna nova `entry_id` com chave para `ledger_entries`
+4. Manter sem chave, registrando o motivo
+
+### Decisão
+
+**Opção 1.** O par `(account_id, sequence)` já identifica o lançamento e já é único no ledger (`uq_entries_sequence`), então a chave reaproveita o que existe: garante que o lançamento existe e, por ele, que a conta existe. Decisão do usuário, em 2026-10-02.
+
+### Opções rejeitadas
+
+**Chave simples para `accounts`.** Garante a conta, não o lançamento: aceitaria a mensagem de um lançamento que não existe, que é justamente o evento fantasma que esta ADR existe para eliminar.
+
+**Coluna `entry_id`.** Mais explícita, mas duplica uma identificação que `(account_id, sequence)` já dá, e exige mudar o esquema da tabela e o código que grava, sem garantia a mais.
+
+**Manter sem chave.** As justificativas plausíveis (mensagem como cópia autossuficiente; expurgo sem vínculo) não se sustentam: o expurgo apaga do lado da outbox, que é o lado que referencia, e a chave não o impede.
+
+### Consequências
+
+- Mensagem órfã passa a ser recusada pelo banco (`23503`, `fk_outbox_entry`), verificado em teste com o papel da aplicação
+- A ordem de gravação dentro da transação passa a importar: o lançamento antes da mensagem. Já era a ordem em `PostgresLedgerStore.WriteAsync`
+- Custo na inserção: uma busca no índice de `uq_entries_sequence`, que já existe
+- Sem índice do lado da outbox: o ledger é append-only, então a chave nunca é verificada por exclusão ou alteração do lado referenciado
+- Mudança de esquema aplicada pelo script inicial: no ambiente local, exige `docker compose down -v` até o card 27 (DbUp)
 
 ## Gatilho de revisão
 

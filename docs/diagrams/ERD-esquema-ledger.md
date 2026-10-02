@@ -6,23 +6,12 @@ As 5 tabelas do esquema `ledger`, transcritas de [`db/init/001_roles_and_schema.
 
 ```mermaid
 erDiagram
-    outbox_messages {
-        uuid message_id PK
-        uuid account_id "NOT NULL, sem FK"
-        bigint sequence "ordem por conta"
-        text event_type
-        jsonb payload
-        timestamptz occurred_at
-        timestamptz published_at "NULL até publicar"
-        smallint attempts "DEFAULT 0"
-        timestamptz next_attempt_at "DEFAULT now()"
-    }
-
     accounts ||--o{ ledger_entries : "account_id"
     accounts ||--o{ balance_snapshots : "account_id"
     accounts ||--o{ idempotency_records : "account_id"
     ledger_entries ||--o| idempotency_records : "entry_id"
     ledger_entries |o--o| ledger_entries : "reversal_of: no máximo um estorno"
+    ledger_entries ||--o| outbox_messages : "(account_id, sequence)"
 
     accounts {
         uuid account_id PK
@@ -57,6 +46,18 @@ erDiagram
         timestamptz created_at "DEFAULT now()"
     }
 
+    outbox_messages {
+        uuid message_id PK
+        uuid account_id FK "com sequence: aponta para o lançamento"
+        bigint sequence FK "ordem por conta"
+        text event_type
+        jsonb payload
+        timestamptz occurred_at
+        timestamptz published_at "NULL até publicar"
+        smallint attempts "DEFAULT 0"
+        timestamptz next_attempt_at "DEFAULT now()"
+    }
+
     idempotency_records {
         uuid account_id PK, FK
         text idempotency_key PK
@@ -85,11 +86,13 @@ A chave primária de `balance_snapshots` é composta por `(account_id, up_to_seq
 
 **Consequência:** a consulta histórica (`?asOf=`) não usa snapshot. Sequência é ordem de registro; `occurred_at` é ordem do fato. Com lançamento retroativo, as duas ordens divergem, e um snapshot "até a sequência N" pode conter um fato posterior ao instante pedido. A consulta histórica agrega `ledger_entries` pelo índice `ix_entries_account_occurred`, que cobre as colunas do cálculo. É limitação assumida e declarada no ADR-0007.
 
-### 3. `outbox_messages` não tem chave estrangeira
+### 3. Toda mensagem da outbox aponta para um lançamento
 
-**Fato do esquema:** `outbox_messages.account_id` é `NOT NULL` e não referencia `accounts`; nenhuma coluna da outbox referencia `ledger_entries`. A relação com o lançamento existe só nos dados: `(account_id, sequence)` identifica o lançamento, e `payload` carrega a cópia do evento.
+`outbox_messages` referencia `ledger_entries` pela chave composta `fk_outbox_entry (account_id, sequence)`. O par já identifica o lançamento e já é único no ledger (`uq_entries_sequence`), então a chave garante que o lançamento existe e, por ele, que a conta existe. Mensagem sem lançamento correspondente, o "evento fantasma" que o [ADR-0008](../adr/ADR-0008-outbox-transacional.md) existe para eliminar, é recusada pelo banco, e não só evitada pelo código.
 
-**Decisão não registrada.** O [ADR-0008](../adr/ADR-0008-outbox-transacional.md) define a tabela sem FK, mas não diz por quê, e o script de esquema também não. Justificativas plausíveis, `[INFERIDO]` e não verificadas como intenção original: a mensagem é cópia autossuficiente do evento, não referência a ele; e a outbox precisa de expurgo das mensagens publicadas (ADR-0008, consequências), que fica mais simples sem vínculo de integridade com o ledger. A ausência pode ser lida como defeito por quem não conhece o padrão. Registrada como lacuna **L-12** no [ESTADO](../ESTADO.md) §6, para decisão explícita no ADR-0008.
+**Histórico:** até 2026-10-02 a tabela não tinha chave estrangeira, e nenhum documento dizia por quê (lacuna L-12). A chave foi acrescentada por decisão registrada no ADR-0008, que também registra as alternativas rejeitadas: chave simples para `accounts`, que aceitaria mensagem de lançamento inexistente, e coluna `entry_id`, que duplicaria uma identificação existente.
+
+Sem índice próprio do lado da outbox: o ledger é append-only, então a chave nunca é verificada por exclusão ou alteração do lado referenciado.
 
 ### 4. Duas barreiras de idempotência, não duplicação
 
@@ -136,7 +139,7 @@ Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql`, linha por lin
 | 5 tabelas do esquema `ledger` | 5 entidades |
 | 40 colunas (6 + 13 + 5 + 7 + 9) | 40 atributos, mesmo nome, mesmo tipo, mesma ordem |
 | 5 PK: `account_id`; `entry_id`; `pk_balance_snapshots (account_id, up_to_sequence)`; `pk_idempotency (account_id, idempotency_key)`; `message_id` | 5 chaves primárias, duas compostas |
-| 5 FK: `ledger_entries.account_id`, `ledger_entries.reversal_of`, `balance_snapshots.account_id`, `idempotency_records.account_id`, `idempotency_records.entry_id` | 5 relacionamentos |
+| 6 FK: `ledger_entries.account_id`, `ledger_entries.reversal_of`, `balance_snapshots.account_id`, `idempotency_records.account_id`, `idempotency_records.entry_id`, `fk_outbox_entry (account_id, sequence)` | 6 relacionamentos |
 | 3 UNIQUE: `uq_entries_sequence`, `uq_entries_idempotency`, `uq_entries_reversal` | Nos atributos de `ledger_entries` |
 | 5 CHECK: `ck_accounts_status`, `ck_accounts_sequence`, `ck_entries_amount`, `ck_entries_direction`, `ck_entries_sequence` | Nos atributos |
 | 4 índices explícitos | Tabela de índices |

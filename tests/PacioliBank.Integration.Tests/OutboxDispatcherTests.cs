@@ -194,6 +194,26 @@ public class OutboxDispatcherTests
         Assert.False((await LinhaAsync(estacionada)).Publicada);
     }
 
+    [Fact]
+    public async Task Banco_recusa_mensagem_de_outbox_sem_lancamento_correspondente()
+    {
+        // L-12: toda mensagem corresponde a um lancamento. A garantia e a chave
+        // estrangeira (account_id, sequence) para ledger_entries, nao a
+        // disciplina de quem grava.
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 10.00m);
+
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        var erro = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync(
+            """
+            INSERT INTO ledger.outbox_messages (message_id, account_id, sequence, event_type, payload, occurred_at)
+            VALUES (@id, @conta, 999, 'pacioli.ledger.entry-recorded.v1', '{}'::jsonb, now())
+            """,
+            new { id = Guid.NewGuid(), conta }));
+
+        Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, erro.SqlState);
+        Assert.Equal("fk_outbox_entry", erro.ConstraintName);
+    }
+
     private sealed class PublicadorQueRegistra(TimeSpan? atraso = null) : IEventPublisher
     {
         private readonly ConcurrentQueue<OutboxMessage> _mensagens = new();

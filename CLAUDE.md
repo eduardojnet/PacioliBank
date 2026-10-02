@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 102 testes; os de integração exigem Docker
+dotnet test                   # 103 testes; os de integração exigem Docker
 docker compose up --build     # API em http://localhost:8080
 docker compose down -v        # obrigatório após qualquer mudança de esquema
 ```
@@ -67,7 +67,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP; hospeda o despachante
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
-  PacioliBank.Integration.Tests/   43 testes, PostgreSQL real, inclui concorrencia, estorno, extrato e outbox
+  PacioliBank.Integration.Tests/   44 testes, PostgreSQL real, inclui concorrencia, estorno, extrato e outbox
 db/init/                           esquema, papeis e privilegios
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
 ```
@@ -98,8 +98,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 19, 19.1, 19.4, 20, 20.1, 21, 22, 23 e 24 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011). O card 24.1 (decisão sobre FK na outbox, L-12) aguarda o usuário. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Cards 19, 19.1, 19.4, 20, 20.1, 21, 22, 23 e 24 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011).  O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 
-Antes de começar, rode `dotnet test`. Esperado: 102 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 103 passando, sem avisos.
