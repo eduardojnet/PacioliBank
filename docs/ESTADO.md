@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (quarta revisão)
+**Última atualização:** 2026-10-02 (quinta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 57 passando (39 de domínio, 18 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Atenção:** os tipos que a L-07 dava como "escritos e não compilados" **não existem no disco**. Ver §6, L-07.
@@ -63,6 +63,15 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 |---|---|---|
 | QA-003 | Estorno pode gerar posição negativa? | **Não.** Respeita RN-001, com política isolada para troca futura |
 | RN-012 | Manter bitemporalidade (`occurredAt` separado de `recordedAt`)? | **Sim**, mantida no escopo |
+
+### Decisões de processo, fora de ADR
+
+| Decisão | Registro |
+|---|---|
+| `CLAUDE.md` **versionado** no repositório público (revertida a decisão de mantê-lo no `.gitignore`) | Correta: o arquivo descreve arquitetura, regras invioláveis e armadilhas encontradas. Em um desafio que avalia processo, é evidência, não configuração de ferramenta. O efeito colateral antes registrado ("quem clonar não recebe as regras") deixa de existir |
+| `.claude/` permanece ignorado | Contém permissões locais de execução, que são do ambiente e não do projeto |
+| Commits agrupados por decisão, não por arquivo | O enunciado avalia como se pensa e prioriza; push único sinaliza ausência de processo |
+| Convenção de mensagem: Conventional Commits | Uma mensagem fora do padrão já entrou no histórico ("Atualizando CLAUDE.md no .gitignore"), e o histórico é lido pelo avaliador. Não reescrever: histórico publicado é imutável, pelo mesmo princípio do ledger |
 
 ### Questões de negócio ainda abertas
 
@@ -237,6 +246,8 @@ O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 37 cartões distr
 
 **Limitação a conhecer:** o quadro é mantido no ambiente de gestão do projeto, separado do terminal de desenvolvimento. Enquanto o trabalho correr no terminal, o quadro fica congelado e precisa ser sincronizado a partir deste documento e de `KANBAN.md`.
 
+A política do quadro está em [`docs/PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md): critério de entrada e saída de cada coluna, limite de trabalho em andamento, anatomia do cartão e o procedimento de sincronização em cinco passos. Esse documento existe porque L-07 e L-09 nasceram, as duas, de sincronização mal definida.
+
 Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um cartão ali significa trabalho registrado sem critério, e a ação é triá-lo, não executá-lo. O limite de **Em Andamento é um cartão**.
 
 ## 7. Fila de execução
@@ -334,3 +345,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Build e suíte verificados (0 avisos, 57 verdes). L-07 encerrada: os tipos descritos não existiam no disco. L-08 registrada (estorno sem caminho de persistência). Contagem de exceções corrigida para 12 |
 | 2026-10-02 | Repositório público criado e publicado: L-01 encerrada, item 2 da fila concluído antes do item 1. Cartão movido para Concluído em `KANBAN.md` |
 | 2026-10-02 | L-09 registrada e encerrada: o README público subdeclarava domínio, persistência, idempotência e testes de integração como pendentes. README corrigido; a regra 9 passa a cobri-lo |
+| 2026-10-02 | Correções da L-09 commitadas e publicadas (3 commits, `origin/main` em `c8d90ff`). `CLAUDE.md` retirado do `.gitignore` e versionado; decisão registrada na §3 |
