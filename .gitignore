@@ -11,5 +11,4 @@ coverage*.json
 .env
 
 # Configuracao local de ferramenta, fora do repositorio
-CLAUDE.md
 .claude/
