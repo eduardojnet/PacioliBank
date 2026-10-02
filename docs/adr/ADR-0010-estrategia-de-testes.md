@@ -139,7 +139,7 @@ As camadas de domínio, arquitetura e contrato executam em segundos e rodam a ca
 ## Validação
 
 - Pipeline executando todas as camadas a cada commit
-- Verificação deliberada, uma vez durante o desenvolvimento, de que o teste de concorrência reprova a implementação sem bloqueio
+- Verificação deliberada, uma vez durante o desenvolvimento, de que o teste de concorrência reprova a implementação sem bloqueio. **Feita em 2026-10-02:** reprova, mas por perda de disponibilidade, não por violação de saldo; a constraint de sequência preserva a correção mesmo sem bloqueio. Resultado completo no [ADR-0005](./ADR-0005-controle-de-concorrencia.md), "Validação empírica do bloqueio"
 - `docker compose up` em container limpo, validando RNF-037
 - Relatório de cobertura publicado no pipeline
 

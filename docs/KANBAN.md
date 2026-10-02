@@ -12,9 +12,9 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 | Backlog/Ideias | 10 | 24, 25, 31 a 38 |
 | A Fazer | 6 | 19.2, 19.3, 23, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
-| Em Revisão | 1 | 22 |
+| Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 22 | 01 a 21 |
+| Concluído | 23 | 01 a 22 |
 
 ---
 
@@ -189,25 +189,13 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 22, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 23, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
 ## Em Revisão
 
-### 22. Verificar o poder de detecção do teste de concorrência
-
-`prioridade: Alta` · `teste` · `risco`
-
-LACUNA L-04. O ADR-0010 e o próprio ConcurrencyTests afirmam que o teste deve falhar contra implementação sem bloqueio. Isso NUNCA foi medido.
-
-EXPERIMENTO: remover FOR NO KEY UPDATE do LedgerSql, rodar só a suíte de concorrência, restaurar.
-
-DUAS HIPÓTESES DECLARADAS ANTES DO RESULTADO:
-(a) falha: o bloqueio sustenta RN-001 e o teste enxerga;
-(b) passa: a constraint mais a nova tentativa funcionam como controle otimista, a defesa em profundidade é real, e o critério que escrevi está errado e precisa ser corrigido.
-
-CRITÉRIO: saber qual hipótese é verdadeira e registrar o resultado no ADR-0005 como validação empírica. Custo: 2 minutos.
+_Vazia. Os dois cartões que ocupavam a coluna (21 e 22) foram concluídos em 2026-10-02._
 
 ---
 
@@ -545,3 +533,19 @@ ESCOPO AMPLIADO em 02/10, com motivo: o critério pede coerência "com o código
 ENTREGA (02/10/2026): as 4 correções aplicadas, cada uma com nota de revisão no documento de origem. As 3 divergências novas tratadas com nota "Estado da implementação", sem alterar decisão. L-11 incorporada à EF: §8.7, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 (tamanho de página). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas.
 
 VERIFICAÇÃO: busca no repositório por `app_`, `FORBIDDEN`, `Integration` como módulo, prefixo `Ledger.` e `api.banco.example`; as ocorrências restantes são as próprias notas de revisão.
+
+### 22. Verificar o poder de detecção do teste de concorrência
+
+`prioridade: Alta` · `teste` · `risco`
+
+LACUNA L-04. O ADR-0010 e o próprio ConcurrencyTests afirmam que o teste deve falhar contra implementação sem bloqueio. Isso NUNCA foi medido.
+
+EXPERIMENTO: remover FOR NO KEY UPDATE do LedgerSql, rodar só a suíte de concorrência, restaurar.
+
+DUAS HIPÓTESES DECLARADAS ANTES DO RESULTADO:
+(a) falha: o bloqueio sustenta RN-001 e o teste enxerga;
+(b) passa: a constraint mais a nova tentativa funcionam como controle otimista, a defesa em profundidade é real, e o critério que escrevi está errado e precisa ser corrigido.
+
+CRITÉRIO: saber qual hipótese é verdadeira e registrar o resultado no ADR-0005 como validação empírica. Custo: 2 minutos.
+
+ENTREGA (02/10/2026): o teste REPROVA sem o bloqueio, mas por perda de disponibilidade (24% a 78% dos comandos com `503` por tentativas esgotadas), não por saldo negativo. Sem o bloqueio, a constraint de sequência mais a nova tentativa preservaram a invariante: nenhuma posição negativa, nenhuma lacuna. Nenhuma das duas hipóteses estava certa como escrita. Registrado no ADR-0005 como validação empírica.

@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima revisão)
+**Última atualização:** 2026-10-02 (décima primeira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 94 passando (59 de domínio, 35 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -189,16 +189,17 @@ O histórico tem 7 commits agrupados por área (base, banco, domínio, persistê
 
 **Corrigido:** `ILedgerService` é a porta de entrada. O endpoint HTTP é adaptador fino: traduz rota, cabeçalho, corpo e status, e não conhece o store. Conversão do valor monetário, impressão do comando (ADR-0006), validação de instante e de tamanho de página ficam na porta, de modo que uma segunda borda (fila, por exemplo) não reimplemente regra. A ligação entre as camadas acontece só em `Program.cs`.
 
-### L-04: Poder de detecção do teste de concorrência não verificado (ALTA)
+### L-04: Poder de detecção do teste de concorrência não verificado (ENCERRADA em 2026-10-02, card 22)
 
-O ADR-0010 e o próprio `ConcurrencyTests` afirmam que o teste deve falhar contra implementação sem bloqueio. **Isso nunca foi medido.**
+**Situação registrada:** o ADR-0010 e o `ConcurrencyTests` afirmavam que o teste reprova uma implementação sem bloqueio. Nunca medido.
 
-Experimento pendente: remover `FOR NO KEY UPDATE`, rodar só a suíte de concorrência, observar. Duas hipóteses legítimas:
+**Medido:** `FOR NO KEY UPDATE` removido, suíte executada três vezes, sonda de desfechos executada duas vezes, código restaurado e conferido por `git diff` vazio. O teste **reprova** nas três execuções. Mas nenhuma das duas hipóteses declaradas estava certa como escrita:
 
-- **Falha:** o bloqueio sustenta RN-001 e o teste tem poder de detecção
-- **Passa:** a constraint mais a nova tentativa funcionam como controle otimista, e a defesa em profundidade do ADR-0005 é real com duas camadas independentes. Nesse caso o critério escrito está errado e precisa ser corrigido
+- **Sem o bloqueio, a invariante se mantém.** Nenhuma posição negativa, nenhuma lacuna de sequência: `uq_entries_sequence` mais a nova tentativa funcionam como controle otimista. A defesa em profundidade do ADR-0005 é real e agora medida
+- **Sem o bloqueio, a disponibilidade desaba.** Entre 24% e 78% dos comandos esgotam as três tentativas e recebem `503`
+- **O teste detecta a falta do bloqueio pela contagem exata dos desfechos**, não por saldo negativo, que não acontece
 
-Qualquer resultado vai para o ADR-0005 como validação empírica.
+Registrado no ADR-0005 ("Validação empírica do bloqueio"), no ADR-0010 e no comentário do próprio teste. Achada no caminho e corrigida: a validação do ADR-0005 citava 200 créditos e 100 contas, e os testes usam 50 e 25, com motivo já documentado no teste.
 
 ### L-05: Correções pendentes nos documentos (ENCERRADA em 2026-10-02, card 21)
 
@@ -303,7 +304,7 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
-5. **[22] Experimento de detecção do teste de concorrência** (L-04). Pode ser antecipado a qualquer momento: custa dois minutos
+5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
 6. **[23] README final**
 7. **[24] Despachante de outbox**
 8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
@@ -402,3 +403,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Card 19 concluído: porta de entrada `ILedgerService`, os 5 endpoints da EF §8.3, `ProblemDetails` com o catálogo da §8.6, correlação, prontidão ligada ao PostgreSQL. L-03 e L-07 encerradas; L-11 registrada (6 decisões de contrato provisórias). O teste via curl achou 2 defeitos que a suíte não via (corpo da repetição diferente por precisão de instante; estorno duplicado saindo como saldo insuficiente), corrigidos com teste que reprova sem a correção. 94 verdes. `.dockerignore` criado: sem ele a imagem não compilava |
 | 2026-10-02 | Card 20 concluído: modelo C4 em Mermaid em `docs/diagrams/` (C1, C2, C3, sequência do débito), com estado por elemento. L-02 encerrada; requisito "documentação no repositório" passa a atendido. C3 e sequência redesenhados a partir do código, com correspondência explícita ao Lucid |
 | 2026-10-02 | Card 21 concluído: as 4 correções da L-05 aplicadas com nota de revisão; 3 divergências novas achadas ao conferir os documentos contra o código (ADR-0010, ADR-0001 e convenções, EF §8.4) e tratadas; L-11 incorporada à EF 1.1 (§8.7, QA-008). EF e BDD passam à versão 1.1. L-05 e L-11 encerradas |
+| 2026-10-02 | Card 22 concluído: experimento sem `FOR NO KEY UPDATE`. O teste reprova, mas por perda de disponibilidade (24% a 78% de `503`), não por saldo negativo: a constraint de sequência preserva a invariante sem o bloqueio. Resultado no ADR-0005. L-04 encerrada |

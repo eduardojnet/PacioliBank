@@ -15,6 +15,14 @@ namespace PacioliBank.Integration.Tests;
 /// casos nao esta testando concorrencia, e e pior do que nao existir, porque
 /// produz confianca injustificada.
 /// <para>
+/// Medido em 2026-10-02 (ADR-0005, "Validacao empirica do bloqueio"): sem
+/// <c>FOR NO KEY UPDATE</c>, a suite reprova, mas NAO por posicao negativa. A
+/// constraint de sequencia mais a nova tentativa preservam a invariante; o que
+/// some e a disponibilidade, com a maior parte dos comandos esgotando as
+/// tentativas. Por isso os testes afirmam a contagem exata de cada desfecho, e
+/// nao apenas a posicao final: so a contagem enxerga a falta do bloqueio.
+/// </para>
+/// <para>
 /// Por isso as tarefas sao liberadas por uma barreira comum, e nao disparadas
 /// em laco: disparar em laco quase sempre serializa por acidente de
 /// escalonamento, e o teste passa sem nunca ter havido concorrencia real.

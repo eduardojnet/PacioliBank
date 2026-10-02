@@ -139,8 +139,35 @@ Duas mitigações aplicadas:
 
 - [BDD](../specs/BDD-comportamento.md) F07, obrigatoriamente executado com paralelismo real e barreira de sincronização, contra PostgreSQL em Testcontainers
 - Cenário decisivo: 50 débitos simultâneos sobre saldo que comporta 10. Exatamente 10 aceitos, posição final zero, nunca negativa
-- Cenário de sequência: 200 créditos simultâneos produzindo a série contínua de 1 a 200
-- Cenário de independência: operações simultâneas em 100 contas distintas sem espera por bloqueio
+- Cenário de sequência: 50 créditos simultâneos produzindo a série contínua de 1 a 50
+- Cenário de independência: operações simultâneas em 25 contas distintas sem espera por bloqueio
+
+> **Revisão de 2026-10-02.** Esta seção previa 200 créditos e 100 contas; os testes usam 50 e 25. Motivo, registrado em `ConcurrencyTests`: as escritas de uma mesma conta serializam, e com `lock_timeout` de 3 s uma fila de 200 faria as últimas estourarem o tempo em máquina de integração lenta. O que o cenário verifica (nenhuma perda, nenhuma sequência duplicada) independe do número.
+
+### Validação empírica do bloqueio (2026-10-02, card 22, lacuna L-04)
+
+**Pergunta:** o teste de concorrência reprova uma implementação sem bloqueio? E, se reprova, por quê?
+
+**Hipóteses declaradas antes da execução:** (a) reprova, porque sem bloqueio a posição fica negativa; (b) passa, porque a constraint mais a nova tentativa funcionam como controle otimista.
+
+**Experimento:** `FOR NO KEY UPDATE` removido de `LedgerSql.LockAccountForWrite`; suíte `ConcurrencyTests` executada três vezes; depois, uma sonda contando o desfecho de cada comando, executada duas vezes; código restaurado e conferido por `git diff` vazio.
+
+| Sem o bloqueio | Débitos (50 sobre saldo para 10) | Créditos (50) |
+|---|---|---|
+| Aceitos | 10 e 10 | 17 e 11 |
+| Recusados como repetíveis (`503`, tentativas esgotadas) | 24 e 12 | 33 e 39 |
+| Menor posição registrada | 0,00 | nunca negativa |
+| Sequência sem lacuna, soma do ledger coerente | sim | sim |
+
+`ConcurrencyTests` reprovou nas três execuções, nos cenários de débito e de crédito.
+
+**Resultado: nenhuma das duas hipóteses, como escrita.**
+
+1. **A correção não depende do bloqueio.** Sem ele, nenhuma posição ficou negativa e nenhuma sequência teve lacuna: `uq_entries_sequence` recusou a segunda gravação concorrente, e a nova tentativa releu a posição. A afirmação desta ADR de que o sistema "erra parando, não corrompendo" passa a ser medida, não só argumentada. A defesa em profundidade é real.
+2. **O bloqueio é o que mantém o sistema disponível sob contenção.** Sem ele, entre 24% e 78% dos comandos esgotaram as três tentativas e foram recusados com `503`. Correção sem disponibilidade não atende RNF-004.
+3. **O teste tem poder de detecção, mas pelo motivo que não estava escrito.** Ele reprova porque conta desfechos exatos (10 aceitos, 40 recusados por saldo, 50 créditos aceitos), e sem bloqueio os desfechos viram `503`. Ele não reprovaria por saldo negativo, porque saldo negativo não acontece.
+
+**Consequência para a decisão:** nenhuma mudança. O bloqueio pessimista continua sendo a escolha, agora com o papel medido: disponibilidade sob contenção, com a constraint como guarda da correção. A alternativa otimista pura, rejeitada acima, rejeita-se agora também por evidência: com 50 escritores na mesma conta, ela recusaria a maior parte.
 - Métrica de conflito e de nova tentativa exposta para monitorar RNF-004
 
 **Advertência de método:** um teste de concorrência executado contra repositório em memória passa na implementação ingênua e, portanto, não testa nada. A exigência de banco real neste cenário é parte da decisão, não detalhe de infraestrutura.
