@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PacioliBank.Ledger\PacioliBank.Ledger.csproj" />
+    <!-- Somente a raiz de composicao (Program.cs) usa a persistencia. Os
+         endpoints conhecem apenas a porta de entrada (ADR-0001). -->
+    <ProjectReference Include="..\PacioliBank.Ledger.Persistence\PacioliBank.Ledger.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

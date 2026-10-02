@@ -141,23 +141,33 @@ public sealed class Account
     /// Produz o lancamento compensatorio de um lancamento desta conta (RN-004).
     /// </summary>
     /// <remarks>
-    /// A unicidade do estorno NAO e verificada aqui. O dominio nao conhece os
+    /// A unicidade do estorno NAO e garantida aqui. O dominio nao conhece os
     /// demais lancamentos da conta, e uma verificacao em memoria abriria janela
     /// de corrida entre dois pedidos simultaneos. A garantia e estrutural, pela
     /// constraint <c>uq_entries_reversal</c> (ADR-0003 e ADR-0006): o segundo
     /// estorno e recusado pelo banco, nao pela esperanca de que o codigo olhe
     /// antes.
+    /// <para>
+    /// <paramref name="alreadyReversed"/> nao substitui essa garantia: so ordena
+    /// a rejeicao quando o fato ja e conhecido. Sem ele, o segundo estorno de um
+    /// credito cujo primeiro estorno zerou a conta sairia como saldo
+    /// insuficiente, e nao como estorno em duplicidade (BDD F06).
+    /// </para>
     /// </remarks>
     /// <exception cref="EntryNotFromThisAccountException">O lancamento pertence a outra conta.</exception>
     /// <exception cref="CannotReverseReversalException">O lancamento ja e um estorno (RN-004).</exception>
+    /// <exception cref="EntryAlreadyReversedException">O lancamento ja foi estornado (RN-004).</exception>
     public LedgerEntry Reverse(
         LedgerEntry original,
         DateTimeOffset occurredAt,
         string idempotencyKey,
-        Guid correlationId)
+        Guid correlationId,
+        bool alreadyReversed = false)
     {
         ArgumentNullException.ThrowIfNull(original);
 
+        // A titularidade vem primeiro: qualquer outra rejeicao revelaria algo
+        // sobre um lancamento de outra conta.
         if (original.AccountId != AccountId)
         {
             throw new EntryNotFromThisAccountException(original.EntryId, AccountId);
@@ -166,6 +176,11 @@ public sealed class Account
         if (original.IsReversal)
         {
             throw new CannotReverseReversalException(original.EntryId);
+        }
+
+        if (alreadyReversed)
+        {
+            throw new EntryAlreadyReversedException(original.EntryId);
         }
 
         var opposite = original.Direction == EntryDirection.Credit

@@ -109,6 +109,22 @@ public class LedgerStoreTests
     }
 
     [Fact]
+    public async Task Repeticao_devolve_corpo_identico_inclusive_os_instantes()
+    {
+        // EF 8.4: corpo identico ao da primeira execucao. O instante com fracao
+        // abaixo de microssegundo forca a diferenca entre a precisao do .NET
+        // (100 ns) e a do timestamptz (1 us).
+        var conta = await _fixture.CreateAccountAsync(openingCredit: 500.00m);
+        var quando = new DateTimeOffset(2026, 10, 2, 10, 0, 0, TimeSpan.Zero).AddTicks(1_234_567);
+        var comando = Comando(EntryDirection.Debit, 100.00m, "k-corpo", quando);
+
+        var primeira = await PostAsync(conta, comando);
+        var segunda = await PostAsync(conta, comando);
+
+        Assert.Equal(primeira with { Replayed = true }, segunda);
+    }
+
+    [Fact]
     public async Task Chave_reutilizada_com_conteudo_diferente_e_recusada()
     {
         var conta = await _fixture.CreateAccountAsync(openingCredit: 500.00m);

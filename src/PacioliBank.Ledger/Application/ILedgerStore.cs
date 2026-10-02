@@ -56,4 +56,18 @@ public interface ILedgerStore
         Guid accountId,
         DateTimeOffset? asOf,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lista lancamentos em ordem crescente de sequencia, com filtro opcional
+    /// por data do fato e limites inclusivos (RF-005). Os parametros chegam ja
+    /// validados pela porta de entrada.
+    /// </summary>
+    /// <exception cref="AccountNotFoundException">A conta nao existe.</exception>
+    Task<StatementPage> GetStatementAsync(
+        Guid accountId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        long afterSequence,
+        int limit,
+        CancellationToken cancellationToken);
 }

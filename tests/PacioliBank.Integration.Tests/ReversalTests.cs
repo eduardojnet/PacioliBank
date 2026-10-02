@@ -89,18 +89,49 @@ public class ReversalTests
     }
 
     [Fact]
-    public async Task Estorno_em_duplicidade_e_recusado_pela_constraint()
+    public async Task Estorno_em_duplicidade_e_recusado_como_duplicidade_mesmo_com_a_conta_zerada()
     {
+        // Contexto literal do BDD F06: o primeiro estorno zera a conta. Sem a
+        // ordem correta das rejeicoes, o segundo sairia como saldo insuficiente.
         var conta = await _fixture.CreateAccountAsync();
         var original = await CreditarAsync(conta, 500.00m, "lcto-1");
-        await CreditarAsync(conta, 1000.00m, "lcto-2");
         await EstornarAsync(conta, original.EntryId, "estorno-1");
 
         // Chave diferente: nao e repeticao, e um segundo estorno de verdade.
         await Assert.ThrowsAsync<EntryAlreadyReversedException>(
             () => EstornarAsync(conta, original.EntryId, "estorno-2"));
 
+        Assert.Equal(2, await ContarLancamentosAsync(conta));
+    }
+
+    [Fact]
+    public async Task Estorno_em_duplicidade_com_saldo_sobrando_tambem_e_recusado()
+    {
+        var conta = await _fixture.CreateAccountAsync();
+        var original = await CreditarAsync(conta, 500.00m, "lcto-1");
+        await CreditarAsync(conta, 1000.00m, "lcto-2");
+        await EstornarAsync(conta, original.EntryId, "estorno-1");
+
+        await Assert.ThrowsAsync<EntryAlreadyReversedException>(
+            () => EstornarAsync(conta, original.EntryId, "estorno-2"));
+
         Assert.Equal(3, await ContarLancamentosAsync(conta));
+    }
+
+    [Fact]
+    public async Task Reenvio_do_estorno_que_zerou_a_conta_devolve_o_resultado_original()
+    {
+        // A repeticao tem precedencia sobre a rejeicao por duplicidade: e o
+        // mesmo comando, nao um segundo estorno.
+        var conta = await _fixture.CreateAccountAsync();
+        var original = await CreditarAsync(conta, 500.00m, "lcto-1");
+        var quando = DateTimeOffset.UtcNow;
+
+        var primeiro = await EstornarAsync(conta, original.EntryId, "estorno-1", quando);
+        var segundo = await EstornarAsync(conta, original.EntryId, "estorno-1", quando);
+
+        Assert.True(segundo.Replayed);
+        Assert.Equal(primeiro with { Replayed = true }, segundo);
     }
 
     [Fact]

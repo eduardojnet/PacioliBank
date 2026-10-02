@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick. Atualizado a cada entrega, junto
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 10 | 24, 25, 31 a 38 |
-| A Fazer | 8 | 19, 19.1, 19.3, 20, 23, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 20, 23, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 2 | 21, 22 |
-| Bloqueado | 3 | 19.2, 29, 30 |
-| Concluído | 18 | 01 a 18 |
+| Bloqueado | 2 | 29, 30 |
+| Concluído | 20 | 01 a 19.1 |
 
 ---
 
@@ -122,43 +122,17 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 19. Implementar a porta de entrada e os endpoints HTTP
+### 19.2. Testar a API via Insomnia
 
-`prioridade: Alta` · `codigo` · `arquitetura` · `requisito-obrigatorio`
+`prioridade: Média` · `teste`
 
-LACUNA L-03. O hexágono existe só no lado dirigido: ILedgerStore é porta de saída e está bem feita, mas NÃO EXISTE porta de entrada. Quem chama o store é o teste de integração, diretamente.
+DESBLOQUEADO em 02/10/2026: o card 19 foi concluído. Antes: BLOQUEADO POR 'Implementar a porta de entrada e os endpoints HTTP'.
 
-ESCOPO AMPLIADO em 02/10 (absorve L-07):
+Hoje a API tem apenas /health/live e /health/ready. Nenhum endpoint de negócio existe, a connection string não é lida e o store não está registrado na injeção de dependência.
 
-1. Registrar NpgsqlDataSource e ILedgerStore na injeção de dependência (a API hoje nem lê a connection string).
-2. Criar a porta de entrada, deixando o endpoint como adaptador HTTP fino. O cálculo do fingerprint é regra do ADR-0006 e não pertence ao adaptador.
-3. Escrever os tipos de comando: PostingCommand, ReversalCommand, StatementQuery, StatementEntry, StatementPage. Foram dados como escritos na revisão anterior e NÃO existem no disco (L-07).
-4. Escrever as exceções faltantes: EntryNotFoundException, PageSizeExceededException, InvalidPointInTimeException. Mesma situação.
-5. Endpoints: credits, debits, reversals, balance, entries.
-6. Mapear exceções de domínio para ProblemDetails com os códigos da EF 8.6.
-7. Ler o header Idempotency-Key.
+QUANDO DESBLOQUEAR: a coleção sai por importação direta do OpenAPI, e o requests.http que já está no repositório vira útil.
 
-CRITÉRIO: build sem avisos, 57 testes ainda verdes, docker compose up servindo os endpoints, e um crédito seguido de consulta de posição funcionando via curl.
-
-### 19.1. Implementar o caminho de persistência do estorno
-
-`prioridade: Alta` · `codigo` · `risco` · `persistencia`
-
-LACUNA L-08, ALTA. Descoberta na primeira verificação feita pelo Claude Code, por leitura direta do código.
-
-O domínio tem Account.Reverse, que valida titularidade e proíbe estorno de estorno (RN-004). A PERSISTÊNCIA NÃO O USA: PostgresLedgerStore só expõe PostAsync, que chama Account.Post.
-
-CONSEQUÊNCIAS VERIFICADAS NA LEITURA:
-
-1. Não há leitura do lançamento original dentro da transação, então EntryNotFromThisAccountException e CannotReverseReversalException nunca são lançadas fora dos testes de domínio.
-2. Um PostingRequest com ReversalOf preenchido seria gravado SEM essas validações. A FK reversal_of garante apenas que o original existe: não que pertence à conta, não que não é estorno, não que sentido e valor são os opostos.
-3. A violação de uq_entries_reversal (estorno duplicado) sai como PostgresException crua. Pela EF 8.6 deveria ser ENTRY_ALREADY_REVERSED (409).
-
-Nenhum teste de integração cobre estorno hoje.
-
-CRITÉRIO: ReverseAsync no store, dentro da mesma transação e sob o mesmo bloqueio do ADR-0005, com teste contra PostgreSQL real cobrindo os três casos acima.
-
-Pode ser feito junto do item de endpoints, mas é verificável separadamente.
+ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI ainda não é gerado, então a coleção do Insomnia não sai por importação direta: sai do `requests.http` ou é montada à mão.
 
 ### 19.3. Escrever os testes de contrato da API
 
@@ -227,7 +201,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 19, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 20, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -263,16 +237,6 @@ CRITÉRIO: saber qual hipótese é verdadeira e registrar o resultado no ADR-000
 ---
 
 ## Bloqueado
-
-### 19.2. Testar a API via Insomnia
-
-`prioridade: Média` · `teste`
-
-BLOQUEADO POR: 'Implementar a porta de entrada e os endpoints HTTP'.
-
-Hoje a API tem apenas /health/live e /health/ready. Nenhum endpoint de negócio existe, a connection string não é lida e o store não está registrado na injeção de dependência.
-
-QUANDO DESBLOQUEAR: a coleção sai por importação direta do OpenAPI, e o requests.http que já está no repositório vira útil.
 
 ### 29. Responder às 6 questões de negócio em aberto
 
@@ -511,3 +475,61 @@ REGRAS QUE PASSAM A VALER:
 - Antecipação de item da fila exige motivo registrado no cartão
 
 COMMITS: 12 (política, `4e28487`) e 13 (convenção de numeração, `99924c4`), ambos publicados.
+
+### 19. Implementar a porta de entrada e os endpoints HTTP
+
+`prioridade: Alta` · `codigo` · `arquitetura` · `requisito-obrigatorio`
+
+LACUNA L-03. O hexágono existe só no lado dirigido: ILedgerStore é porta de saída e está bem feita, mas NÃO EXISTE porta de entrada. Quem chama o store é o teste de integração, diretamente.
+
+ESCOPO AMPLIADO em 02/10 (absorve L-07):
+
+1. Registrar NpgsqlDataSource e ILedgerStore na injeção de dependência (a API hoje nem lê a connection string).
+2. Criar a porta de entrada, deixando o endpoint como adaptador HTTP fino. O cálculo do fingerprint é regra do ADR-0006 e não pertence ao adaptador.
+3. Escrever os tipos de comando: PostingCommand, ReversalCommand, StatementQuery, StatementEntry, StatementPage. Foram dados como escritos na revisão anterior e NÃO existem no disco (L-07).
+4. Escrever as exceções faltantes: EntryNotFoundException, PageSizeExceededException, InvalidPointInTimeException. Mesma situação.
+5. Endpoints: credits, debits, reversals, balance, entries.
+6. Mapear exceções de domínio para ProblemDetails com os códigos da EF 8.6.
+7. Ler o header Idempotency-Key.
+
+CRITÉRIO: build sem avisos, 57 testes ainda verdes, docker compose up servindo os endpoints, e um crédito seguido de consulta de posição funcionando via curl.
+
+ENTREGA (02/10/2026, commit `feat(api)` deste card):
+
+1. Injeção de dependência em `Program.cs`, a raiz de composição; connection string lida de `ConnectionStrings:Ledger`
+2. Porta de entrada `ILedgerService` / `LedgerService`; endpoint como adaptador fino
+3. `Commands.cs` com os 5 tipos (L-07)
+4. As 3 exceções faltantes, mais `EntryAlreadyReversedException`
+5. Endpoints credits, debits, reversals, balance, entries
+6. `LedgerProblems`: um único mapa de exceção para problem+json com `code` da EF §8.6
+7. `Idempotency-Key` lido; repetição responde 200 com `Idempotency-Replayed: true`
+
+VERIFICAÇÃO: build sem avisos; 94 testes verdes (eram 57); `docker compose up --build` servindo os endpoints; crédito seguido de consulta de posição via curl, mais 20 cenários de erro.
+
+ACHADOS DO CURL, que a suíte não via: corpo da repetição diferente do original (precisão de instante) e estorno duplicado saindo como saldo insuficiente (BDD F06). Corrigidos, com teste que reprova sem a correção.
+
+REGISTRADO: L-11 (6 decisões de contrato provisórias, sem respaldo na EF). Sem autenticação: RF-009 segue pendente.
+
+### 19.1. Implementar o caminho de persistência do estorno
+
+`prioridade: Alta` · `codigo` · `risco` · `persistencia`
+
+LACUNA L-08, ALTA. Descoberta na primeira verificação feita pelo Claude Code, por leitura direta do código.
+
+O domínio tem Account.Reverse, que valida titularidade e proíbe estorno de estorno (RN-004). A PERSISTÊNCIA NÃO O USA: PostgresLedgerStore só expõe PostAsync, que chama Account.Post.
+
+CONSEQUÊNCIAS VERIFICADAS NA LEITURA:
+
+1. Não há leitura do lançamento original dentro da transação, então EntryNotFromThisAccountException e CannotReverseReversalException nunca são lançadas fora dos testes de domínio.
+2. Um PostingRequest com ReversalOf preenchido seria gravado SEM essas validações. A FK reversal_of garante apenas que o original existe: não que pertence à conta, não que não é estorno, não que sentido e valor são os opostos.
+3. A violação de uq_entries_reversal (estorno duplicado) sai como PostgresException crua. Pela EF 8.6 deveria ser ENTRY_ALREADY_REVERSED (409).
+
+Nenhum teste de integração cobre estorno hoje.
+
+CRITÉRIO: ReverseAsync no store, dentro da mesma transação e sob o mesmo bloqueio do ADR-0005, com teste contra PostgreSQL real cobrindo os três casos acima.
+
+Pode ser feito junto do item de endpoints, mas é verificável separadamente.
+
+ENTREGA (02/10/2026, commit `4c71b3f`): `ReverseAsync` no store, sob o mesmo bloqueio por conta. 9 testes de integração (os três casos do critério, F06 completo e 10 estornos simultâneos do mesmo lançamento, dos quais exatamente 1 é aceito). L-08 encerrada.
+
+ACHADO NA ENTREGA: L-10, reenvio idempotente recusado quando o saldo mudou. Verificado por execução e registrado; exige revisão do ADR-0006.

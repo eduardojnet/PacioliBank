@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 66 testes; os de integração exigem Docker
+dotnet test                   # 94 testes; os de integração exigem Docker
 docker compose up --build     # API em http://localhost:8080
 docker compose down -v        # obrigatório após qualquer mudança de esquema
 ```
@@ -65,8 +65,8 @@ src/
   PacioliBank.Ledger.Persistence/  adaptador PostgreSQL: Dapper, SQL, transacao, bloqueio
   PacioliBank.Api/                 adaptador HTTP
 tests/
-  PacioliBank.Domain.Tests/        39 testes, sem I/O
-  PacioliBank.Integration.Tests/   27 testes, PostgreSQL real, inclui concorrencia e estorno
+  PacioliBank.Domain.Tests/        59 testes, sem I/O
+  PacioliBank.Integration.Tests/   35 testes, PostgreSQL real, inclui concorrencia, estorno e extrato
 db/init/                           esquema, papeis e privilegios
 docs/                              ESTADO, ADRs, specs, convencoes, kanban
 ```
@@ -97,6 +97,8 @@ docs/                              ESTADO, ADRs, specs, convencoes, kanban
 
 ## Pendência imediata
 
-O próximo item da fila é a **porta de entrada e os endpoints HTTP**, com escopo ampliado para absorver L-03, L-07 e L-08. Ver `docs/ESTADO.md §7`, item 1.
+Cards 19 e 19.1 concluídos: os 5 endpoints de negócio existem. O próximo da fila é o **20** (diagramas em Mermaid). Ver `docs/ESTADO.md §7`.
 
-Antes de começar, rode `dotnet test`. Esperado: 66 passando, sem avisos.
+Lacuna aberta de severidade ALTA fora da fila: **L-10** (reenvio idempotente recusado quando o saldo mudou), que exige revisão do ADR-0006.
+
+Antes de começar, rode `dotnet test`. Esperado: 94 passando, sem avisos.

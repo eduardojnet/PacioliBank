@@ -234,6 +234,33 @@ public class AccountTests
         Assert.Equal(1000.00m, conta.CurrentBalance.Amount);
     }
 
+    [Fact]
+    public void Estorno_ja_estornado_e_recusado_como_duplicidade_antes_do_saldo()
+    {
+        // BDD F06: com a conta zerada pelo primeiro estorno, o segundo e
+        // duplicidade, nao saldo insuficiente.
+        var conta = Conta(saldo: 0m);
+        var credito = conta.Post(Comando(EntryDirection.Credit, 500.00m, "k1"));
+        conta.Reverse(credito, Agora, "k2", Guid.NewGuid());
+
+        Assert.Throws<EntryAlreadyReversedException>(
+            () => conta.Reverse(credito, Agora, "k3", Guid.NewGuid(), alreadyReversed: true));
+
+        Assert.Equal(2L, conta.LastSequence);
+    }
+
+    [Fact]
+    public void Titularidade_e_verificada_antes_da_duplicidade()
+    {
+        // Responder "ja estornado" a quem nao e titular revelaria o lancamento.
+        var contaA = Conta(saldo: 0m, accountId: ContaA);
+        var contaB = Conta(saldo: 0m, accountId: ContaB);
+        var lancamentoDeA = contaA.Post(Comando(EntryDirection.Credit, 100.00m, "k1"));
+
+        Assert.Throws<EntryNotFromThisAccountException>(
+            () => contaB.Reverse(lancamentoDeA, Agora, "k2", Guid.NewGuid(), alreadyReversed: true));
+    }
+
     // ------------------------------------------------------- Moeda e sinal
 
     [Fact]

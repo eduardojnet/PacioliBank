@@ -116,7 +116,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
         // qualquer gravacao e antes de a sequencia ser consumida (RN-006).
         var entry = account.Post(request);
 
-        var recordedAt = DateTimeOffset.UtcNow;
+        var recordedAt = ToStoredPrecision(DateTimeOffset.UtcNow);
 
         try
         {
@@ -161,11 +161,28 @@ public sealed class PostgresLedgerStore : ILedgerStore
             throw new EntryNotFoundException(entryId);
         }
 
-        // Titularidade, estorno de estorno e saldo sao decididos pelo agregado,
-        // nao por comparacao de colunas aqui (RN-001, RN-004).
-        var entry = account.Reverse(ToEntry(row), request.OccurredAt, request.IdempotencyKey, request.CorrelationId);
+        if (row.AlreadyReversed)
+        {
+            // O reenvio do proprio estorno encontra o original ja estornado. A
+            // repeticao legitima tem precedencia sobre qualquer rejeicao; a
+            // impressao inclui conta e lancamento, entao so casa com o mesmo
+            // comando (ADR-0006).
+            var replayed = await TryReplayAsync(accountId, request.IdempotencyKey, requestHash, cancellationToken)
+                .ConfigureAwait(false);
 
-        var recordedAt = DateTimeOffset.UtcNow;
+            if (replayed is not null)
+            {
+                return replayed;
+            }
+        }
+
+        // Titularidade, estorno de estorno, duplicidade e saldo sao decididos
+        // pelo agregado, nessa ordem, e nao por comparacao de colunas aqui
+        // (RN-001, RN-004).
+        var entry = account.Reverse(
+            ToEntry(row), request.OccurredAt, request.IdempotencyKey, request.CorrelationId, row.AlreadyReversed);
+
+        var recordedAt = ToStoredPrecision(DateTimeOffset.UtcNow);
 
         try
         {
@@ -414,16 +431,79 @@ public sealed class PostgresLedgerStore : ILedgerStore
             (int)point.EntriesReplayed);
     }
 
+    /// <inheritdoc />
+    public async Task<StatementPage> GetStatementAsync(
+        Guid accountId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        long afterSequence,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+
+        var code = await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(
+            LedgerSql.SelectAccountCurrency, new { accountId }, cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+
+        if (code is null)
+        {
+            throw new AccountNotFoundException(accountId);
+        }
+
+        var currency = Currency.FromCode(code);
+
+        // Uma linha a mais que o limite revela se ha proxima pagina, sem COUNT.
+        var rows = (await connection.QueryAsync<StatementRow>(new CommandDefinition(
+            LedgerSql.SelectStatementPage,
+            new
+            {
+                accountId,
+                afterSequence,
+                from = from?.UtcDateTime,
+                to = to?.UtcDateTime,
+                take = limit + 1,
+            },
+            cancellationToken: cancellationToken)).ConfigureAwait(false)).ToList();
+
+        var hasMore = rows.Count > limit;
+        var page = rows.Take(limit)
+            .Select(row => new StatementEntry(
+                row.EntryId,
+                row.Sequence,
+                (EntryDirection)row.Direction,
+                Money.Of(row.Amount, currency),
+                new DateTimeOffset(row.OccurredAt, TimeSpan.Zero),
+                new DateTimeOffset(row.RecordedAt, TimeSpan.Zero),
+                Money.Of(row.BalanceAfter, currency),
+                row.ReversalOf))
+            .ToList();
+
+        return new StatementPage(accountId, page, hasMore ? page[^1].Sequence : null);
+    }
+
     private static PostEntryResult ToResult(LedgerEntry entry, DateTimeOffset recordedAt, bool replayed) =>
         new(entry.EntryId,
             entry.AccountId,
             entry.Sequence,
             entry.Direction,
             entry.Amount,
-            entry.OccurredAt,
+            ToStoredPrecision(entry.OccurredAt),
             recordedAt,
             entry.BalanceAfter,
             replayed);
+
+    /// <summary>
+    /// Trunca para microssegundos, a precisao do <c>timestamptz</c>.
+    /// </summary>
+    /// <remarks>
+    /// O .NET guarda ticks de 100 ns. Sem truncar, a primeira resposta levaria
+    /// o instante em memoria e a repeticao, lida do banco, o instante gravado:
+    /// corpos diferentes para o mesmo comando, contra a EF secao 8.4. O Npgsql
+    /// tambem trunca na escrita, entao o valor devolvido e o gravado coincidem.
+    /// </remarks>
+    private static DateTimeOffset ToStoredPrecision(DateTimeOffset value) =>
+        new(value.Ticks - (value.Ticks % 10), value.Offset);
 
     private static LedgerEntry ToEntry(EntryRow row)
     {
@@ -491,6 +571,25 @@ public sealed class PostgresLedgerStore : ILedgerStore
         public long LastSequence { get; set; }
     }
 
+    private sealed class StatementRow
+    {
+        public Guid EntryId { get; set; }
+
+        public long Sequence { get; set; }
+
+        public short Direction { get; set; }
+
+        public decimal Amount { get; set; }
+
+        public DateTime OccurredAt { get; set; }
+
+        public DateTime RecordedAt { get; set; }
+
+        public decimal BalanceAfter { get; set; }
+
+        public Guid? ReversalOf { get; set; }
+    }
+
     private sealed class EntryRow
     {
         public Guid EntryId { get; set; }
@@ -514,6 +613,8 @@ public sealed class PostgresLedgerStore : ILedgerStore
         public Guid? ReversalOf { get; set; }
 
         public decimal BalanceAfter { get; set; }
+
+        public bool AlreadyReversed { get; set; }
     }
 
     private sealed class ReplayRow

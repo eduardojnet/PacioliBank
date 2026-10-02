@@ -2,10 +2,10 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (sétima revisão)
+**Última atualização:** 2026-10-02 (oitava revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 66 passando (39 de domínio, 27 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
-**Atenção:** os tipos que a L-07 dava como "escritos e não compilados" **não existem no disco**. Ver §6, L-07.
+**Testes:** 94 passando (59 de domínio, 35 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
 
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 57 passando |
+| Testes automatizados | Atendido, 94 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido, precisa da revisão final |
 | Toda documentação no próprio repositório | **Parcial**: diagramas estão fora (ver §6, L-02) |
@@ -94,7 +94,9 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 | `Domain/PostingRequest.cs`, `ReversalRequest.cs` | Comandos de lançamento e de estorno |
 | `Domain/AccountStatus.cs`, `EntryDirection.cs` | Enums alinhados às colunas do banco |
 | `Domain/LedgerDomainException.cs` | Exceção raiz mais 16 derivadas, uma por regra violável |
-| `Application/ILedgerStore.cs` | Porta de saída, estreita e orientada a caso de uso |
+| `Application/ILedgerStore.cs` | Porta de saída, estreita e orientada a caso de uso: lançamento, estorno, posição, extrato |
+| `Application/ILedgerService.cs`, `LedgerService.cs` | **Porta de entrada** (L-03): conversão do valor, impressão do comando, validação de instante e de página, antes de qualquer I/O |
+| `Application/Commands.cs` | `PostingCommand`, `ReversalCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` |
 | `Application/PostEntryResult.cs`, `BalanceResult.cs` | Contratos de saída |
 | `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variante própria para estorno |
 
@@ -109,6 +111,20 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 
 **A ordem dos passos dentro da transação é a arquitetura**, não detalhe de implementação: bloqueia a linha da conta, depois lê a posição, o agregado decide, e lançamento, sequência, idempotência e outbox são gravados juntos.
 
+Instantes devolvidos são truncados para microssegundos, a precisão do `timestamptz`: sem isso, a primeira resposta e a repetição idempotente (lida do banco) diferiam no `recordedAt`, contra a EF §8.4. Defeito encontrado no teste via curl, coberto por teste desde então.
+
+### API (`src/PacioliBank.Api`)
+
+| Arquivo | Conteúdo |
+|---|---|
+| `Program.cs` | Raiz de composição: único lugar que conhece todas as camadas; `/health/ready` consulta o PostgreSQL |
+| `Endpoints/LedgerEndpoints.cs` | Os 5 endpoints da EF §8.3, como adaptador fino sobre `ILedgerService` |
+| `Endpoints/LedgerProblems.cs` | Único mapa de exceção para `application/problem+json` com `code` da EF §8.6 |
+| `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como string, instantes ISO 8601 UTC |
+| `Endpoints/Correlation.cs` | `X-Correlation-Id` aceito ou gerado, devolvido inclusive em resposta de erro |
+
+Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo idêntico ao original; lançamento novo responde `201`.
+
 ### Banco (`db/init/`)
 
 Esquema `ledger` com 5 tabelas e 3 papéis. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
@@ -119,8 +135,8 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 39 | Invariantes puras, sem I/O |
-| `PacioliBank.Integration.Tests` | 27 | PostgreSQL real via Testcontainers, incluindo concorrência e estorno (9 testes, F06) |
+| `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
+| `PacioliBank.Integration.Tests` | 35 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06) e extrato (F05) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -138,10 +154,10 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 
 | Item | Situação |
 |---|---|
-| Endpoints HTTP de negócio | A API tem apenas `/health/live` e `/health/ready` |
-| Injeção de dependência na API | `NpgsqlDataSource` e `ILedgerStore` não registrados; connection string não lida |
-| Mapeamento de exceções para `ProblemDetails` | Não existe |
-| Porta de entrada (lado dirigente do hexágono) | Não existe |
+| Autenticação e autorização (RF-009) | **Não implementadas.** Qualquer chamador opera qualquer conta. Os endpoints existem sem a borda de segurança do ADR-0009 |
+| `description` e `metadata` do corpo (EF §8.4) | Aceitos e ignorados: o lançamento de domínio não os carrega e a coluna `metadata` fica com o padrão `{}` |
+| Limite de taxa (RNF-012, código `RATE_LIMIT_EXCEEDED`) | Não implementado |
+| Documento OpenAPI | Não gerado. Pré-requisito do card 19.3 (testes de contrato) |
 | Despachante de outbox | Tabela e gravação existem; o publicador não |
 | Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
 | Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
@@ -167,13 +183,11 @@ O enunciado exige toda a documentação no próprio repositório. Hoje quem clon
 
 **Segunda parte:** os diagramas mostram componentes que ainda não existem (painel, despachante, endpoints, autorização). Legítimo como arquitetura-alvo, desonesto como estado atual. Cada diagrama precisa de nota distinguindo o implementado do especificado.
 
-### L-03: Hexágono implementado só no lado dirigido (ALTA)
+### L-03: Hexágono implementado só no lado dirigido (ENCERRADA em 2026-10-02, card 19)
 
-`ILedgerStore` é porta de saída e está bem feita. **Não existe porta de entrada.** Hoje quem chama o store é o teste de integração, diretamente.
+**Situação registrada:** `ILedgerStore` existia como porta de saída, mas não havia porta de entrada; quem chamava o store era o teste de integração.
 
-Quando os endpoints forem escritos, a recomendação é criar `IPostEntryHandler` como porta de entrada, deixando o endpoint como adaptador HTTP fino. O cálculo do fingerprint é regra do ADR-0006 e não pertence ao adaptador HTTP.
-
-Resposta honesta hoje: "Ports and Adapters com desvio consciente, implementado no lado dirigido; o lado dirigente ainda não foi construído".
+**Corrigido:** `ILedgerService` é a porta de entrada. O endpoint HTTP é adaptador fino: traduz rota, cabeçalho, corpo e status, e não conhece o store. Conversão do valor monetário, impressão do comando (ADR-0006), validação de instante e de tamanho de página ficam na porta, de modo que uma segunda borda (fila, por exemplo) não reimplemente regra. A ligação entre as camadas acontece só em `Program.cs`.
 
 ### L-04: Poder de detecção do teste de concorrência não verificado (ALTA)
 
@@ -199,16 +213,11 @@ Divergências já identificadas e registradas, ainda não aplicadas nos document
 
 Registrar em vez de corrigir em silêncio preserva a rastreabilidade de por que mudou. Mas as correções precisam ser aplicadas antes da entrega.
 
-### L-07: Código dado como escrito, mas ausente do disco (ENCERRADA como verificação; o trabalho migra para o item 1 da fila)
+### L-07: Código dado como escrito, mas ausente do disco (ENCERRADA em 2026-10-02, cards 19.1 e 19)
 
-A revisão anterior registrava dois arquivos como escritos e não compilados. A verificação de 2026-10-02 mostrou que **nenhum dos dois existe no repositório**:
+**Situação registrada:** uma revisão anterior dava como escritos `Application/Commands.cs` e três exceções (`EntryNotFoundException`, `PageSizeExceededException`, `InvalidPointInTimeException`). A verificação mostrou que **nenhum existia no disco**. Fica registrado em vez de apagado: era apresentar o especificado como implementado.
 
-- `src/PacioliBank.Ledger/Application/Commands.cs` não existe. Nenhum dos tipos `PostingCommand`, `ReversalCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` aparece em código algum
-- `src/PacioliBank.Ledger/Domain/LedgerDomainException.cs` existe, mas **sem** `EntryNotFoundException`, `PageSizeExceededException` e `InvalidPointInTimeException`. O arquivo tem a exceção raiz mais 12 derivadas, nenhuma delas as três citadas
-
-O build verde e os 57 testes verdes valem para o código que está no disco, não para o que a revisão anterior descrevia. A descrição antiga apresentava como escrito algo que não estava escrito, exatamente o tipo de divergência que a §5 deste documento existe para impedir: apresentar o especificado como implementado. Fica registrada aqui em vez de apagada.
-
-Os tipos continuam necessários e passam a ser escritos dentro do item 1 da fila (§7).
+**Corrigido:** os cinco tipos de `Commands.cs` e as três exceções existem, mais `EntryAlreadyReversedException`, exigida pelo estorno. Todos compilados e cobertos por teste. A raiz de exceções tem agora 16 derivadas.
 
 **Primeira ação de qualquer sessão nova continua sendo `dotnet test`**, e conferir no disco o que este documento afirma existir.
 
@@ -240,7 +249,24 @@ Detectada ao verificar o repositório recém-publicado. A tabela "Estado atual d
 
 **Impacto:** o cliente que reenvia após timeout, exatamente o caso que a idempotência existe para proteger, recebe 422 para um débito que foi efetivado. Pode levar o originador a tratar como recusado um pagamento consumado.
 
+**Situação após o card 19:** o estorno deixou de ser afetado no caso mais comum. Quando o original já está estornado, o adaptador tenta a repetição antes de o agregado decidir, e o reenvio do estorno devolve o resultado original mesmo com a conta zerada (coberto por teste). Crédito e débito continuam afetados.
+
 **Correção provável, a decidir em ADR:** sob o bloqueio da conta, consultar o registro de idempotência antes de o agregado decidir. Sob bloqueio, a consulta prévia não tem a janela de corrida que o ADR-0006 rejeita, porque o registro é gravado pela mesma conta serializada. Contraria a letra do ADR-0006 ("nunca por consulta prévia"), por isso exige revisão do ADR, e não correção silenciosa. Fora do escopo do card 19.
+
+### L-11: Decisões de contrato tomadas na implementação, sem respaldo na EF (MÉDIA)
+
+Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebeu conduta provisória, registrada aqui para não virar suposição silenciosa. Todas são reversíveis sem migração de dados.
+
+| Ponto | Conduta provisória | Por quê |
+|---|---|---|
+| Lançamento inexistente, ou de outra conta, no estorno | `404 ENTRY_NOT_FOUND`, código ausente da EF §8.6 | Responder diferente para "de outra conta" revelaria a existência do lançamento, mesmo princípio do ADR-0009 para contas |
+| Corpo malformado, campo obrigatório ausente, cursor ilegível | `400 INVALID_REQUEST`, código ausente da EF §8.6 | Erro de protocolo, sem regra de negócio correspondente; sem código, o chamador recebia 400 sem corpo |
+| Moeda fora do catálogo (ex.: `USD`) | `400 CURRENCY_MISMATCH` | O BDD F01 espera esse código; para o chamador, é moeda divergente da conta (QA-005) |
+| Tamanho de página do extrato | Padrão 50, máximo 200 | A EF não fixa valor; o BDD F05 usa 50 e recusa 10000 |
+| `occurredAt` no estorno | Obrigatório no corpo | Sem ele, o padrão "agora" mudaria a cada reenvio e a repetição viraria conflito de chave |
+| `X-Correlation-Id` que não é GUID | Substituído por um GUID gerado, devolvido no cabeçalho | O domínio usa GUID; a EF não define formato |
+
+Destino: incorporar à EF §8 na revisão documental (card 21), ou reverter o que o negócio decidir diferente.
 
 ### L-06: `AnalysisMode` ainda em `Default` (BAIXA)
 
@@ -262,10 +288,10 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 
 Ordem fixa. Cada item só começa quando o anterior está verde. O número em colchetes é o do cartão no quadro; subníveis (19.x) dependem do pai e não alteram a ordem.
 
-1. **[19] Endpoints HTTP e tratamento de erro**: injeção de dependência, porta de entrada (L-03), tipos de comando e exceções ausentes do disco (L-07), endpoints de crédito, débito, estorno, posição e extrato, `ProblemDetails` com os códigos da EF §8.6, leitura do `Idempotency-Key`
+1. ~~**[19] Endpoints HTTP e tratamento de erro** (L-03, L-07)~~ concluído em 2026-10-02
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
-   - **[19.2] Teste via Insomnia**, bloqueado pelo 19
-   - **[19.3] Testes de contrato da API**, depois do 19
+   - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
+   - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. **[20] Diagramas em Mermaid no repositório** (L-02)
 4. **[21] Correções documentais** (L-05)
@@ -281,10 +307,16 @@ Ordem fixa. Cada item só começa quando o anterior está verde. O número em co
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 57 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 94 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
-curl http://localhost:8080/health/live
+curl http://localhost:8080/health/ready
+curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
+     -H 'Idempotency-Key: k1' -H 'Content-Type: application/json' \
+     -d '{"amount":"150.00","currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
+curl http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/balance
 ```
+
+Demais requisições em `requests.http`, na raiz.
 
 Os testes de integração exigem Docker em execução.
 
@@ -359,3 +391,4 @@ por quê. Não avance sem minha confirmação.
 | 2026-10-02 | Correções da L-09 commitadas e publicadas (3 commits, `origin/main` em `c8d90ff`). `CLAUDE.md` retirado do `.gitignore` e versionado; decisão registrada na §3 |
 | 2026-10-02 | Quadro sincronizado com a numeração aplicada no TickTick (41 cartões, 01 a 38 com subníveis 19.1 a 19.3). `KANBAN.md` regenerado por leitura direta do quadro; §6-A e §7 passam a citar o número do cartão. Push dos commits 12 e 13 confirmado (`origin/main` em `99924c4`) |
 | 2026-10-02 | Card 19.1 concluído: `ReverseAsync` no store, sob o mesmo bloqueio por conta, com 9 testes de integração (66 verdes). L-08 encerrada. L-10 registrada e verificada por execução: reenvio idempotente recusado quando o saldo mudou |
+| 2026-10-02 | Card 19 concluído: porta de entrada `ILedgerService`, os 5 endpoints da EF §8.3, `ProblemDetails` com o catálogo da §8.6, correlação, prontidão ligada ao PostgreSQL. L-03 e L-07 encerradas; L-11 registrada (6 decisões de contrato provisórias). O teste via curl achou 2 defeitos que a suíte não via (corpo da repetição diferente por precisão de instante; estorno duplicado saindo como saldo insuficiente), corrigidos com teste que reprova sem a correção. 94 verdes. `.dockerignore` criado: sem ele a imagem não compilava |

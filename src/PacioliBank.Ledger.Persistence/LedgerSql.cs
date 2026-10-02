@@ -127,21 +127,62 @@ internal static class LedgerSql
     /// Lancamento original de um estorno. Lido pela chave primaria, sem filtro
     /// de conta: a titularidade e decidida pelo agregado (RN-004), e filtrar
     /// aqui esconderia essa regra dentro do SQL.
+    ///
+    /// AlreadyReversed so ordena a rejeicao; quem impede o segundo estorno e
+    /// uq_entries_reversal. Lido sob o bloqueio da conta, e o estorno de um
+    /// lancamento so pode ser gravado por quem detem esse mesmo bloqueio, entao
+    /// o valor nao muda entre esta leitura e a gravacao. O indice da constraint
+    /// atende o EXISTS.
     /// </summary>
     internal const string SelectEntry = """
-        SELECT entry_id        AS EntryId,
-               account_id      AS AccountId,
-               sequence        AS Sequence,
-               direction       AS Direction,
-               amount          AS Amount,
-               currency        AS Currency,
-               occurred_at     AS OccurredAt,
-               idempotency_key AS IdempotencyKey,
-               correlation_id  AS CorrelationId,
-               reversal_of     AS ReversalOf,
-               balance_after   AS BalanceAfter
+        SELECT e.entry_id        AS EntryId,
+               e.account_id      AS AccountId,
+               e.sequence        AS Sequence,
+               e.direction       AS Direction,
+               e.amount          AS Amount,
+               e.currency        AS Currency,
+               e.occurred_at     AS OccurredAt,
+               e.idempotency_key AS IdempotencyKey,
+               e.correlation_id  AS CorrelationId,
+               e.reversal_of     AS ReversalOf,
+               e.balance_after   AS BalanceAfter,
+               EXISTS (SELECT 1
+                         FROM ledger.ledger_entries r
+                        WHERE r.reversal_of = e.entry_id) AS AlreadyReversed
+          FROM ledger.ledger_entries e
+         WHERE e.entry_id = @entryId
+        """;
+
+    /// <summary>Moeda da conta, que tambem serve de verificacao de existencia.</summary>
+    internal const string SelectAccountCurrency = """
+        SELECT currency
+          FROM ledger.accounts
+         WHERE account_id = @accountId
+        """;
+
+    /// <summary>
+    /// Pagina do extrato. O cursor e a sequencia: estavel e sem lacunas
+    /// (RN-006), entao nao repete nem omite linha entre paginas. Atendida pelo
+    /// indice de <c>uq_entries_sequence</c>, em ordem, sem ordenacao adicional.
+    /// Os casts explicitos permitem filtro opcional sem que o PostgreSQL precise
+    /// inferir o tipo de um parametro nulo.
+    /// </summary>
+    internal const string SelectStatementPage = """
+        SELECT entry_id      AS EntryId,
+               sequence      AS Sequence,
+               direction     AS Direction,
+               amount        AS Amount,
+               occurred_at   AS OccurredAt,
+               recorded_at   AS RecordedAt,
+               balance_after AS BalanceAfter,
+               reversal_of   AS ReversalOf
           FROM ledger.ledger_entries
-         WHERE entry_id = @entryId
+         WHERE account_id = @accountId
+           AND sequence > @afterSequence
+           AND (@from::timestamptz IS NULL OR occurred_at >= @from::timestamptz)
+           AND (@to::timestamptz   IS NULL OR occurred_at <= @to::timestamptz)
+         ORDER BY sequence
+         LIMIT @take
         """;
 
     /// <summary>Lancamento e impressao originais, para a repeticao idempotente.</summary>

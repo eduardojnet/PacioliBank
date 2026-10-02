@@ -1,0 +1,12 @@
+# Saidas de build do host. O obj/ carrega project.assets.json com caminhos de
+# pacote da maquina local; copiado para a imagem, sobrescreve o restore feito
+# no container e o publish falha com NETSDK1064.
+**/bin/
+**/obj/
+
+.git/
+.vs/
+.vscode/
+.claude/
+tests/
+docs/
