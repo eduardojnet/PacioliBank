@@ -1,0 +1,50 @@
+# Ambiente local completo. RNF-037: um comando, maquina limpa, sem passo manual.
+#   docker compose up --build
+
+services:
+
+  pacioli-db:
+    image: postgres:17-alpine
+    container_name: pacioli-db
+    environment:
+      POSTGRES_DB: pacioli
+      POSTGRES_USER: pacioli_migrator
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pacioli_local_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pacioli-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pacioli_migrator -d pacioli"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - pacioli-net
+
+  pacioli-api:
+    build:
+      context: .
+      dockerfile: src/PacioliBank.Api/Dockerfile
+    image: pacioli-bank/ledger:local
+    container_name: pacioli-api
+    depends_on:
+      pacioli-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Ledger: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_runtime;Password=${POSTGRES_PASSWORD:-pacioli_local_dev}"
+    ports:
+      - "8080:8080"
+    networks:
+      - pacioli-net
+
+networks:
+  pacioli-net:
+    name: pacioli-net
+
+volumes:
+  pacioli-data:
+    name: pacioli-data
