@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (décima nona revisão)
+**Última atualização:** 2026-10-02 (vigésima revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 103 passando (59 de domínio, 44 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 105 passando (59 de domínio, 46 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 103 passando |
+| Testes automatizados | Atendido, 105 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -98,6 +98,7 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 | `Application/ILedgerService.cs`, `LedgerService.cs` | **Porta de entrada** (L-03): conversão do valor, impressão do comando, validação de instante e de página, antes de qualquer I/O |
 | `Application/Commands.cs` | `PostingCommand`, `ReversalCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` |
 | `Application/PostEntryResult.cs`, `BalanceResult.cs` | Contratos de saída |
+| `Application/LedgerEntryEvent.cs`, `WireFormat.cs` | Payload dos eventos (EF §9), separado do resultado da API; formato de instante compartilhado com a API |
 | `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variante própria para estorno |
 
 **Decisão de modelagem a defender:** o agregado não carrega os lançamentos da conta. É reidratado dentro da transação, sob bloqueio, com a posição corrente já calculada. Carregar o histórico para validar um débito reintroduziria a degradação do sistema legado.
@@ -145,7 +146,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
-| `PacioliBank.Integration.Tests` | 44 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
+| `PacioliBank.Integration.Tests` | 46 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -170,7 +171,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Barramento de eventos real | Não escolhido (ADR-0008). O despachante publica em log; nenhum consumidor externo recebe eventos |
 | Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
-| Contrato do payload dos eventos | Não especificado na EF; o payload atual tem defeitos conhecidos (card 24.2) |
 | Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
 | Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
 | Testes de contrato (OpenAPI) | Previstos, não escritos |
@@ -301,7 +301,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 47 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 48 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -317,6 +317,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
    - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
+   - **[19.5] Divergência entre o ADR-0006 e o uso de `response_body`**: o ADR afirma devolver a resposta gravada, "não uma reconstrução"; o código reconstrói do ledger e nunca lê a coluna. Aguarda decisão do usuário
    - ~~**[19.4] Repetição idempotente recusada quando o estado da conta mudou** (L-10)~~ concluído em 2026-10-02, antecipado ao 23 por decisão do usuário
 2. ~~**[16] Repositório público no GitHub** (L-01)~~ concluído em 2026-10-02, antecipado ao item 1
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
@@ -327,7 +328,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 6. ~~**[23] README final**~~ concluído em 2026-10-02
 7. ~~**[24] Despachante de outbox**~~ concluído em 2026-10-02
    - ~~**[24.1] Chave estrangeira na outbox** (L-12)~~ concluído em 2026-10-02
-   - **[24.2] Contrato do payload dos eventos**: hoje o payload é o resultado da API serializado como está (valor como número JSON, internos do `Money`, sem `reversalOf` no estorno). Achado no 21.1
+   - ~~**[24.2] Contrato do payload dos eventos**~~ concluído em 2026-10-02
 8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
 
 ---
@@ -337,7 +338,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 103 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 105 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -436,3 +437,4 @@ confirmação.
 | 2026-10-02 | Card 24.1 concluído: chave estrangeira `fk_outbox_entry (account_id, sequence)` na outbox, por decisão do usuário, registrada no ADR-0008 com alternativas rejeitadas. Teste novo reprovou antes e passa depois; 103 verdes. L-12 encerrada. Cards 18.1 (inverter a política do quadro) e 21.1 (nomes dos eventos da EF §9) criados |
 | 2026-10-02 | Card 18.1 concluído: política do quadro invertida (PROCESSO-KANBAN 2.0). O quadro no TickTick é a fonte de toda atividade e da ordem; §7 e `KANBAN.md` passam a espelhos. Regra nova: nenhum trabalho sem cartão |
 | 2026-10-02 | Card 21.1 concluído: EF §9 (1.2), ENF (1.1) e convenções §8 alinhados ao código: `pacioli.ledger.*.v1` e `message_id`. Escopo ampliado com motivo: ENF R-06 descrevia o bloqueio consultivo, opção rejeitada no ADR-0005. Lendo eventos reais, achados defeitos no payload; viraram o card 24.2, declarados na EF |
+| 2026-10-02 | Card 24.2 concluído: payload dos eventos com tipo próprio (`LedgerEntryEvent`), valores como string, instantes em `Z`, sentido como texto e `reversalOf` no estorno; especificado na EF §9 (1.3), mantendo `v1` porque nenhum consumidor recebeu eventos. 2 testes leem o payload gravado e reprovaram antes. 105 verdes; verificado no Docker. Card 19.5 criado: o ADR-0006 diz devolver `response_body`, o código reconstrói do ledger |

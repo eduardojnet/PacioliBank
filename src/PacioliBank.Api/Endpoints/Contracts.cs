@@ -125,7 +125,6 @@ public sealed record StatementResponse(
 /// <summary>Formatos do contrato que nao pertencem ao dominio.</summary>
 public static class ContractFormat
 {
-    /// <summary>ISO 8601 em UTC com sufixo Z (EF secao 8.1).</summary>
-    public static string Instant(DateTimeOffset value) =>
-        value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'", CultureInfo.InvariantCulture);
+    /// <summary>ISO 8601 em UTC com sufixo Z (EF secao 8.1). Mesmo dono do formato dos eventos.</summary>
+    public static string Instant(DateTimeOffset value) => WireFormat.Instant(value);
 }

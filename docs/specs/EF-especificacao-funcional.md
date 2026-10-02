@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.2
+**Versão:** 1.3
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -490,9 +490,43 @@ O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão 
 
 **Garantia:** entrega ao menos uma vez, com `message_id` estável entre republicações, que permite deduplicação pelo consumidor ([ADR-0008](../adr/ADR-0008-outbox-transacional.md)). O `message_id` é o identificador da mensagem na outbox e viaja junto do evento, fora do payload. Ordenação é garantida apenas **dentro da mesma conta**, pelo campo `sequence`. Ordenação global não é oferecida porque não é necessária e custaria serialização total do sistema.
 
-**Payload: ainda não especificado.** Hoje o evento carrega o resultado da API serializado como está, com defeitos conhecidos: valores monetários como número JSON (contra a §8.2), propriedades internas do valor monetário, sentido como número, instantes sem o sufixo `Z` e, no estorno, sem a referência ao lançamento estornado. Nenhum consumidor externo recebe eventos hoje (o publicador registra em log), então o defeito ainda não quebrou ninguém. A definição do payload e a correção do código são o card 24.2 do quadro.
+**Payload.** Os dois tipos compartilham o mesmo corpo JSON. Os formatos são os da API (§8.1 e §8.2): valor monetário como string, instante em ISO 8601 UTC com sufixo `Z`.
+
+| Campo | Tipo | Conteúdo |
+|---|---|---|
+| `entryId` | string (UUID) | Identificador do lançamento |
+| `accountId` | string (UUID) | Conta |
+| `sequence` | inteiro | Sequência do lançamento na conta; é por ela que o consumidor ordena (RN-006) |
+| `direction` | string | `Credit` ou `Debit` |
+| `amount` | string | Valor, sempre positivo, na escala da moeda: `"150.00"` |
+| `currency` | string | ISO 4217: `"BRL"` |
+| `occurredAt` | string | Data do fato |
+| `recordedAt` | string | Data do registro |
+| `balanceAfter` | string | Posição da conta imediatamente após o lançamento |
+| `reversalOf` | string (UUID) | **Só em `entry-reversed`:** o lançamento estornado. Ausente em `entry-recorded` |
+
+```json
+{
+  "entryId": "fc117413-74ef-41ee-9ce4-dd1241b793e6",
+  "accountId": "11111111-1111-1111-1111-111111111111",
+  "sequence": 2,
+  "direction": "Debit",
+  "amount": "10.00",
+  "currency": "BRL",
+  "occurredAt": "2026-10-02T12:00:00Z",
+  "recordedAt": "2026-10-02T21:59:21.864935Z",
+  "balanceAfter": "0.00",
+  "reversalOf": "c8a31790-e0ab-4d66-91c1-dedb0f45508f"
+}
+```
+
+Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado na outbox e confere o conjunto de campos e o formato de cada um.
+
+**Por que continua `v1`.** Até 2026-10-02 o payload era o resultado da API serializado como estava (valor como número JSON, propriedades internas do valor monetário, sentido como número, instantes sem `Z`, estorno sem `reversalOf`). Corrigir o formato de um evento já publicado exigiria `v2` e convivência das duas versões. Aqui não exigiu, porque nenhum consumidor externo jamais recebeu eventos: o publicador registra em log. A partir desta versão, mudança incompatível no payload exige `v2`.
 
 > **Revisão 1.2 (2026-10-02).** A versão 1.1 nomeava os eventos `LedgerEntryRecorded` e `EntryReversed` e o identificador `eventId`; o código, as convenções e o ADR-0008 usam `pacioli.ledger.*.v1` e `message_id`. Alinhado ao código (card 21.1).
+>
+> **Revisão 1.3 (2026-10-02).** Payload especificado (card 24.2). A versão 1.2 o declarava como não especificado e listava os defeitos do payload de então.
 
 **Contrato com o consumidor:** o consumidor é responsável por idempotência. O produtor não garante entrega única, e qualquer consumidor que dependa disso será incorreto sob falha de rede.
 
@@ -540,3 +574,4 @@ O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão 
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | Lacuna L-05: `FORBIDDEN` restrito a serviço interno (ADR-0009); `type` de problema como URN. Lacuna L-11: §8.7 com as decisões de contrato tomadas na implementação, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 |
 | 1.2 | 2026-10-02 | Eduardo J. G. do Carmo | §9: nomes dos eventos e identificador de deduplicação alinhados ao código (`pacioli.ledger.*.v1`, `message_id`); payload declarado como não especificado, com os defeitos conhecidos (card 24.2) |
+| 1.3 | 2026-10-02 | Eduardo J. G. do Carmo | §9: payload dos eventos especificado, campo a campo, com formatos da API; justificativa de manter `v1` (card 24.2) |

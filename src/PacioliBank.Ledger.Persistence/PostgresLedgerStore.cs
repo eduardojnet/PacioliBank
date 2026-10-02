@@ -34,6 +34,15 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// Payload de evento: campo nulo e omitido, para que <c>reversalOf</c> so
+    /// apareca no estorno, como o contrato da EF secao 9 define.
+    /// </summary>
+    private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private readonly NpgsqlDataSource _dataSource;
 
     public PostgresLedgerStore(NpgsqlDataSource dataSource)
@@ -332,10 +341,8 @@ public sealed class PostgresLedgerStore : ILedgerStore
             messageId = Guid.NewGuid(),
             accountId = entry.AccountId,
             sequence = entry.Sequence,
-            eventType = entry.IsReversal
-                ? "pacioli.ledger.entry-reversed.v1"
-                : "pacioli.ledger.entry-recorded.v1",
-            payload = JsonSerializer.Serialize(ToResult(entry, recordedAt, replayed: false), JsonOptions),
+            eventType = LedgerEntryEvent.TypeOf(entry),
+            payload = JsonSerializer.Serialize(LedgerEntryEvent.From(entry, recordedAt), EventJsonOptions),
             occurredAt = entry.OccurredAt.UtcDateTime,
         }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
 

@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 47 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 48 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 7 | 19.2, 19.3, 24.2, 25, 26, 27, 28 |
+| A Fazer | 7 | 19.2, 19.3, 19.5, 25, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 30 | 01 a 24, mais 18.1, 19.4, 20.1, 21.1 e 24.1 |
+| Concluído | 31 | 01 a 24, mais 18.1, 19.4, 20.1, 21.1, 24.1 e 24.2 |
 
 ---
 
@@ -102,6 +102,12 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
+### 19.5. Resolver a divergência entre o ADR-0006 e o uso de response_body
+
+`prioridade: Baixa` · `arquitetura` · `doc`
+
+ÂNCORA: ADR-0006, consequências; achado no card 24.2. `idempotency_records.response_body` é gravado e nunca lido: a repetição é reconstruída de `ledger_entries`. O corpo devolvido é idêntico ao original (há teste), mas por reconstrução, contra o que o ADR afirma. OPÇÕES: (a) corrigir o ADR; (b) devolver `response_body` de fato. BLOQUEIO: decisão do usuário.
+
 ### 19.2. Testar a API via Insomnia
 
 `prioridade: Média` · `teste`
@@ -121,12 +127,6 @@ ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI a
 Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que alteração acidental de contrato seja detectada antes da publicação (RNF-039).
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
-
-### 24.2. Definir e implementar o contrato do payload dos eventos
-
-`prioridade: Média` · `codigo` · `risco` · `arquitetura`
-
-ÂNCORA: EF §9, EF §8.2, ADR-0008; achado no card 21.1. O payload é o resultado da API serializado como está: valor como número JSON, internos do `Money` (`isZero`, `scale`...), sentido como número, instantes com `+00:00`, estorno sem `reversalOf`. Impacto hoje baixo (nenhum consumidor externo). ESCOPO: payload definido na EF §9; tipo de evento próprio no código; teste que confere o payload gravado; ajustar a v1, sem consumidor a migrar. CRITÉRIO: payload gravado igual ao definido, verificado contra PostgreSQL real.
 
 ### 25. Implementar o painel de evidência
 
@@ -170,7 +170,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 24.2, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O próximo da fila é o 25, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -652,3 +652,13 @@ ESCOPO AMPLIADO, com motivo: a ENF R-06 descrevia acoplamento por bloqueio consu
 ENTREGA (02/10/2026): EF 1.2 (§9 com `pacioli.ledger.entry-recorded.v1`, `pacioli.ledger.entry-reversed.v1` e `message_id`), ENF 1.1 (R-05 e R-06), convenções §8 (o identificador é `message_id`; não existe `eventId`). Cada mudança com nota de revisão. VERIFICAÇÃO: busca no repositório pelos nomes antigos; restam só as notas de revisão.
 
 ACHADO, item 2 do escopo: lendo eventos reais na outbox, o payload é o resultado da API serializado como está, com cinco defeitos (valor como número JSON, internos do `Money`, sentido numérico, `+00:00` em vez de `Z`, estorno sem `reversalOf`). Declarados na EF §9 e transformados no card 24.2.
+
+### 24.2. Definir e implementar o contrato do payload dos eventos
+
+`prioridade: Média` · `codigo` · `risco` · `arquitetura`
+
+ÂNCORA: EF §9, EF §8.2, ADR-0008; achado no card 21.1. O payload é o resultado da API serializado como está: valor como número JSON, internos do `Money` (`isZero`, `scale`...), sentido como número, instantes com `+00:00`, estorno sem `reversalOf`. Impacto hoje baixo (nenhum consumidor externo). ESCOPO: payload definido na EF §9; tipo de evento próprio no código; teste que confere o payload gravado; ajustar a v1, sem consumidor a migrar. CRITÉRIO: payload gravado igual ao definido, verificado contra PostgreSQL real.
+
+ENTREGA (02/10/2026): tipo `LedgerEntryEvent` na aplicação do Ledger, separado do resultado da API; `WireFormat` como dono único do formato de instante, usado pela API e pelos eventos. Payload: valores como string na escala da moeda, instantes em `Z`, sentido `Credit`/`Debit`, `reversalOf` só no estorno, nenhum outro campo. EF 1.3, §9: tabela de campos, exemplo e o motivo de manter `v1`. VERIFICAÇÃO: 2 testes leem o payload gravado na outbox e conferem o conjunto exato de campos e o formato; reprovaram antes da mudança. 105 verdes. No Docker, crédito e estorno reais gravados e publicados no formato especificado.
+
+ACHADO: o ADR-0006 afirma devolver a resposta gravada em `response_body`, "não uma reconstrução"; o código nunca lê a coluna e reconstrói do ledger. Virou o card 19.5.
