@@ -28,7 +28,7 @@ namespace PacioliBank.Integration.Tests;
 /// escalonamento, e o teste passa sem nunca ter havido concorrencia real.
 /// </para>
 /// </remarks>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class ConcurrencyTests
 {
     private readonly LedgerFixture _fixture;

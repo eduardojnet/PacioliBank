@@ -17,7 +17,7 @@ namespace PacioliBank.Integration.Tests;
 /// publicado o que ja estava pendente: as classes de uma mesma colecao rodam
 /// em sequencia, entao isso isola o teste sem filtro artificial no despachante.
 /// </remarks>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class OutboxDispatcherTests
 {
     private readonly LedgerFixture _fixture;
@@ -218,7 +218,8 @@ public class OutboxDispatcherTests
     {
         private readonly ConcurrentQueue<OutboxMessage> _mensagens = new();
 
-        public IReadOnlyList<OutboxMessage> Mensagens => _mensagens.ToList();
+        // Copia a cada leitura: o despachante continua publicando em paralelo.
+        public List<OutboxMessage> Mensagens => _mensagens.ToList();
 
         public async Task PublishAsync(OutboxMessage message, CancellationToken cancellationToken)
         {

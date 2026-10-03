@@ -7,7 +7,7 @@ namespace PacioliBank.Integration.Tests;
 /// <summary>
 /// Extrato paginado por cursor (RF-005). Equivale a funcionalidade F05 do BDD.
 /// </summary>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class StatementTests
 {
     private static readonly DateTimeOffset Janeiro = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);

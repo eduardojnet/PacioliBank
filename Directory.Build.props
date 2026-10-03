@@ -12,11 +12,12 @@
     <WarningsAsErrors />
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 
-    <!-- Analisadores ligados em modo Default. Subir para Recommended apenas
-         depois do primeiro build limpo, em commit proprio (ver ADR-0002). -->
+    <!-- Analisadores em modo Recommended (latest-recommended, ADR-0002), com
+         TreatWarningsAsErrors: regra recomendada violada reprova o build.
+         Elevado no card 28, depois de varios ciclos de build limpo em Default. -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
-    <AnalysisMode>Default</AnalysisMode>
+    <AnalysisMode>Recommended</AnalysisMode>
 
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>

@@ -136,7 +136,7 @@ public sealed class LedgerFixture : IAsyncLifetime
 
 /// <summary>Compartilha um unico container entre todas as classes de teste.</summary>
 [CollectionDefinition(Name)]
-public sealed class LedgerCollection : ICollectionFixture<LedgerFixture>
+public sealed class LedgerCollectionDefinition : ICollectionFixture<LedgerFixture>
 {
     public const string Name = "ledger";
 }

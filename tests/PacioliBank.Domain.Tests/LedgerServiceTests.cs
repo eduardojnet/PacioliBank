@@ -176,7 +176,7 @@ public class LedgerServiceTests
             return Task.FromResult(new BalanceResult(accountId, Money.Zero(Currency.Brl), asOf ?? Agora, 0, BalanceSource.Ledger, 0));
         }
 
-        public Task<StatementPage> GetStatementAsync(Guid accountId, DateTimeOffset? from, DateTimeOffset? to, long afterSequence, int limit, CancellationToken cancellationToken)
+        public Task<StatementPage> GetStatementAsync(Guid accountId, DateTimeOffset? from, DateTimeOffset? until, long afterSequence, int limit, CancellationToken cancellationToken)
         {
             Called = true;
             LastLimit = limit;

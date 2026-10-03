@@ -96,6 +96,22 @@ public class MoneyTests
         Assert.Equal(Currency.Brl, Currency.FromCode(code));
     }
 
+    // A porta de entrada valida a moeda do corpo por TryFromCode, nao por
+    // FromCode: as duas precisam aceitar e recusar os mesmos codigos.
+    [Theory]
+    [InlineData("brl", true)]
+    [InlineData("BRL", true)]
+    [InlineData(" bRl ", true)]
+    [InlineData("USD", false)]
+    [InlineData("BRLX", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void Validacao_sem_excecao_resolve_os_mesmos_codigos_que_a_resolucao(string? code, bool resolvido)
+    {
+        Assert.Equal(resolvido, Currency.TryFromCode(code, out var moeda));
+        Assert.Equal(resolvido ? Currency.Brl : default, moeda);
+    }
+
     [Fact]
     public void Representacao_de_contrato_usa_cultura_invariante()
     {

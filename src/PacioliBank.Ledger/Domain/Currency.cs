@@ -39,7 +39,7 @@ public readonly record struct Currency
     /// <summary>Tenta resolver a moeda sem lancar excecao.</summary>
     public static bool TryFromCode(string? code, out Currency currency)
     {
-        if (!string.IsNullOrWhiteSpace(code) && code.Trim().ToUpperInvariant() == "BRL")
+        if (!string.IsNullOrWhiteSpace(code) && string.Equals(code.Trim(), "BRL", StringComparison.OrdinalIgnoreCase))
         {
             currency = Brl;
             return true;

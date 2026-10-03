@@ -17,7 +17,7 @@ namespace PacioliBank.Integration.Tests;
 /// saia como excecao crua do banco. Os testes abaixo fixam o comportamento
 /// contra o banco real, onde a unicidade do estorno de fato reside.
 /// </remarks>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class ReversalTests
 {
     private readonly LedgerFixture _fixture;

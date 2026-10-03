@@ -16,7 +16,7 @@ namespace PacioliBank.Integration.Tests;
 /// conjunto de campos, para que propriedade interna nao vaze, e o formato de
 /// cada um.
 /// </remarks>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class EventPayloadTests
 {
     private static readonly string[] CamposDoLancamento =

@@ -13,7 +13,7 @@ namespace PacioliBank.Integration.Tests;
 /// compartilhado ja foi migrado na inicializacao e nao serve para provar o
 /// ponto de partida.
 /// </remarks>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class MigrationTests
 {
     private const string InitialSchema = "0001_esquema_inicial.sql";

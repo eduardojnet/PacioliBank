@@ -10,7 +10,7 @@ namespace PacioliBank.Integration.Tests;
 /// Verifica as invariantes que so existem na interacao entre codigo e banco.
 /// Equivale as funcionalidades F01, F02, F03, F04 e F09 do BDD.
 /// </summary>
-[Collection(LedgerCollection.Name)]
+[Collection(LedgerCollectionDefinition.Name)]
 public class LedgerStoreTests
 {
     private readonly LedgerFixture _fixture;

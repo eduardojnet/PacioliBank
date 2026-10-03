@@ -534,16 +534,16 @@ public sealed class PostgresLedgerStore : ILedgerStore
     public Task<StatementPage> GetStatementAsync(
         Guid accountId,
         DateTimeOffset? from,
-        DateTimeOffset? to,
+        DateTimeOffset? until,
         long afterSequence,
         int limit,
         CancellationToken cancellationToken) =>
-        TranslatingUnavailable(() => GetStatementCoreAsync(accountId, from, to, afterSequence, limit, cancellationToken));
+        TranslatingUnavailable(() => GetStatementCoreAsync(accountId, from, until, afterSequence, limit, cancellationToken));
 
     private async Task<StatementPage> GetStatementCoreAsync(
         Guid accountId,
         DateTimeOffset? from,
-        DateTimeOffset? to,
+        DateTimeOffset? until,
         long afterSequence,
         int limit,
         CancellationToken cancellationToken)
@@ -569,7 +569,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
                 accountId,
                 afterSequence,
                 from = from?.UtcDateTime,
-                to = to?.UtcDateTime,
+                to = until?.UtcDateTime,
                 take = limit + 1,
             },
             cancellationToken: cancellationToken)).ConfigureAwait(false)).ToList();

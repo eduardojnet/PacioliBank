@@ -66,7 +66,7 @@ public interface ILedgerStore
     Task<StatementPage> GetStatementAsync(
         Guid accountId,
         DateTimeOffset? from,
-        DateTimeOffset? to,
+        DateTimeOffset? until,
         long afterSequence,
         int limit,
         CancellationToken cancellationToken);
