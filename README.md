@@ -17,12 +17,13 @@ docker compose up --build -d
 curl http://localhost:8080/health/ready        # {"status":"ready"}
 ```
 
-O banco é criado, o esquema é aplicado, os papéis com privilégio mínimo são provisionados e duas contas de exemplo, ativas e em BRL, já existem:
+O banco é criado, o esquema é aplicado, os papéis com privilégio mínimo são provisionados e cinco contas de exemplo, ativas e em BRL, já existem:
 
 | Conta | Uso sugerido |
 |---|---|
 | `11111111-1111-1111-1111-111111111111` | Exemplos abaixo |
 | `22222222-2222-2222-2222-222222222222` | Testes livres |
+| `33333333-…`, `44444444-…`, `55555555-…` | Reservadas ao [painel de evidência](#painel-de-evidência) |
 
 Registrar um crédito e consultar a posição:
 
@@ -37,6 +38,21 @@ curl $A/balance
 ```
 
 O primeiro comando responde `201 Created` com o lançamento; o segundo, a posição `"150.00"`.
+
+---
+
+## Painel de evidência
+
+Com o ambiente no ar, abra **<http://localhost:8080/>**. Quatro demonstrações, cada uma provando uma decisão de arquitetura contra a API real, pelos mesmos endpoints públicos de qualquer integrador:
+
+| Painel | O que acontece | Decisão provada |
+|---|---|---|
+| Disparo concorrente | 50 débitos de uma vez sobre saldo para 10: exatamente 10 aceitos, 40 recusados, posição nunca negativa | [ADR-0005](./docs/adr/ADR-0005-controle-de-concorrencia.md) |
+| Linha do tempo | Controle deslizante recalculando a posição em qualquer instante passado, com lançamentos de data do fato retroativa | [ADR-0003](./docs/adr/ADR-0003-ledger-append-only.md) |
+| Reenvio idempotente | Mesmo comando duas vezes: `201`, depois `200` com `Idempotency-Replayed` e o mesmo corpo, byte a byte | [ADR-0006](./docs/adr/ADR-0006-idempotencia.md) |
+| Origem do cálculo | Atravessa a âncora de snapshot (a cada 100 lançamentos) e mostra `computedFrom` e `entriesReplayed` | [ADR-0007](./docs/adr/ADR-0007-snapshot-e-projecao.md) |
+
+É material de demonstração, sem teste automatizado próprio, por decisão do [ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md): a prova está na suíte de testes, e o painel a torna visível. Usa as contas `3333…`, `4444…` e `5555…`, reservadas a ele; cada demonstração prepara o próprio estado e pode ser repetida.
 
 ---
 
@@ -184,6 +200,7 @@ src/
   PacioliBank.Ledger.Persistence/  adaptador PostgreSQL: Dapper, SQL explícito, transação, bloqueio
   PacioliBank.Events/              despachante de outbox: SKIP LOCKED, recuo, alerta
   PacioliBank.Api/                 adaptador HTTP: endpoints, problem+json, correlação; hospeda o despachante
+    wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
   PacioliBank.Integration.Tests/   48 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
@@ -215,7 +232,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Barramento de eventos real | Pendente: plataforma não definida (ADR-0008) |
 | Migrações versionadas (DbUp) | Pendente: o esquema só é aplicado na criação do volume |
 | Testes de arquitetura e de contrato | Pendentes |
-| Painel de evidência | Condicional, [ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md) |
+| Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
 
@@ -227,11 +244,11 @@ Em ordem de prioridade, com o motivo de cada posição.
 2. **Barramento de eventos real e expurgo da outbox (ADR-0008).** O despachante já lê a outbox com `FOR UPDATE SKIP LOCKED` e publica com recuo exponencial, mas publica em log: falta ligar a plataforma de mensageria do banco, expurgar as mensagens publicadas e conciliar ledger e outbox (RNF-033).
 3. **Migrações com DbUp (RNF-038).** Hoje mudar o esquema exige recriar o volume. Inaceitável fora do ambiente local.
 4. **CI no GitHub Actions** com build sem avisos, as camadas de teste e varredura de segredos. Transforma o critério de bloqueio do ADR-0010 de declarado em verificado a cada commit.
-5. **Testes de arquitetura (NetArchTest) e de contrato (instantâneo do OpenAPI).** Hoje a direção das dependências é garantida pelo compilador só no domínio; o resto depende de revisão.
+5. **Testes de arquitetura (NetArchTest) e de contrato, com o documento OpenAPI e sua interface de exploração.** Hoje a direção das dependências é garantida pelo compilador só no domínio, e o contrato da API está só na EF.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
 7. **Observabilidade (OpenTelemetry, Serilog),** com uma métrica de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
 8. **Teste de carga** para medir os RNF de desempenho, hoje especificados e não verificados.
-9. **Itens com gatilho declarado, que não devem ser feitos antes dele:** posição diária pré-calculada para consulta histórica (quando o p99 passar do alvo), particionamento do ledger por tempo (depende da política de retenção, QA-004), transferência entre contas (exige novo ADR e bloqueio em ordem determinística), painel de evidência (condicional).
+9. **Itens com gatilho declarado, que não devem ser feitos antes dele:** posição diária pré-calculada para consulta histórica (quando o p99 passar do alvo), particionamento do ledger por tempo (depende da política de retenção, QA-004), transferência entre contas (exige novo ADR e bloqueio em ordem determinística).
 
 As questões de negócio que mudariam o desenho, como limite de cheque especial, lançamento retroativo e multimoeda, estão na [EF §10](./docs/specs/EF-especificacao-funcional.md), cada uma com a conduta provisória adotada.
 

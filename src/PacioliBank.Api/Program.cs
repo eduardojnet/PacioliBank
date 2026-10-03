@@ -43,6 +43,11 @@ app.UseCorrelation();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+// Painel de evidencia (ADR-0011): pagina estatica em wwwroot, servida na raiz.
+// Consome a mesma API publica que qualquer integrador, sem endpoint proprio.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // RNF-013: vivo e pronto sao verificacoes distintas.
 // Vivo nao depende de nenhuma dependencia externa.
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));

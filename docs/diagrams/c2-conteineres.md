@@ -14,7 +14,7 @@ flowchart TB
         api["API do Ledger<br/>[ASP.NET Core 10]<br/>Valida invariantes, serializa escritas<br/>por conta e calcula a posição"]:::impl
         db[("Banco do Ledger<br/>[PostgreSQL 17]<br/>Lançamentos imutáveis, snapshots,<br/>idempotência e outbox")]:::impl
         disp["Despachante de Outbox<br/>[Serviço hospedado, no processo da API]<br/>Publica eventos pendentes<br/>com SKIP LOCKED"]:::impl
-        painel["Painel de Evidência<br/>[HTML e JS estático]<br/>Demonstra concorrência, idempotência<br/>e posição temporal"]:::espec
+        painel["Painel de Evidência<br/>[HTML e JS estático, servido pela API]<br/>Demonstra concorrência, idempotência,<br/>posição temporal e snapshot"]:::impl
     end
 
     orig -->|"escreve<br/>HTTPS/JSON"| api
@@ -22,7 +22,7 @@ flowchart TB
     api -->|"SQL, uma transação por comando"| db
     api -.->|"valida JWT"| iam
     api -.->|"lê conta"| cad
-    api -.->|"serve"| painel
+    api -->|"serve, na raiz"| painel
     disp -->|"lê e marca a outbox"| db
     disp -.->|"publica<br/>(hoje: registra em log)"| bus
 
@@ -40,7 +40,7 @@ flowchart TB
 | Escrita na outbox | Implementado | `PostgresLedgerStore.WriteAsync`, na transação do lançamento (ADR-0008) |
 | Despachante de Outbox | Implementado | Card 24: `PacioliBank.Events/OutboxDispatcher.cs`, executado por `OutboxDispatcherService` no processo da API. Rodar no mesmo processo é decisão operacional (ADR-0008); várias instâncias convivem pelo `SKIP LOCKED` |
 | Despachante → Barramento | Especificado | O publicador atual registra o evento em log (`LoggingEventPublisher`), como o ADR-0008 prevê enquanto a plataforma de mensageria não é conhecida |
-| Painel de Evidência | Especificado, condicional | Card 25, ADR-0011, com critério de corte |
+| Painel de Evidência | Implementado | Card 25: `src/PacioliBank.Api/wwwroot/`, quatro demonstrações que usam só a API pública. Sem teste automatizado próprio, por decisão do ADR-0011; verificado em Chrome headless |
 | API → Provedor de Identidade | Especificado | RF-009 pendente |
 | API → Cadastro de Contas | Especificado | Contas vêm de massa local |
 | Barramento de Eventos | Externo, não escolhido | ADR-0008 decide o padrão, não o produto |

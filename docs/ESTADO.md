@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima segunda revisão)
+**Última atualização:** 2026-10-02 (vigésima terceira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 107 passando (59 de domínio, 48 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -132,6 +132,7 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 | `Endpoints/LedgerEndpoints.cs` | Os 5 endpoints da EF §8.3, como adaptador fino sobre `ILedgerService` |
 | `Endpoints/LedgerProblems.cs` | Único mapa de exceção para `application/problem+json` com `code` da EF §8.6 |
 | `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como string, instantes ISO 8601 UTC |
+| `wwwroot/` | Painel de evidência (ADR-0011): quatro demonstrações na raiz, só com a API pública; sem teste automatizado próprio, verificado em Chrome headless |
 | `Endpoints/Correlation.cs` | `X-Correlation-Id` aceito ou gerado, devolvido inclusive em resposta de erro |
 
 Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo idêntico ao original; lançamento novo responde `201`.
@@ -176,7 +177,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
 | Testes de contrato (OpenAPI) | Previstos, não escritos |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
-| Painel de evidência | Condicional, ADR-0011 |
 
 ---
 
@@ -331,7 +331,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 7. ~~**[24] Despachante de outbox**~~ concluído em 2026-10-02
    - ~~**[24.1] Chave estrangeira na outbox** (L-12)~~ concluído em 2026-10-02
    - ~~**[24.2] Contrato do payload dos eventos**~~ concluído em 2026-10-02
-8. **[25] Painel de evidência** (condicional, ADR-0011, com critério de corte na hora 16)
+8. ~~**[25] Painel de evidência** (ADR-0011)~~ concluído em 2026-10-02; o critério de corte não se aplicou
 
 ---
 
@@ -442,3 +442,4 @@ confirmação.
 | 2026-10-02 | Card 24.2 concluído: payload dos eventos com tipo próprio (`LedgerEntryEvent`), valores como string, instantes em `Z`, sentido como texto e `reversalOf` no estorno; especificado na EF §9 (1.3), mantendo `v1` porque nenhum consumidor recebeu eventos. 2 testes leem o payload gravado e reprovaram antes. 105 verdes; verificado no Docker. Card 19.5 criado: o ADR-0006 diz devolver `response_body`, o código reconstrói do ledger |
 | 2026-10-02 | Card 19.5 concluído, opção (b): a repetição devolve o `response_body` gravado, no formato do contrato; coluna de `jsonb` para `json` para preservar o texto exato. ADR-0006 revisado. 2 testes novos (107 verdes); no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256 |
 | 2026-10-02 | Card 21.2 concluído: o `CLAUDE.md` descrevia a idempotência como "nunca por consulta prévia" (superado pelas revisões 19.4 e 19.5 do ADR-0006) e a EF na versão 1.1 (está na 1.3) |
+| 2026-10-02 | Card 25 concluído: painel de evidência em `wwwroot`, quatro demonstrações (concorrência, linha do tempo, reenvio, origem do cálculo). Contas `3333…`, `4444…`, `5555…` no script de massa; `entriesReplayed` na posição (EF 1.4). Verificado em Chrome headless, repetidamente. Com isso, a fila ativa 19 a 25 está concluída |

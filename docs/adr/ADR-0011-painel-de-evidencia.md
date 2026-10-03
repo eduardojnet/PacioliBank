@@ -117,6 +117,17 @@ O critério é fixado agora, antes de existir pressão de prazo. Critério de co
 - O painel consome exclusivamente endpoints públicos documentados no OpenAPI
 - O painel de disparo concorrente reproduz visualmente o resultado do cenário [BDD](../specs/BDD-comportamento.md) F07
 
+### Estado da implementação (2026-10-02, card 25)
+
+Implementado em `src/PacioliBank.Api/wwwroot/` (`index.html`, `painel.css`, `painel.js`), servido na raiz da API. O critério de corte não se aplicou: as duas condições estavam satisfeitas. Diferenças em relação ao texto acima, sem mudar a decisão:
+
+- **Contas dedicadas no script de massa local.** "A massa de dados é criada pelos próprios endpoints públicos" vale para os lançamentos, não para as contas: não existe endpoint de criação de conta, porque o ciclo de vida da conta é do Cadastro (EF §3.2). Três contas (`3333…`, `4444…`, `5555…`) foram reservadas no `002_seed_local.sql`, uma por demonstração; cada demonstração prepara o próprio estado pela API antes de executar
+- **`entriesReplayed` acrescentado à resposta de posição** (EF 1.4, §8.5), porque o painel de origem do cálculo o exibe e a API não o devolvia
+- **A disputa do disparo concorrente é menor que a do teste F07.** O navegador limita as conexões simultâneas por servidor; o painel declara isso na própria tela e remete ao teste da suíte, que dispara os 50 em paralelo real
+- **OpenAPI com interface de exploração, o "complemento de custo marginal", não foi feito.** É pré-requisito do card 19.3 (testes de contrato). Por isso o item "consome exclusivamente endpoints documentados no OpenAPI" da validação vale como "documentados na EF §8"
+
+**Validação feita:** os quatro painéis executados em Chrome headless contra o ambiente do `docker compose`, repetidamente: 10 aceitos e 40 recusados com posição mínima 0,00; posição recalculada em três instantes passados; reenvio com `200`, `Idempotency-Replayed` e mesmo SHA-256 do corpo, e `409` com outro valor; travessia da âncora com `snapshot` e `entriesReplayed` 0. Sem erro de JavaScript no console; as únicas linhas de console são as respostas `422` e `409` esperadas.
+
 ## Gatilho de revisão
 
 1. Acionamento do critério de corte na hora 16, que move esta decisão para `docs/com-mais-tempo.md`

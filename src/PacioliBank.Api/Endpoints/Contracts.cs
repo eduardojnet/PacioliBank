@@ -30,14 +30,19 @@ public sealed record ReversalBody(DateTimeOffset? OccurredAt);
 // de aplicacao: e gravado no registro de idempotencia e devolvido como texto,
 // entao nao pode ser montado aqui (ADR-0006, card 19.5).
 
-/// <summary>Posicao consolidada (EF secao 8.5).</summary>
+/// <summary>
+/// Posicao consolidada (EF secao 8.5). <c>EntriesReplayed</c> e quantos
+/// lancamentos foram somados alem do snapshot: metrica de RNF-006, e o que o
+/// painel de evidencia mostra para tornar visivel o snapshot (ADR-0007, ADR-0011).
+/// </summary>
 public sealed record BalanceResponse(
     Guid AccountId,
     string Balance,
     string Currency,
     string AsOf,
     long ComputedAtSequence,
-    string ComputedFrom)
+    string ComputedFrom,
+    int EntriesReplayed)
 {
     public static BalanceResponse From(BalanceResult result)
     {
@@ -49,7 +54,8 @@ public sealed record BalanceResponse(
             result.Balance.Currency.Code,
             ContractFormat.Instant(result.AsOf),
             result.ComputedAtSequence,
-            result.ComputedFrom == BalanceSource.Snapshot ? "snapshot" : "ledger");
+            result.ComputedFrom == BalanceSource.Snapshot ? "snapshot" : "ledger",
+            result.EntriesReplayed);
     }
 }
 

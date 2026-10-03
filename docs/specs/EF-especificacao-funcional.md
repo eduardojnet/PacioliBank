@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.3
+**Versão:** 1.4
 **Data:** 2026-10-02
 **Status:** Proposto
 
@@ -431,11 +431,12 @@ GET /api/v1/accounts/7f3a.../balance?asOf=2026-01-20T00:00:00Z HTTP/1.1
   "currency": "BRL",
   "asOf": "2026-01-20T00:00:00Z",
   "computedAtSequence": 87,
-  "computedFrom": "snapshot"
+  "computedFrom": "snapshot",
+  "entriesReplayed": 7
 }
 ```
 
-O campo `computedFrom` assume `snapshot` ou `ledger` e é instrumento de observabilidade: frequência elevada de `ledger` indica atraso na projeção, antes que vire problema de desempenho percebido.
+O campo `computedFrom` assume `snapshot` ou `ledger` e é instrumento de observabilidade: frequência elevada de `ledger` indica atraso na projeção, antes que vire problema de desempenho percebido. `entriesReplayed` é quantos lançamentos foram somados além do snapshot, a métrica de RNF-006; em consulta histórica, que não usa snapshot, é o total de lançamentos até o instante. *Acrescentado na versão 1.4, para o painel de evidência (ADR-0011).*
 
 ### 8.6 Catálogo de códigos de erro
 
@@ -575,3 +576,4 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | Lacuna L-05: `FORBIDDEN` restrito a serviço interno (ADR-0009); `type` de problema como URN. Lacuna L-11: §8.7 com as decisões de contrato tomadas na implementação, códigos `ENTRY_NOT_FOUND` e `INVALID_REQUEST`, QA-008 |
 | 1.2 | 2026-10-02 | Eduardo J. G. do Carmo | §9: nomes dos eventos e identificador de deduplicação alinhados ao código (`pacioli.ledger.*.v1`, `message_id`); payload declarado como não especificado, com os defeitos conhecidos (card 24.2) |
 | 1.3 | 2026-10-02 | Eduardo J. G. do Carmo | §9: payload dos eventos especificado, campo a campo, com formatos da API; justificativa de manter `v1` (card 24.2) |
+| 1.4 | 2026-10-02 | Eduardo J. G. do Carmo | §8.5: campo `entriesReplayed` na posição consolidada, exibido pelo painel de evidência (card 25) |

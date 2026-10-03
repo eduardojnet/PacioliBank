@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 6 | 19.2, 19.3, 25, 26, 27, 28 |
+| A Fazer | 5 | 19.2, 19.3, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 33 | 01 a 24, mais 18.1, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 34 | 01 a 25, mais 18.1, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -122,18 +122,6 @@ Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que
 
 DEPENDÊNCIA: só faz sentido depois dos endpoints.
 
-### 25. Implementar o painel de evidência
-
-`prioridade: Média` · `codigo` · `condicional`
-
-ADR-0011, escopo condicional. Página estática no wwwroot, sem dependência de toolchain fora do .NET.
-
-Quatro painéis que PROVAM decisões, não fazem CRUD: disparo concorrente (ADR-0005), linha do tempo da posição (ADR-0003), replay idempotente (ADR-0006) e origem do cálculo (ADR-0007).
-
-CRITÉRIO DE CORTE JÁ FIXADO: se na hora 16 o teste de concorrência não estiver verde ou o README não estiver completo, o painel é cortado integralmente e vira item de com-mais-tempo.md.
-
-ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuário. Item 8 da fila. As duas condições do critério de corte estão satisfeitas (concorrência verde, README final concluído), então o corte não se aplica. `com-mais-tempo.md` não existe; o destino equivalente é a seção "O que seria feito com mais tempo" do README.
-
 ### 26. Escrever os testes de arquitetura com NetArchTest
 
 `prioridade: Média` · `arquitetura` · `teste`
@@ -164,7 +152,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. O próximo da fila é o 25, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. A fila ativa (19 a 25) está concluída; o próximo é o 19.2, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -672,3 +660,19 @@ ENTREGA (02/10/2026), opção (b) por decisão do usuário: `PostingResponse` na
 ÂNCORA: `CLAUDE.md`, achado ao retomar a sessão. A linha de arquitetura do ADR-0006 dizia "nunca por consulta prévia", superada pelas revisões dos cards 19.4 e 19.5; a pendência citava "EF e BDD na versão 1.1", com a EF na 1.3.
 
 ENTREGA (02/10/2026): as duas afirmações corrigidas e coerentes com o ADR-0006 e o histórico das especificações.
+
+### 25. Implementar o painel de evidência
+
+`prioridade: Média` · `codigo` · `condicional`
+
+ADR-0011, escopo condicional. Página estática no wwwroot, sem dependência de toolchain fora do .NET.
+
+Quatro painéis que PROVAM decisões, não fazem CRUD: disparo concorrente (ADR-0005), linha do tempo da posição (ADR-0003), replay idempotente (ADR-0006) e origem do cálculo (ADR-0007).
+
+CRITÉRIO DE CORTE JÁ FIXADO: se na hora 16 o teste de concorrência não estiver verde ou o README não estiver completo, o painel é cortado integralmente e vira item de com-mais-tempo.md.
+
+ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuário. Item 8 da fila. As duas condições do critério de corte estão satisfeitas (concorrência verde, README final concluído), então o corte não se aplica. `com-mais-tempo.md` não existe; o destino equivalente é a seção "O que seria feito com mais tempo" do README.
+
+CRITÉRIO ACRESCENTADO AO INICIAR (o cartão não tinha): quatro painéis em `wwwroot` servidos na raiz; executados em navegador real com resultado capturado e sem erro de console; disparo concorrente reproduzindo F07; só API pública; README e diagramas atualizados. Fora do escopo: OpenAPI (card 19.3) e teste automatizado do painel (ADR-0011).
+
+ENTREGA (02/10/2026): `index.html`, `painel.css`, `painel.js`, sem dependência externa. Contas `3333…`, `4444…`, `5555…` no script de massa (não há endpoint de criação de conta); `entriesReplayed` na posição (EF 1.4). VERIFICAÇÃO em Chrome headless, repetida: 10 aceitos, 40 recusados, mínimo 0,00; posição em três instantes passados; reenvio `201`/`200` com o mesmo SHA-256 e `409` com outro valor; âncora de snapshot com `entriesReplayed` 0. Sem erro de JavaScript; um `404` de favicon achado e eliminado. ADR-0011 com nota de implementação; README, C2 e ESTADO atualizados. Fila ativa 19 a 25 concluída.

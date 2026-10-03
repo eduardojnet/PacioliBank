@@ -66,7 +66,7 @@ src/
     Application/                   ILedgerStore (porta de saida), comandos, resultados
   PacioliBank.Ledger.Persistence/  adaptador PostgreSQL: Dapper, SQL, transacao, bloqueio
   PacioliBank.Events/              despachante de outbox (SKIP LOCKED); nao referencia o Ledger
-  PacioliBank.Api/                 adaptador HTTP; hospeda o despachante
+  PacioliBank.Api/                 adaptador HTTP; hospeda o despachante; wwwroot = painel de evidencia
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
   PacioliBank.Integration.Tests/   48 testes, PostgreSQL real, inclui concorrencia, estorno, extrato e outbox
@@ -100,7 +100,7 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 18.1, 19, 19.1, 19.4, 19.5, 20, 20.1, 21, 21.1, 21.2, 22, 23, 24, 24.1 e 24.2 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.3, ENF 1.1, BDD 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011). O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.1, BDD 1.1), e painel de evidência na raiz da API. Restam em A Fazer o 19.2 (teste via Insomnia), o 19.3 (testes de contrato, que exigem gerar o OpenAPI) e os previstos por ADR 26 a 28; a ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 

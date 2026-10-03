@@ -1,0 +1,140 @@
+:root {
+  --fundo: #f6f7f9;
+  --cartao: #ffffff;
+  --texto: #1b2430;
+  --suave: #5b6675;
+  --borda: #dde2e8;
+  --primaria: #1168bd;
+  --primaria-texto: #ffffff;
+  --ok: #1f8a4c;
+  --recusa: #9aa4b1;
+  --erro: #c0392b;
+  --destaque: #fff4d6;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #12161c;
+    --cartao: #1b2129;
+    --texto: #e6eaef;
+    --suave: #9aa5b3;
+    --borda: #2c3540;
+    --primaria: #4d9be6;
+    --primaria-texto: #0b1420;
+    --ok: #3fbf74;
+    --recusa: #4a5563;
+    --erro: #ff6b5a;
+    --destaque: #3a3220;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a { color: var(--primaria); }
+code { font: 0.9em ui-monospace, "SFMono-Regular", Consolas, monospace; }
+
+.topo, .rodape { max-width: 1200px; margin: 0 auto; padding: 24px 16px 8px; }
+.topo h1 { margin: 0 0 4px; font-size: 1.6rem; }
+.sub { margin: 0 0 8px; max-width: 75ch; }
+.nota, .rodape p { color: var(--suave); font-size: 0.9rem; margin: 0; }
+.rodape { padding-bottom: 32px; }
+
+.grade {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  gap: 16px;
+}
+
+.painel {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cabeca h2 { margin: 0; font-size: 1.1rem; }
+.adr {
+  font-size: 0.75rem;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--suave);
+  white-space: nowrap;
+}
+.painel > p { margin: 0; color: var(--suave); }
+
+button {
+  align-self: flex-start;
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: var(--primaria);
+  color: var(--primaria-texto);
+  cursor: pointer;
+}
+button.secundario { background: transparent; color: var(--primaria); border: 1px solid var(--primaria); }
+button:disabled { opacity: 0.5; cursor: progress; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.resultado { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+.metricas { display: flex; flex-wrap: wrap; gap: 8px; }
+.metrica {
+  flex: 1 1 110px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.metrica .rotulo { display: block; font-size: 0.75rem; color: var(--suave); }
+.metrica .valor { font-size: 1.25rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.metrica.ok .valor { color: var(--ok); }
+.metrica.erro .valor { color: var(--erro); }
+
+.celulas { display: grid; grid-template-columns: repeat(25, 1fr); gap: 3px; }
+.celula { aspect-ratio: 1; border-radius: 3px; background: var(--borda); }
+.celula.aceito { background: var(--ok); }
+.celula.recusado { background: var(--recusa); }
+.celula.falha { background: var(--erro); }
+
+.detalhe { margin: 0; font-size: 0.85rem; color: var(--suave); overflow-wrap: anywhere; }
+.detalhe.erro { color: var(--erro); }
+
+.deslizante { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.deslizante input { width: 100%; }
+
+.lancamentos { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.lancamentos li {
+  display: grid;
+  grid-template-columns: 8.5em 4.5em 1fr;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.lancamentos li.dentro { background: var(--destaque); }
+.lancamentos li.fora { color: var(--suave); }
+.lancamentos .valor { text-align: right; }
+
+.tabela { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.tabela th, .tabela td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+.tabela th { color: var(--suave); font-weight: 600; }
+.tabela td.ok { color: var(--ok); font-weight: 600; }
+.tabela td.erro { color: var(--erro); font-weight: 600; }

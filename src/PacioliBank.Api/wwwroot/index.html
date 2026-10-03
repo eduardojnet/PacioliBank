@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PacioliBank Ledger: painel de evidência</title>
+  <link rel="stylesheet" href="painel.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231168bd'/%3E%3Cpath d='M4 4h8M4 8h8M4 12h5' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topo">
+    <h1>PacioliBank Ledger</h1>
+    <p class="sub">Painel de evidência: quatro demonstrações, cada uma provando uma decisão de arquitetura contra a API real. Não há cadastro aqui, nem endpoint próprio: o painel usa a mesma API pública de qualquer integrador.</p>
+    <p class="nota">Material de demonstração, sem teste automatizado próprio (<a href="https://github.com/eduardojnet/PacioliBank/blob/main/docs/adr/ADR-0011-painel-de-evidencia.md">ADR-0011</a>). A prova que importa está na suíte de testes; aqui ela fica visível.</p>
+  </header>
+
+  <main class="grade">
+    <section class="painel" id="concorrencia" aria-labelledby="t-concorrencia">
+      <div class="cabeca">
+        <h2 id="t-concorrencia">1. Disparo concorrente</h2>
+        <span class="adr">ADR-0005</span>
+      </div>
+      <p>A conta recebe saldo para exatamente <strong>10</strong> débitos de 10,00. Em seguida, <strong>50</strong> débitos são disparados de uma vez. O bloqueio por conta serializa as escritas: exatamente 10 passam, 40 são recusados por saldo, e a posição nunca fica negativa.</p>
+      <button type="button" data-acao="concorrencia">Disparar 50 débitos</button>
+      <div class="resultado" aria-live="polite">
+        <div class="metricas" data-saida="concorrencia-metricas"></div>
+        <div class="celulas" data-saida="concorrencia-celulas" aria-hidden="true"></div>
+        <p class="detalhe" data-saida="concorrencia-detalhe"></p>
+      </div>
+    </section>
+
+    <section class="painel" id="linha-do-tempo" aria-labelledby="t-tempo">
+      <div class="cabeca">
+        <h2 id="t-tempo">2. Linha do tempo</h2>
+        <span class="adr">ADR-0003</span>
+      </div>
+      <p>O ledger é a única fonte da verdade, e a posição é derivada dele. Por isso a posição de qualquer instante passado sai do mesmo dado, sem estrutura extra. Os lançamentos têm <em>data do fato</em> retroativa, embora todos tenham sido <em>registrados</em> agora (RN-009, RN-012).</p>
+      <button type="button" data-acao="tempo-preparar">Preparar a linha do tempo</button>
+      <div class="resultado" aria-live="polite">
+        <label class="deslizante" hidden data-saida="tempo-controle">
+          <span>Instante consultado: <strong data-saida="tempo-instante"></strong></span>
+          <input type="range" min="0" max="1000" value="1000" data-entrada="tempo">
+        </label>
+        <div class="metricas" data-saida="tempo-metricas"></div>
+        <ol class="lancamentos" data-saida="tempo-lancamentos"></ol>
+      </div>
+    </section>
+
+    <section class="painel" id="replay" aria-labelledby="t-replay">
+      <div class="cabeca">
+        <h2 id="t-replay">3. Reenvio idempotente</h2>
+        <span class="adr">ADR-0006</span>
+      </div>
+      <p>O mesmo crédito é enviado duas vezes com a mesma <code>Idempotency-Key</code>, como faria um cliente após um timeout. A segunda resposta é a original, byte a byte, lida do registro: nenhum lançamento novo, posição inalterada. Mesma chave com outro valor é conflito.</p>
+      <button type="button" data-acao="replay">Enviar duas vezes</button>
+      <button type="button" class="secundario" data-acao="replay-conflito" disabled>Reenviar com outro valor</button>
+      <div class="resultado" aria-live="polite">
+        <table class="tabela" data-saida="replay-tabela"></table>
+        <p class="detalhe" data-saida="replay-detalhe"></p>
+      </div>
+    </section>
+
+    <section class="painel" id="origem" aria-labelledby="t-origem">
+      <div class="cabeca">
+        <h2 id="t-origem">4. Origem do cálculo</h2>
+        <span class="adr">ADR-0007</span>
+      </div>
+      <p>Um snapshot é gravado a cada 100 lançamentos, na própria transação. A posição corrente é o snapshot mais os lançamentos posteriores. <code>computedFrom</code> diz de onde veio o cálculo, e <code>entriesReplayed</code> quantos lançamentos foram somados além do snapshot.</p>
+      <button type="button" data-acao="origem">Atravessar a próxima âncora de snapshot</button>
+      <div class="resultado" aria-live="polite">
+        <div class="metricas" data-saida="origem-metricas"></div>
+        <table class="tabela" data-saida="origem-tabela"></table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>Contas de demonstração reservadas no script de massa local: <code>3333…</code> (painéis 1 e 3), <code>4444…</code> (painel 2), <code>5555…</code> (painel 4). Valores monetários trafegam como string; instantes em ISO 8601 UTC.</p>
+  </footer>
+
+  <script src="painel.js"></script>
+</body>
+</html>
