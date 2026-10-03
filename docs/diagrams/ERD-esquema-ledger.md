@@ -1,6 +1,6 @@
 # Esquema do ledger: entidades e relacionamentos
 
-As 5 tabelas do esquema `ledger`, transcritas de [`db/init/001_roles_and_schema.sql`](../../db/init/001_roles_and_schema.sql) coluna por coluna. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
+As 5 tabelas do esquema `ledger`, transcritas de [`db/migrations/0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql) coluna por coluna. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
 
 **Por que este diagrama importa:** neste sistema, várias regras de negócio não estão no código, estão no banco. Lançamento positivo, sequência sem duplicata, um único estorno por lançamento e chave de idempotência única são constraints; a imutabilidade do ledger é ausência de privilégio. Ler o esquema é ler as invariantes.
 
@@ -132,7 +132,7 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 
 ## Conferência contra o script
 
-Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql`, linha por linha, e contra o catálogo do PostgreSQL com o script aplicado (`information_schema.columns` e `pg_constraint`), por comparação automática de nome, tipo e ordem de cada coluna:
+Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql` (movido sem alteração de esquema para `db/migrations/0001_esquema_inicial.sql` no card 27), linha por linha, e contra o catálogo do PostgreSQL com o script aplicado (`information_schema.columns` e `pg_constraint`), por comparação automática de nome, tipo e ordem de cada coluna:
 
 | Item do script | No diagrama |
 |---|---|

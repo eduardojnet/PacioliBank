@@ -17,7 +17,7 @@ docker compose up --build -d
 curl http://localhost:8080/health/ready        # {"status":"ready"}
 ```
 
-O banco é criado, o esquema é aplicado, os papéis com privilégio mínimo são provisionados e cinco contas de exemplo, ativas e em BRL, já existem:
+O banco é criado, o migrador aplica as migrações pendentes e termina, e só então a API sobe. Os papéis com privilégio mínimo são provisionados e cinco contas de exemplo, ativas e em BRL, já existem:
 
 | Conta | Uso sugerido |
 |---|---|
@@ -216,12 +216,14 @@ src/
   PacioliBank.Events/              despachante de outbox: SKIP LOCKED, recuo, alerta
   PacioliBank.Api/                 adaptador HTTP: endpoints, problem+json, correlação; hospeda o despachante
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
+  PacioliBank.Migrations/          migrador (DbUp): aplica o que falta com o papel de migração e termina
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
-  PacioliBank.Architecture.Tests/  5 regras de dependência (NetArchTest)
+  PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   50 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
-db/init/                           esquema, papéis, privilégios e contas de exemplo
+  PacioliBank.Integration.Tests/   57 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox e migrações
+db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
+db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
 requests.http                      chamadas prontas para todos os endpoints
 insomnia/                          colecao do Insomnia, com testes, executavel pelo inso
@@ -248,9 +250,9 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | **Autenticação e autorização por titularidade (RF-009)** | **Pendente: hoje qualquer chamador opera qualquer conta** |
 | Despachante de outbox, com publicação em log no lugar do barramento | Implementado, com testes |
 | Barramento de eventos real | Pendente: plataforma não definida (ADR-0008) |
-| Migrações versionadas (DbUp) | Pendente: o esquema só é aplicado na criação do volume |
+| Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
-| Testes de arquitetura (NetArchTest), 5 regras de dependência entre módulos e camadas | Implementado |
+| Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
@@ -261,7 +263,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 
 1. **Autenticação e autorização por titularidade (RF-009).** É a maior distância entre o especificado e o implementado, e a única que impediria uso real. O desenho está pronto no ADR-0009: JWT validado contra o provedor de identidade, titularidade conferida no domínio e não só na borda, `404` para conta de terceiro para não revelar existência.
 2. **Barramento de eventos real e expurgo da outbox (ADR-0008).** O despachante já lê a outbox com `FOR UPDATE SKIP LOCKED` e publica com recuo exponencial, mas publica em log: falta ligar a plataforma de mensageria do banco, expurgar as mensagens publicadas e conciliar ledger e outbox (RNF-033).
-3. **Migrações com DbUp (RNF-038).** Hoje mudar o esquema exige recriar o volume. Inaceitável fora do ambiente local.
+3. **Regra de compatibilidade entre migração e versão da API.** As migrações já rodam em passo separado (card 27), mas com várias instâncias a migração precisa ser compatível com a versão anterior enquanto as duas coexistem (expandir antes, contrair depois). Hoje há uma instância só, e a regra não está escrita.
 4. **CI no GitHub Actions** com build sem avisos, as camadas de teste e varredura de segredos. Transforma o critério de bloqueio do ADR-0010 de declarado em verificado a cada commit.
 5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
@@ -278,20 +280,24 @@ As questões de negócio que mudariam o desenho, como limite de cheque especial,
 Útil para depurar. Pré-requisitos: SDK do .NET 10 e Docker, só para o banco.
 
 ```bash
-docker compose up -d pacioli-db            # só o PostgreSQL
+docker compose up -d pacioli-migrations    # PostgreSQL e migrações; o migrador termina sozinho
 docker compose stop pacioli-api            # libera a porta 8080, se a API em container estiver no ar
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/PacioliBank.Api --urls http://localhost:8080
 ```
 
 O ambiente `Development` é o que carrega a connection string local (`appsettings.Development.json`). Sem ele, a API recusa a partida por falta da connection string `Ledger`, de propósito.
 
-### Recriar o banco do zero
+### Mudar o esquema
 
-O esquema é aplicado pelo entrypoint do container PostgreSQL, que só executa na **primeira** criação do volume:
+Mudança de esquema é uma migração nova em `db/migrations/`, com o número seguinte (`0002_descricao.sql`). Script já aplicado não se edita. O próximo `docker compose up --build` roda o migrador, que aplica só o que falta, sem perder dados. O que já rodou fica em `public.schema_versions`.
+
+Para recomeçar com o banco vazio, de propósito:
 
 ```bash
 docker compose down -v && docker compose up --build -d
 ```
+
+Bancos locais criados antes do card 27 não têm o diário de migrações e precisam desse recomeço uma vez.
 
 ---
 

@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 2 | 27, 28 |
+| A Fazer | 1 | 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 37 | 01 a 26, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 38 | 01 a 27, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -102,14 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 27. Substituir o initdb do PostgreSQL por migrações DbUp
-
-`prioridade: Média` · `codigo` · `infra`
-
-Hoje o esquema é aplicado pelo entrypoint do container, que só roda na PRIMEIRA criação do volume. Qualquer mudança de esquema exige docker compose down -v, o que não é aceitável fora do ambiente local e não atende RNF-038.
-
-CRITÉRIO: migrações idempotentes aplicadas na subida da aplicação, com teste de integração partindo de banco vazio.
-
 ### 28. Elevar o AnalysisMode para latest-recommended
 
 `prioridade: Baixa` · `codigo`
@@ -122,7 +114,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. A fila ativa (19 a 25) e seus subníveis estão concluídos; o próximo é o 27, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O 27 foi concluído; o próximo é o 28, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -688,3 +680,41 @@ CRITÉRIO: o teste reprova se alguém introduzir uma dependência fora do grafo 
 ESCOPO AMPLIADO, com motivo: a regra dos endpoints apontou, já na primeira execução, uma violação real (`LedgerProblems` capturava `NpgsqlException`). Corrigida na causa, neste cartão.
 
 ENTREGA (02/10/2026): `PacioliBank.Architecture.Tests`, NetArchTest 1.3.2, 5 regras: Ledger sem banco, HTTP nem outros módulos; domínio sem aplicação; Persistence sem HTTP nem Events; Events sem Ledger; endpoints sem banco. Correção: `PostgresLedgerStore` traduz falha transitória do driver para `LedgerUnavailableException`, nas escritas e nas leituras; `LedgerProblems` deixou de conhecer o Npgsql. VERIFICAÇÃO: regra dos endpoints reprovou o código antigo; regra do domínio reprova dependência inserida de propósito; 2 testes de banco inalcançável reprovaram antes da correção; 116 verdes; no Docker, banco parado dá `503` com `Retry-After`, e religado volta a `200`.
+
+### 27. Substituir o initdb do PostgreSQL por migrações DbUp
+
+`prioridade: Média` · `codigo` · `infra`
+
+Hoje o esquema é aplicado pelo entrypoint do container, que só roda na PRIMEIRA criação do volume. Qualquer mudança de esquema exige docker compose down -v, o que não é aceitável fora do ambiente local e não atende RNF-038.
+
+CRITÉRIO: migrações idempotentes aplicadas na subida da aplicação, com teste de integração partindo de banco vazio.
+
+--- ATUALIZAÇÃO 02/10/2026, ao iniciar (append-only) ---
+
+CRITÉRIO REVISADO por decisão do usuário (opção b). 'Aplicadas na subida da aplicação' colide com o ADR-0009: a API roda com o papel que só lê e insere, e o papel de migração 'nunca é usado pela aplicação em execução'. Aplicar migrações na API exigiria dar a ela a credencial capaz de alterar e apagar o ledger.
+
+ESCOPO: projeto PacioliBank.Migrations com DbUp; scripts versionados (o esquema atual vira a migração 0001, a massa local vira script separado); passo de migração separado no docker compose, com o papel de migração, antes da API; o entrypoint do banco deixa de aplicar o esquema; testes de integração pelas mesmas migrações, com idempotência e evolução; revisão do ADR-0002.
+
+CRITÉRIO: do zero, migração termina com sucesso e API atende; de novo sobre o mesmo volume, nada reaplicado e dados preservados; testes partindo de banco vazio; a API continua sem privilégio de alteração de esquema; build sem avisos e suíte verde.
+
+--- ENTREGA 02/10/2026 (append-only) ---
+
+ENTREGUE:
+- src/PacioliBank.Migrations: console com DbUp (dbup-postgresql 7.0.1). SchemaMigrator aplica só o que falta, uma transação por script, variáveis do DbUp desligadas; diário public.schema_versions. Massa local com diário próprio (public.seed_versions), só com PACIOLI_SEED_LOCAL=true
+- db/init/ substituído por db/migrations/0001_esquema_inicial.sql (esquema sem alteração) e db/seed/0001_contas_locais.sql
+- docker compose: serviço pacioli-migrations (pacioli_migrator, termina); a API depende de service_completed_successfully e segue com pacioli_runtime; o entrypoint do banco não aplica mais nada
+- LedgerFixture monta o banco de teste pelo mesmo SchemaMigrator
+- Revisão do ADR-0002 (onde a migração roda), com 4 alternativas rejeitadas: API migrando com a credencial de migração (contraria o ADR-0009); API migrando com o papel da aplicação; manter o initdb; ferramenta externa (Flyway, Liquibase, sqitch)
+- C2 com o contêiner do migrador (renderizado com mermaid-cli); referências a db/init atualizadas no README, CLAUDE.md, ERD, C1, convenções e ADR-0006, 0008, 0009
+
+CRITÉRIO ATENDIDO:
+- Do zero: migrador sai com código 0, API saudável
+- Migrador e API recriados sobre o mesmo volume: "No new scripts need to be executed"; crédito gravado antes continua na posição
+- 7 testes de integração novos (MigrationTests), que reprovaram com o esboço: banco vazio, reexecução, evolução sem perda de dado, falha sem alteração parcial nem registro, delimitador nomeado intacto, massa só quando pedida, diário fora do alcance do papel da aplicação
+- Poder de detecção: sem a transação por script, o teste de falha reprova; sem desligar as variáveis, o do delimitador reprova
+- 6ª regra de arquitetura: o migrador não depende do Ledger, de Events, da API nem de ASP.NET
+- Testes de privilégio continuam verdes; painel (4 demonstrações) e Insomnia (43/43) verdes sobre o banco migrado
+- Build sem avisos; 124 testes verdes (59 + 57 + 6 + 2)
+
+PENDENTE, declarado: regra de compatibilidade entre migração e versão da API para várias instâncias (expandir antes, contrair depois), [NVI], registrada no ADR-0002 e no ESTADO §5.
+TRANSIÇÃO: um último docker compose down -v local, feito.

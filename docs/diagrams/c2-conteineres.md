@@ -14,6 +14,7 @@ flowchart TB
         api["API do Ledger<br/>[ASP.NET Core 10]<br/>Valida invariantes, serializa escritas<br/>por conta e calcula a posição"]:::impl
         db[("Banco do Ledger<br/>[PostgreSQL 17]<br/>Lançamentos imutáveis, snapshots,<br/>idempotência e outbox")]:::impl
         disp["Despachante de Outbox<br/>[Serviço hospedado, no processo da API]<br/>Publica eventos pendentes<br/>com SKIP LOCKED"]:::impl
+        mig["Migrador<br/>[Console .NET 10, DbUp]<br/>Aplica as migrações pendentes<br/>com o papel de migração e termina"]:::impl
         painel["Painel de Evidência<br/>[HTML e JS estático, servido pela API]<br/>Demonstra concorrência, idempotência,<br/>posição temporal e snapshot"]:::impl
     end
 
@@ -24,6 +25,7 @@ flowchart TB
     api -.->|"lê conta"| cad
     api -->|"serve, na raiz"| painel
     disp -->|"lê e marca a outbox"| db
+    mig -->|"DDL e GRANT, antes da API"| db
     disp -.->|"publica<br/>(hoje: registra em log)"| bus
 
     classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
@@ -36,7 +38,8 @@ flowchart TB
 | Elemento | Estado | Evidência |
 |---|---|---|
 | API do Ledger | Implementado, sem autenticação | `src/PacioliBank.Api`; `docker compose up --build` serve em `:8080` |
-| Banco do Ledger | Implementado | `db/init/001_roles_and_schema.sql`: 5 tabelas, 3 papéis, constraints por regra |
+| Banco do Ledger | Implementado | `db/migrations/0001_esquema_inicial.sql`: 5 tabelas, 3 papéis, constraints por regra |
+| Migrador | Implementado | Card 27: `src/PacioliBank.Migrations`, serviço `pacioli-migrations` do `docker compose`. Único processo com a credencial de migração; a API só sobe depois que ele termina com sucesso (ADR-0002, revisão; ADR-0009) |
 | Escrita na outbox | Implementado | `PostgresLedgerStore.WriteAsync`, na transação do lançamento (ADR-0008) |
 | Despachante de Outbox | Implementado | Card 24: `PacioliBank.Events/OutboxDispatcher.cs`, executado por `OutboxDispatcherService` no processo da API. Rodar no mesmo processo é decisão operacional (ADR-0008); várias instâncias convivem pelo `SKIP LOCKED` |
 | Despachante → Barramento | Especificado | O publicador atual registra o evento em log (`LoggingEventPublisher`), como o ADR-0008 prevê enquanto a plataforma de mensageria não é conhecida |

@@ -5,6 +5,8 @@
 - **Decisor:** Eduardo J. G. do Carmo
 - **Requisitos dirigentes:** RNF-001, RNF-003, RNF-025, RNF-037, RNF-038, R-06
 
+> **Revisado em 2026-10-02 (card 27).** A decisão original escolhia o DbUp, mas não dizia onde a migração roda. A revisão, no fim deste documento, fixa: num passo separado, com o papel de migração, antes de a API subir.
+
 ## Contexto e problema
 
 O desafio impõe C# como linguagem. Restam três decisões: versão da plataforma, sistema de armazenamento e estratégia de acesso a dados.
@@ -103,3 +105,50 @@ O SQL fica confinado aos adaptadores de persistência de cada módulo. O domíni
 1. Decisão corporativa de padronização de SGBD
 2. Entrada de agregados mutáveis complexos no escopo
 3. Fim da janela de suporte do .NET 10
+
+## Revisão de 2026-10-02 (card 27): onde a migração roda
+
+### Problema
+
+Até o card 27, o esquema era aplicado pelo `docker-entrypoint-initdb.d` do container PostgreSQL. Esse mecanismo só roda na **primeira** criação do volume: toda mudança de esquema exigia `docker compose down -v`, apagando os dados. Não atende RNF-038 e não existe fora do ambiente local. O DbUp, escolhido acima, resolve o "o quê"; faltava decidir **onde** ele roda, e a escolha toca o [ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md).
+
+### Decisão
+
+**Migrador próprio, `PacioliBank.Migrations`, executado como passo separado antes da API, com o papel `pacioli_migrator`, que aplica o que falta e termina.**
+
+- Scripts em `db/migrations/NNNN_descricao.sql`, copiados para a saída do migrador; o DbUp registra cada script aplicado em `public.schema_versions` e só aplica os que faltam. Script aplicado não se edita: mudança de esquema é migração nova
+- Uma transação por script: script com erro desfaz o que fez e não entra no diário
+- Massa do ambiente local em `db/seed/`, com diário próprio (`public.seed_versions`), aplicada só quando `PACIOLI_SEED_LOCAL=true`. Fora do ambiente local, não existe
+- No `docker compose`, o serviço `pacioli-migrations` depende do banco saudável, e a API depende de `service_completed_successfully`: migração que falha impede a API de subir sobre esquema incompleto
+- A API continua com `pacioli_runtime` (`SELECT, INSERT` no ledger). A credencial capaz de alterar e apagar o ledger nunca fica com o processo que atende requisições
+- Os testes de integração montam o banco pelo mesmo `SchemaMigrator`, não por cópia do script
+
+### Alternativas rejeitadas
+
+**A API aplica as migrações na subida, com a credencial de migração.** É o arranjo mais comum e o que o critério original do card pedia. Rejeitado porque contraria o [ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md): o papel de migração "nunca é usado pela aplicação em execução". A API passaria a guardar, durante toda a vida do processo, a credencial com `UPDATE`, `DELETE` e DDL sobre o ledger, e a imutabilidade por privilégio viraria imutabilidade por disciplina. *Voltaria a ser considerado* se o ambiente de execução oferecesse credencial de uso único, revogada ao fim da migração e antes de a API atender a primeira requisição.
+
+**A API aplica as migrações com o próprio papel `pacioli_runtime`.** Impossível sem conceder DDL ao papel da aplicação, o que é a alternativa anterior por outro caminho.
+
+**Manter o `docker-entrypoint-initdb.d`.** Zero código. Rejeitado: não reaplica em volume existente (RNF-038), exige `down -v` a cada mudança e não tem equivalente em banco gerenciado.
+
+**Ferramenta externa de migração (Flyway, Liquibase, sqitch).** Mesmo desenho de passo separado, sem código C#. Rejeitada por acrescentar uma toolchain fora do .NET (Java, no caso das duas primeiras) e por deixar o banco dos testes de integração montado por um caminho diferente do usado pelo ambiente: o DbUp roda dentro do processo de teste, a ferramenta externa exigiria outro container na suíte. *Voltaria a ser considerada* se houvesse padrão corporativo de migração.
+
+### Consequências
+
+- **Positiva:** mudança de esquema sem perder dados; o mesmo migrador monta o ambiente local e o banco de cada teste
+- **Positiva:** falha de migração é visível e bloqueante (código de saída diferente de zero, API não sobe)
+- **Negativa:** um container e uma imagem a mais no `docker compose`
+- **Negativa:** migração e versão da API sobem em passos distintos; uma migração precisa ser compatível com a versão anterior da API enquanto as duas coexistirem. Hoje há uma única instância e o passo precede a API, então a janela é nula no ambiente local. [NVI] Em implantação com várias instâncias, a regra de compatibilidade (expandir antes, contrair depois) ainda não está escrita
+- **Transição, declarada:** bancos locais criados pelo mecanismo antigo não têm o diário e exigiram um último `docker compose down -v`
+
+### Validação feita
+
+- 7 testes de integração (`MigrationTests`), contra PostgreSQL real: banco vazio fica com as 5 tabelas; segunda execução não aplica nada; migração nova é aplicada sozinha e preserva os dados; migração com erro não deixa tabela parcial nem registro; delimitador nomeado (`$corpo$`) chega intacto; massa local só quando pedida e uma única vez; o papel da aplicação não consegue apagar o diário
+- Poder de detecção medido: sem a transação por script, o teste de falha atômica reprova; sem desligar as variáveis do DbUp, o teste do delimitador nomeado reprova
+- Regra de arquitetura: o migrador não depende do Ledger, de Events, da API nem de ASP.NET
+- `docker compose up --build` a partir do zero: migrador termina com código 0, API saudável. Recriados o migrador e a API sobre o mesmo volume: "No new scripts need to be executed" e o crédito gravado antes continua na posição
+
+### Gatilho de revisão desta parte
+
+1. Implantação com mais de uma instância da API, que exige escrever a regra de compatibilidade entre migração e versão
+2. Ambiente com credencial de uso único, que reabre a alternativa de migrar na subida da API

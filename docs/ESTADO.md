@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima sexta revisão)
-**Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 116 passando (59 de domínio, 5 de arquitetura, 2 de contrato, 50 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Última atualização:** 2026-10-02 (vigésima sétima revisão)
+**Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução (`dotnet build`, verificado em 2026-10-02)
+**Testes:** 124 passando (59 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -137,7 +137,9 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 
 Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo idêntico ao original; lançamento novo responde `201`.
 
-### Banco (`db/init/`)
+### Banco e migrações (`db/migrations/`, `src/PacioliBank.Migrations`, card 27)
+
+O esquema é aplicado por migrações numeradas (DbUp, `dbup-postgresql` 7.0.1), num passo separado do `docker compose` (`pacioli-migrations`): roda com `pacioli_migrator`, aplica só o que falta, registra em `public.schema_versions` e termina. A API depende de `service_completed_successfully` e continua com `pacioli_runtime`. Transação por script: migração com erro não deixa alteração parcial nem registro. A massa local (`db/seed/`) tem diário próprio e só roda com `PACIOLI_SEED_LOCAL=true`. Os testes de integração montam o banco pelo mesmo `SchemaMigrator`. Decisão e alternativas rejeitadas na revisão do ADR-0002.
 
 Esquema `ledger` com 5 tabelas e 3 papéis. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
 
@@ -149,9 +151,9 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
-| `PacioliBank.Architecture.Tests` | 5 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas) |
+| `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 50 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
+| `PacioliBank.Integration.Tests` | 57 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08) e migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -176,7 +178,7 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Barramento de eventos real | Não escolhido (ADR-0008). O despachante publica em log; nenhum consumidor externo recebe eventos |
 | Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
-| Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
+| Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
 
 ---
@@ -337,7 +339,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 Previstos por ADR, que entram com a fila ativa vazia:
 
 9. ~~**[26] Testes de arquitetura com NetArchTest**~~ concluído em 2026-10-02
-10. **[27] Migrações com DbUp** (RNF-038)
+10. ~~**[27] Migrações com DbUp** (RNF-038)~~ concluído em 2026-10-02, em passo separado com o papel de migração (opção b, por decisão do usuário)
 11. **[28] AnalysisMode para recommended** (L-06)
 
 ---
@@ -346,9 +348,8 @@ Previstos por ADR, que entram com a fila ativa vazia:
 
 ```bash
 cd pacioli-bank-ledger
-docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 116 passando, 0 falhando, sem avisos
-docker compose up --build     # API em http://localhost:8080
+dotnet test                   # esperado: 124 passando, 0 falhando, sem avisos
+docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
      -H 'Idempotency-Key: k1' -H 'Content-Type: application/json' \
@@ -375,6 +376,7 @@ Congeladas porque estão verificadas com build limpo e suíte verde, não porque
 | Testcontainers.PostgreSql | 4.15.0 |
 | Npgsql | 10.0.3 |
 | Dapper | 2.1.89 |
+| dbup-postgresql | 7.0.1 (traz dbup-core 6.1.1; card 27) |
 
 ---
 
@@ -453,3 +455,4 @@ confirmação.
 | 2026-10-02 | Card 19.2 concluído: o teste manual no Insomnia virou coleção versionada com testes embutidos (15 requisições, 43 testes), executada pelo `inso` 13.3.0 contra o `docker compose`: verde em três execuções seguidas; apontada para conta inexistente, reprova com código de saída 1 |
 | 2026-10-02 | Card 19.3 concluído: OpenAPI gerado do código em `/openapi/v1.json` (pacote 10.0.12, igual ao runtime), com corpos e problemas declarados por endpoint; três imprecisões corrigidas antes de aprovar (título, inteiro declarado como "inteiro ou string", campo anulável declarado obrigatório). Projeto `PacioliBank.Contract.Tests` com comparação por instantâneo; reprova quando o contrato muda (medido). 109 verdes; coleção do Insomnia segue 43/43 |
 | 2026-10-02 | Card 26 concluído: `PacioliBank.Architecture.Tests` com 5 regras de dependência (NetArchTest 1.3.2, verificado contra assemblies .NET 10). A regra dos endpoints achou uma violação real: o tradutor de erros HTTP conhecia o driver do banco. Corrigido na causa: o adaptador de dados traduz falha transitória do driver para `LedgerUnavailableException` (2 testes novos, que reprovaram antes). 116 verdes; `503` verificado no Docker com o banco parado |
+| 2026-10-02 | Card 27 concluído: migrações DbUp em projeto próprio (`PacioliBank.Migrations`), executadas num passo separado do `docker compose` com o papel de migração; a API continua só com `SELECT, INSERT` (ADR-0009). Critério do card revisado (opção b, decisão do usuário): "aplicadas na subida da aplicação" exigiria dar à API a credencial de migração. Revisão do ADR-0002 com 4 alternativas rejeitadas. `db/init/` substituído por `db/migrations/` e `db/seed/`; C2 ganha o migrador. 7 testes de integração novos (reprovaram com o esboço) e 1 regra de arquitetura; poder de detecção medido em duas mutações. No Docker: do zero, migrador sai com 0 e API saudável; recriado sobre o mesmo volume, nada reaplicado e dado preservado; painel e Insomnia (43/43) verdes. Transição: um último `down -v` local. 124 verdes |

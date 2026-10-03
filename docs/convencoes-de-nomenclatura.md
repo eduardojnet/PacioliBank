@@ -60,7 +60,7 @@ pacioli-bank-ledger/
 └── README.md
 ```
 
-> **Estado em 2026-10-02.** A árvore acima é a alvo. Existem hoje `PacioliBank.Ledger`, `PacioliBank.Ledger.Persistence` (ausente da árvore: o adaptador de dados virou projeto próprio para que a inversão de dependência seja garantida pelo compilador), `PacioliBank.Api`, `PacioliBank.Domain.Tests` e `PacioliBank.Integration.Tests`. `PacioliBank.Events` passou a existir no card 24, `PacioliBank.Contract.Tests` no 19.3 e `PacioliBank.Architecture.Tests` no 26. `Balances`, `Accounts`, `Migrations` e `Concurrency.Tests` não existem; ver [ADR-0001](./adr/ADR-0001-estilo-arquitetural.md) e [ADR-0010](./adr/ADR-0010-estrategia-de-testes.md), notas de estado.
+> **Estado em 2026-10-02.** A árvore acima é a alvo. Existem hoje `PacioliBank.Ledger`, `PacioliBank.Ledger.Persistence` (ausente da árvore: o adaptador de dados virou projeto próprio para que a inversão de dependência seja garantida pelo compilador), `PacioliBank.Api`, `PacioliBank.Domain.Tests` e `PacioliBank.Integration.Tests`. `PacioliBank.Events` passou a existir no card 24, `PacioliBank.Contract.Tests` no 19.3 e `PacioliBank.Architecture.Tests` no 26 e `PacioliBank.Migrations` no 27 (os scripts ficam em `db/migrations/` e vão para a saída do migrador). `Balances`, `Accounts` e `Concurrency.Tests` não existem; ver [ADR-0001](./adr/ADR-0001-estilo-arquitetural.md) e [ADR-0010](./adr/ADR-0010-estrategia-de-testes.md), notas de estado.
 
 ### Correções aos ADRs decorrentes desta convenção
 

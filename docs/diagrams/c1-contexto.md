@@ -31,7 +31,7 @@ flowchart TB
 | PacioliBank Ledger | **Parcial** | Os 5 endpoints da EF §8.3 respondem e os eventos são despachados; autenticação, autorização e a entrega a um barramento real não existem |
 | Canais Digitais → Ledger (consulta) | Implementado | `GET /balance` e `GET /entries` em `Endpoints/LedgerEndpoints.cs` |
 | Originadores → Ledger (registro) | Implementado | `POST /credits`, `/debits`, `/entries/{id}/reversals` |
-| Ledger → Cadastro de Contas | Especificado | Hoje a tabela `ledger.accounts` é preenchida por massa local (`db/init/002_seed_local.sql`); a replicação do Cadastro não existe |
+| Ledger → Cadastro de Contas | Especificado | Hoje a tabela `ledger.accounts` é preenchida por massa local (`db/seed/0001_contas_locais.sql`, aplicada pelo migrador só no ambiente local); a replicação do Cadastro não existe |
 | Ledger → Provedor de Identidade | Especificado | Nenhuma validação de token. Qualquer chamador opera qualquer conta (ESTADO §5, RF-009) |
 | Ledger → Consumidores de Evento | Parcial | O evento é gravado na outbox, na transação do lançamento, e o despachante o publica (card 24); mas o publicador registra em log, porque o barramento real não foi escolhido (ADR-0008). Nenhum consumidor externo recebe eventos hoje |
 

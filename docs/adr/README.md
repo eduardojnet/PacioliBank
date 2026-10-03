@@ -11,7 +11,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | ADR | Decisão | Status | Dirigido por |
 |---|---|---|---|
 | [0001](./ADR-0001-estilo-arquitetural.md) | Monolito modular com fronteiras verificadas | Aceito | RNF-035, RNF-037, R-07 |
-| [0002](./ADR-0002-plataforma-e-armazenamento.md) | .NET 10 LTS, PostgreSQL, Dapper e DbUp | Aceito | RNF-001, RNF-037, R-06 |
+| [0002](./ADR-0002-plataforma-e-armazenamento.md) | .NET 10 LTS, PostgreSQL, Dapper e DbUp; migrador em passo separado (revisão do card 27) | Aceito, revisado em 2026-10-02 | RNF-001, RNF-037, RNF-038, R-06 |
 | [0003](./ADR-0003-ledger-append-only.md) | Ledger append-only como única fonte da verdade | Aceito | RN-003, RNF-003, RNF-016 |
 | [0004](./ADR-0004-representacao-monetaria.md) | `decimal` e `numeric(19,4)`, com Value Object `Money` | Aceito | RN-002, EF §8.2 |
 | [0005](./ADR-0005-controle-de-concorrencia.md) | Bloqueio pessimista de linha por conta | Aceito | RN-001, RNF-004, CQ-02 |

@@ -177,7 +177,7 @@ A tabela foi definida sem chave estrangeira, e esta ADR não dizia por quê. Ach
 - A ordem de gravação dentro da transação passa a importar: o lançamento antes da mensagem. Já era a ordem em `PostgresLedgerStore.WriteAsync`
 - Custo na inserção: uma busca no índice de `uq_entries_sequence`, que já existe
 - Sem índice do lado da outbox: o ledger é append-only, então a chave nunca é verificada por exclusão ou alteração do lado referenciado
-- Mudança de esquema aplicada pelo script inicial: no ambiente local, exige `docker compose down -v` até o card 27 (DbUp)
+- Mudança de esquema aplicada pelo script inicial: no ambiente local, exige `docker compose down -v` até o card 27 (DbUp). Resolvido no card 27: mudança de esquema passou a ser migração nova, sem recriar o volume ([ADR-0002](./ADR-0002-plataforma-e-armazenamento.md), revisão)
 
 ## Gatilho de revisão
 

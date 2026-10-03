@@ -200,7 +200,7 @@ Havia ainda um impedimento técnico escondido: a coluna era `jsonb`, que reorden
 - Primeira resposta e repetição são o mesmo texto por construção: verificado no Docker, com o mesmo SHA-256 na primeira resposta, no reenvio e na coluna
 - O tipo do contrato de escrita sai do adaptador HTTP e vai para a aplicação, porque é gravado onde é produzido. Os contratos de leitura (posição, extrato) continuam no adaptador
 - As colunas do lançamento continuam alimentando o resultado interno da repetição; o **corpo HTTP** vem só do registro
-- Mudança de esquema (`jsonb` para `json`): no ambiente local, exige `docker compose down -v` até o card 27 (DbUp)
+- Mudança de esquema (`jsonb` para `json`): no ambiente local, exige `docker compose down -v` até o card 27 (DbUp). Resolvido no card 27: mudança de esquema passou a ser migração nova, sem recriar o volume ([ADR-0002](./ADR-0002-plataforma-e-armazenamento.md), revisão)
 - **Validação:** teste que altera o `response_body` por fora e verifica que a repetição devolve o texto alterado, o que uma reconstrução não conseguiria; e teste que compara a primeira resposta com o texto gravado
 
 ## Gatilho de revisão desta revisão

@@ -36,7 +36,7 @@ Há duas perguntas de arquitetura a responder, e nenhuma delas é "qual bibliote
 
 Três papéis distintos no banco de dados:
 
-> **Revisão de 2026-10-02 (lacuna L-05).** Os exemplos usavam o prefixo `app_*`. Substituído por `pacioli_*`, o nome efetivo em `db/init/001_roles_and_schema.sql`, para evitar colisão em instância compartilhada ([convenções](../convencoes-de-nomenclatura.md) §5).
+> **Revisão de 2026-10-02 (lacuna L-05).** Os exemplos usavam o prefixo `app_*`. Substituído por `pacioli_*`, o nome efetivo em `db/init/001_roles_and_schema.sql` (desde o card 27, `db/migrations/0001_esquema_inicial.sql`), para evitar colisão em instância compartilhada ([convenções](../convencoes-de-nomenclatura.md) §5).
 
 ```sql
 -- Migrações, exclusivamente. Nunca usado pela aplicação em execução.
