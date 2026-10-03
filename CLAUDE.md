@@ -35,7 +35,7 @@ O esquema é aplicado pelo entrypoint do PostgreSQL, que **só roda na primeira 
 - **Monolito modular**, Ports and Adapters, DDD tático no domínio (ADR-0001)
 - **Ledger append-only é a única fonte da verdade.** Posição é derivada; snapshot e cache são descartáveis (ADR-0003)
 - **A conta é a unidade de serialização.** `FOR NO KEY UPDATE` na linha da conta, antes de ler a posição (ADR-0005)
-- **Idempotência obrigatória**, detectada pela violação de chave primária, nunca por consulta prévia (ADR-0006)
+- **Idempotência obrigatória.** A repetição é reconhecida sob o bloqueio da conta, antes do agregado; a chave primária é a barreira estrutural contra duplicidade; o reenvio recebe o `response_body` gravado, byte a byte (ADR-0006, revisões dos cards 19.4 e 19.5)
 - **Imutabilidade por privilégio**: o papel da aplicação tem `SELECT, INSERT` no ledger e nada mais (ADR-0009)
 
 Inversão de dependência é física: `PacioliBank.Ledger` não declara nenhum `PackageReference`, então referenciar Npgsql no domínio é erro de compilação.
@@ -100,7 +100,7 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Cards 18.1, 19, 19.1, 19.4, 19.5, 20, 20.1, 21, 21.1, 22, 23, 24, 24.1 e 24.2 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF e BDD na versão 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011).  O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Cards 18.1, 19, 19.1, 19.4, 19.5, 20, 20.1, 21, 21.1, 21.2, 22, 23, 24, 24.1 e 24.2 concluídos, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.3, ENF 1.1, BDD 1.1). O próximo da fila é o **25** (painel de evidência, condicional pelo ADR-0011). O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 

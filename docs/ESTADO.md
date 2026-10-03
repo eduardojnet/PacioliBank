@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima primeira revisão)
+**Última atualização:** 2026-10-02 (vigésima segunda revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 107 passando (59 de domínio, 48 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -302,7 +302,7 @@ O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build est
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 48 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 49 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -324,6 +324,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 3. ~~**[20] Diagramas em Mermaid no repositório** (L-02)~~ concluído em 2026-10-02
    - ~~**[20.1] Diagrama de entidade e relacionamento do esquema**~~ concluído em 2026-10-02
 4. ~~**[21] Correções documentais** (L-05, L-11)~~ concluído em 2026-10-02
+   - ~~**[21.2] Afirmações desatualizadas do `CLAUDE.md`**~~ concluído em 2026-10-02
    - ~~**[21.1] Nomes dos eventos da EF §9 alinhados ao código**~~ concluído em 2026-10-02 (também ENF R-05 e R-06)
 5. ~~**[22] Experimento de detecção do teste de concorrência** (L-04)~~ concluído em 2026-10-02
 6. ~~**[23] README final**~~ concluído em 2026-10-02
@@ -440,3 +441,4 @@ confirmação.
 | 2026-10-02 | Card 21.1 concluído: EF §9 (1.2), ENF (1.1) e convenções §8 alinhados ao código: `pacioli.ledger.*.v1` e `message_id`. Escopo ampliado com motivo: ENF R-06 descrevia o bloqueio consultivo, opção rejeitada no ADR-0005. Lendo eventos reais, achados defeitos no payload; viraram o card 24.2, declarados na EF |
 | 2026-10-02 | Card 24.2 concluído: payload dos eventos com tipo próprio (`LedgerEntryEvent`), valores como string, instantes em `Z`, sentido como texto e `reversalOf` no estorno; especificado na EF §9 (1.3), mantendo `v1` porque nenhum consumidor recebeu eventos. 2 testes leem o payload gravado e reprovaram antes. 105 verdes; verificado no Docker. Card 19.5 criado: o ADR-0006 diz devolver `response_body`, o código reconstrói do ledger |
 | 2026-10-02 | Card 19.5 concluído, opção (b): a repetição devolve o `response_body` gravado, no formato do contrato; coluna de `jsonb` para `json` para preservar o texto exato. ADR-0006 revisado. 2 testes novos (107 verdes); no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256 |
+| 2026-10-02 | Card 21.2 concluído: o `CLAUDE.md` descrevia a idempotência como "nunca por consulta prévia" (superado pelas revisões 19.4 e 19.5 do ADR-0006) e a EF na versão 1.1 (está na 1.3) |

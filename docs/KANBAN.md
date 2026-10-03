@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 48 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-02 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -14,7 +14,7 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 32 | 01 a 24, mais 18.1, 19.4, 19.5, 20.1, 21.1, 24.1 e 24.2 |
+| Concluído | 33 | 01 a 24, mais 18.1, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -664,3 +664,11 @@ ACHADO: o ADR-0006 afirma devolver a resposta gravada em `response_body`, "não 
 ÂNCORA: ADR-0006, consequências; achado no card 24.2. `idempotency_records.response_body` é gravado e nunca lido: a repetição é reconstruída de `ledger_entries`. O corpo devolvido é idêntico ao original (há teste), mas por reconstrução, contra o que o ADR afirma. OPÇÕES: (a) corrigir o ADR; (b) devolver `response_body` de fato. BLOQUEIO: decisão do usuário.
 
 ENTREGA (02/10/2026), opção (b) por decisão do usuário: `PostingResponse` na aplicação monta o corpo da resposta de escrita uma vez; o store o grava em `response_body` e a API o devolve como texto, sem reserializar, na primeira resposta e na repetição. Coluna de `jsonb` para `json`, porque `jsonb` reordena chaves e normaliza espaços. ADR-0006 com a revisão e a alternativa rejeitada; ERD atualizado. VERIFICAÇÃO: teste que altera o `response_body` por fora e recebe o texto alterado na repetição; teste que compara a primeira resposta com o gravado; 107 verdes; no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256.
+
+### 21.2. Corrigir as afirmações desatualizadas do CLAUDE.md
+
+`prioridade: Baixa` · `doc`
+
+ÂNCORA: `CLAUDE.md`, achado ao retomar a sessão. A linha de arquitetura do ADR-0006 dizia "nunca por consulta prévia", superada pelas revisões dos cards 19.4 e 19.5; a pendência citava "EF e BDD na versão 1.1", com a EF na 1.3.
+
+ENTREGA (02/10/2026): as duas afirmações corrigidas e coerentes com o ADR-0006 e o histórico das especificações.
