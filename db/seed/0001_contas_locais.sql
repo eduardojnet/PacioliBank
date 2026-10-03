@@ -1,5 +1,7 @@
 -- Massa minima para o ambiente local. Nao e usada em teste automatizado:
 -- cada teste de integracao cria a sua propria massa (ADR-0010).
+-- Aplicada so quando pedida (PACIOLI_SEED_LOCAL=true no docker compose),
+-- depois das migracoes, com diario proprio (public.seed_versions).
 --
 -- 1111 e 2222: exemplos do README e testes livres.
 -- 3333, 4444 e 5555: reservadas ao painel de evidencia (ADR-0011), uma por

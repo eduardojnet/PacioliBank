@@ -4,6 +4,7 @@ using PacioliBank.Api.Endpoints;
 using PacioliBank.Events;
 using PacioliBank.Ledger.Domain;
 using PacioliBank.Ledger.Persistence;
+using PacioliBank.Migrations;
 
 namespace PacioliBank.Architecture.Tests;
 
@@ -28,6 +29,7 @@ public class DependencyRulesTests
     private static readonly Assembly Persistence = typeof(PostgresLedgerStore).Assembly;
     private static readonly Assembly Events = typeof(OutboxDispatcher).Assembly;
     private static readonly Assembly Api = typeof(LedgerEndpoints).Assembly;
+    private static readonly Assembly Migrations = typeof(SchemaMigrator).Assembly;
 
     private const string AspNetCore = "Microsoft.AspNetCore";
     private const string Npgsql = "Npgsql";
@@ -94,5 +96,16 @@ public class DependencyRulesTests
             .GetResult();
 
         Aprovar(resultado, "O adaptador HTTP fala com ILedgerService; quem conhece o banco é a raiz de composição (Program.cs)");
+    }
+
+    [Fact]
+    public void Migracoes_conhecem_o_banco_e_nenhum_outro_modulo()
+    {
+        var resultado = Types.InAssembly(Migrations)
+            .ShouldNot()
+            .HaveDependencyOnAny("PacioliBank.Ledger", "PacioliBank.Events", "PacioliBank.Api", AspNetCore)
+            .GetResult();
+
+        Aprovar(resultado, "O migrador aplica SQL versionado com o papel de migração e termina; não pode depender do domínio nem dos módulos que rodam com o papel da aplicação (ADR-0002, ADR-0009)");
     }
 }

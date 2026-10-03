@@ -1,10 +1,11 @@
 -- =====================================================================
--- PacioliBank Ledger - esquema inicial
+-- PacioliBank Ledger - migracao 0001: esquema inicial
 -- ADR-0003 (ledger append-only) e ADR-0009 (privilegio minimo).
 --
--- Executado pelo entrypoint do container PostgreSQL na PRIMEIRA criacao
--- do volume. Substituido por DbUp no proximo incremento, porque este
--- mecanismo nao reaplica em volume existente (ver RNF-038).
+-- Aplicada pelo PacioliBank.Migrations (DbUp), com o papel de migracao,
+-- uma unica vez por banco: o diario public.schema_versions registra o que
+-- ja rodou (ADR-0002, RNF-038). Script aplicado nao se edita; mudanca de
+-- esquema e uma migracao nova, com o numero seguinte.
 -- =====================================================================
 
 CREATE SCHEMA IF NOT EXISTS ledger;

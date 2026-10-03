@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PacioliBank.Api\PacioliBank.Api.csproj" />
+    <ProjectReference Include="..\..\src\PacioliBank.Migrations\PacioliBank.Migrations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

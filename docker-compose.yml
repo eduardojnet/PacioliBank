@@ -13,13 +13,32 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/init:/docker-entrypoint-initdb.d:ro
       - pacioli-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pacioli_migrator -d pacioli"]
       interval: 5s
       timeout: 5s
       retries: 12
+    networks:
+      - pacioli-net
+
+  # Aplica as migracoes pendentes e termina (ADR-0002). E o unico processo
+  # com a credencial de migracao; a API sobe depois, com o papel que so le e
+  # insere (ADR-0009). Subir de novo sobre o mesmo volume nao reaplica nada.
+  pacioli-migrations:
+    build:
+      context: .
+      dockerfile: src/PacioliBank.Migrations/Dockerfile
+    image: pacioli-bank/migrations:local
+    container_name: pacioli-migrations
+    depends_on:
+      pacioli-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Migrator: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_migrator;Password=${POSTGRES_PASSWORD:-pacioli_local_dev}"
+      # Contas de exemplo do README e do painel. So no ambiente local.
+      PACIOLI_SEED_LOCAL: "true"
+    restart: "no"
     networks:
       - pacioli-net
 
@@ -30,8 +49,8 @@ services:
     image: pacioli-bank/ledger:local
     container_name: pacioli-api
     depends_on:
-      pacioli-db:
-        condition: service_healthy
+      pacioli-migrations:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development

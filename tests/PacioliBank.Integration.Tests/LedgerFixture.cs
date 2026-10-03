@@ -1,13 +1,13 @@
-using System.Reflection;
 using Dapper;
 using Npgsql;
+using PacioliBank.Migrations;
 using Testcontainers.PostgreSql;
 
 namespace PacioliBank.Integration.Tests;
 
 /// <summary>
-/// Sobe um PostgreSQL real por execucao e aplica o MESMO script de esquema que
-/// o ambiente local usa.
+/// Sobe um PostgreSQL real por execucao e aplica as MESMAS migracoes que o
+/// ambiente local usa, pelo mesmo migrador (ADR-0002).
 /// </summary>
 /// <remarks>
 /// Banco real nao e preciosismo (ADR-0010). As invariantes que importam neste
@@ -47,12 +47,10 @@ public sealed class LedgerFixture : IAsyncLifetime
     {
         await _container.StartAsync().ConfigureAwait(false);
 
-        var schema = await File.ReadAllTextAsync(LocateSchemaScript()).ConfigureAwait(false);
-
-        await using (var admin = new NpgsqlConnection(MigratorConnectionString))
+        var migration = SchemaMigrator.ApplySchema(MigratorConnectionString);
+        if (!migration.Successful)
         {
-            await admin.OpenAsync().ConfigureAwait(false);
-            await admin.ExecuteAsync(schema).ConfigureAwait(false);
+            throw new InvalidOperationException("As migracoes nao foram aplicadas ao banco de teste.", migration.Error);
         }
 
         var runtime = new NpgsqlConnectionStringBuilder(MigratorConnectionString)
@@ -117,23 +115,22 @@ public sealed class LedgerFixture : IAsyncLifetime
         return accountId;
     }
 
-    private static string LocateSchemaScript()
+    /// <summary>
+    /// Cria um banco vazio no mesmo servidor e devolve a conexao de migrador
+    /// para ele. Os papeis sao do servidor, nao do banco: a migracao os cria
+    /// so se ainda nao existirem.
+    /// </summary>
+    public async Task<string> CreateEmptyDatabaseAsync()
     {
-        var directory = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
+        var name = "vazio_" + Guid.NewGuid().ToString("N");
 
-        while (directory is not null)
+        await using (var admin = new NpgsqlConnection(MigratorConnectionString))
         {
-            var candidate = Path.Combine(directory.FullName, "db", "init", "001_roles_and_schema.sql");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
+            await admin.OpenAsync().ConfigureAwait(false);
+            await admin.ExecuteAsync($"CREATE DATABASE {name}").ConfigureAwait(false);
         }
 
-        throw new FileNotFoundException(
-            "Nao foi possivel localizar db/init/001_roles_and_schema.sql a partir do diretorio de saida do teste.");
+        return new NpgsqlConnectionStringBuilder(MigratorConnectionString) { Database = name }.ConnectionString;
     }
 }
 

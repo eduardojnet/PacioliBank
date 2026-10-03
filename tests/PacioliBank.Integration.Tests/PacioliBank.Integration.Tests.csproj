@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\PacioliBank.Ledger\PacioliBank.Ledger.csproj" />
     <ProjectReference Include="..\..\src\PacioliBank.Ledger.Persistence\PacioliBank.Ledger.Persistence.csproj" />
     <ProjectReference Include="..\..\src\PacioliBank.Events\PacioliBank.Events.csproj" />
+    <ProjectReference Include="..\..\src\PacioliBank.Migrations\PacioliBank.Migrations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

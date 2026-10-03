@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PacioliBank.Migrations</RootNamespace>
+    <AssemblyName>PacioliBank.Migrations</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- dbup-postgresql 7.0.1 exige Npgsql >= 10.0.1: o 10.0.3 ja congelado
+         atende, e a referencia explicita impede que o DbUp escolha outra. -->
+    <PackageReference Include="dbup-postgresql" Version="7.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Os scripts vivem em db/, onde quem revisa o esquema os procura, e vao
+         para a saida ao lado do executavel. Sem copia manual nem caminho
+         relativo ao repositorio em tempo de execucao. -->
+    <None Include="..\..\db\migrations\*.sql" Link="migrations\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\db\seed\*.sql" Link="seed\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Sem referencia a nenhum outro projeto: a migracao conhece o banco, nao o
+       dominio. E executada antes da API e termina (ADR-0002, revisao do card 27). -->
+
+</Project>
