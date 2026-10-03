@@ -1,0 +1,489 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-10-02T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v13.3.0",
+  "resources": [
+    {
+      "_id": "wrk_pacioli_ledger",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "PacioliBank Ledger",
+      "description": "Coleção da API do PacioliBank Ledger (EF §8). Cada requisição traz os próprios testes. Rode em ordem: as escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores. Conta usada: 2222…, a de testes livres.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_pacioli_base",
+      "_type": "environment",
+      "parentId": "wrk_pacioli_ledger",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "conta": "22222222-2222-2222-2222-222222222222",
+        "conta_inexistente": "00000000-0000-0000-0000-00000000dead"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "conta",
+          "conta_inexistente"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_saude",
+      "_type": "request_group",
+      "parentId": "wrk_pacioli_ledger",
+      "name": "01 Saúde",
+      "description": "Vivo e pronto (RNF-013). Pronto consulta o PostgreSQL.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1000
+    },
+    {
+      "_id": "req_live",
+      "_type": "request",
+      "parentId": "fld_saude",
+      "name": "Vivo",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health/live",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));",
+      "metaSortKey": 2000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_ready",
+      "_type": "request",
+      "parentId": "fld_saude",
+      "name": "Pronto",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health/ready",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));\ninsomnia.test('status ready', () => insomnia.expect(insomnia.response.json().status).to.equal('ready'));",
+      "metaSortKey": 3000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_escrita",
+      "_type": "request_group",
+      "parentId": "wrk_pacioli_ledger",
+      "name": "02 Escrita",
+      "description": "Crédito, débito e estorno (EF §8.4). Toda escrita exige Idempotency-Key.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4000
+    },
+    {
+      "_id": "req_credito",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Crédito de 100,00",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/credits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"100.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T10:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_credito }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "insomnia.environment.set('chave_credito', 'insomnia-' + Date.now() + '-' + Math.random().toString(16).slice(2));",
+      "afterResponseScript": "insomnia.test('HTTP 201', () => insomnia.expect(insomnia.response.code).to.equal(201));\nconst r = insomnia.response.json();\ninsomnia.test('valor como string, na escala da moeda', () => insomnia.expect(r.amount).to.equal('100.00'));\ninsomnia.test('sentido Credit', () => insomnia.expect(r.direction).to.equal('Credit'));\ninsomnia.test('instante em UTC com Z', () => insomnia.expect(r.occurredAt).to.equal('2026-10-02T10:00:00Z'));\ninsomnia.environment.set('lancamento_credito', r.entryId);",
+      "metaSortKey": 5000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_reenvio",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Reenvio do mesmo crédito (idempotente)",
+      "description": "Mesma chave e mesmo conteúdo: devolve a resposta original, gravada no registro, sem novo lançamento (ADR-0006).",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/credits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"100.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T10:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_credito }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));\ninsomnia.test('Idempotency-Replayed: true', () => insomnia.expect(insomnia.response.headers.get('Idempotency-Replayed')).to.equal('true'));\ninsomnia.test('mesmo lançamento do envio original', () => insomnia.expect(insomnia.response.json().entryId).to.equal(insomnia.environment.get('lancamento_credito')));",
+      "metaSortKey": 6000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_conflito",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Mesma chave, outro valor (conflito)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/credits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"999.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T10:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_credito }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 409', () => insomnia.expect(insomnia.response.code).to.equal(409));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code IDEMPOTENCY_KEY_CONFLICT', () => insomnia.expect(insomnia.response.json().code).to.equal('IDEMPOTENCY_KEY_CONFLICT'));",
+      "metaSortKey": 7000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_debito",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Débito de 30,00",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/debits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"30.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T11:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_debito }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "insomnia.environment.set('chave_debito', 'insomnia-' + Date.now() + '-' + Math.random().toString(16).slice(2));",
+      "afterResponseScript": "insomnia.test('HTTP 201', () => insomnia.expect(insomnia.response.code).to.equal(201));\nconst r = insomnia.response.json();\ninsomnia.test('sentido Debit', () => insomnia.expect(r.direction).to.equal('Debit'));\ninsomnia.environment.set('lancamento_debito', r.entryId);",
+      "metaSortKey": 8000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_saldo_insuficiente",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Débito acima do saldo (recusado)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/debits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"99999999.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T11:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_recusa }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "insomnia.environment.set('chave_recusa', 'insomnia-' + Date.now() + '-' + Math.random().toString(16).slice(2));",
+      "afterResponseScript": "insomnia.test('HTTP 422', () => insomnia.expect(insomnia.response.code).to.equal(422));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code INSUFFICIENT_FUNDS', () => insomnia.expect(insomnia.response.json().code).to.equal('INSUFFICIENT_FUNDS'));\ninsomnia.test('saldo disponível como string', () => insomnia.expect(insomnia.response.json().availableBalance).to.be.a('string'));",
+      "metaSortKey": 9000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_sem_chave",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Escrita sem Idempotency-Key (recusada)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/credits",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"amount\": \"10.00\",\n  \"currency\": \"BRL\",\n  \"occurredAt\": \"2026-10-02T11:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 400', () => insomnia.expect(insomnia.response.code).to.equal(400));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code IDEMPOTENCY_KEY_REQUIRED', () => insomnia.expect(insomnia.response.json().code).to.equal('IDEMPOTENCY_KEY_REQUIRED'));",
+      "metaSortKey": 10000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_estorno",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Estorno do débito",
+      "description": "Usa o lançamento criado por \"Débito de 30,00\". Estornar o débito, e não o crédito, garante que o saldo comporta o estorno em qualquer estado da conta.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/entries/{{ _.lancamento_debito }}/reversals",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"occurredAt\": \"2026-10-02T12:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_estorno }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "insomnia.environment.set('chave_estorno', 'insomnia-' + Date.now() + '-' + Math.random().toString(16).slice(2));",
+      "afterResponseScript": "insomnia.test('HTTP 201', () => insomnia.expect(insomnia.response.code).to.equal(201));\nconst r = insomnia.response.json();\ninsomnia.test('compensa o débito com um crédito', () => insomnia.expect(r.direction).to.equal('Credit'));\ninsomnia.test('referencia o lançamento estornado', () => insomnia.expect(r.reversalOf).to.equal(insomnia.environment.get('lancamento_debito')));",
+      "metaSortKey": 11000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_estorno_duplicado",
+      "_type": "request",
+      "parentId": "fld_escrita",
+      "name": "Segundo estorno do mesmo débito (recusado)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/entries/{{ _.lancamento_debito }}/reversals",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"occurredAt\": \"2026-10-02T12:00:00Z\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.chave_estorno_2 }}"
+        }
+      ],
+      "authentication": {},
+      "preRequestScript": "insomnia.environment.set('chave_estorno_2', 'insomnia-' + Date.now() + '-' + Math.random().toString(16).slice(2));",
+      "afterResponseScript": "insomnia.test('HTTP 409', () => insomnia.expect(insomnia.response.code).to.equal(409));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code ENTRY_ALREADY_REVERSED', () => insomnia.expect(insomnia.response.json().code).to.equal('ENTRY_ALREADY_REVERSED'));",
+      "metaSortKey": 12000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_consulta",
+      "_type": "request_group",
+      "parentId": "wrk_pacioli_ledger",
+      "name": "03 Consulta",
+      "description": "Posição corrente, histórica e extrato (EF §8.5, RF-003 a RF-005).",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 13000
+    },
+    {
+      "_id": "req_posicao",
+      "_type": "request",
+      "parentId": "fld_consulta",
+      "name": "Posição corrente",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/balance",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));\nconst r = insomnia.response.json();\ninsomnia.test('posição como string', () => insomnia.expect(r.balance).to.be.a('string'));\ninsomnia.test('origem do cálculo declarada', () => insomnia.expect(['snapshot', 'ledger']).to.include(r.computedFrom));\ninsomnia.test('entriesReplayed presente', () => insomnia.expect(r.entriesReplayed).to.be.a('number'));",
+      "metaSortKey": 14000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_posicao_historica",
+      "_type": "request",
+      "parentId": "fld_consulta",
+      "name": "Posição em 01/01/2026",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/balance?asOf=2026-01-01T00:00:00Z",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));\ninsomnia.test('instante consultado devolvido', () => insomnia.expect(insomnia.response.json().asOf).to.equal('2026-01-01T00:00:00Z'));",
+      "metaSortKey": 15000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_posicao_futuro",
+      "_type": "request",
+      "parentId": "fld_consulta",
+      "name": "Posição no futuro (recusada)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/balance?asOf=2099-01-01T00:00:00Z",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 400', () => insomnia.expect(insomnia.response.code).to.equal(400));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code INVALID_POINT_IN_TIME', () => insomnia.expect(insomnia.response.json().code).to.equal('INVALID_POINT_IN_TIME'));",
+      "metaSortKey": 16000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_extrato",
+      "_type": "request",
+      "parentId": "fld_consulta",
+      "name": "Extrato, 5 por página",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta }}/entries?limit=5",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 200', () => insomnia.expect(insomnia.response.code).to.equal(200));\nconst r = insomnia.response.json();\ninsomnia.test('no máximo 5 lançamentos', () => insomnia.expect(r.entries.length).to.be.at.most(5));\ninsomnia.test('ordem crescente de sequência', () => r.entries.forEach((e, i) => i === 0 || insomnia.expect(e.sequence).to.be.above(r.entries[i - 1].sequence)));",
+      "metaSortKey": 17000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_conta_inexistente",
+      "_type": "request",
+      "parentId": "fld_consulta",
+      "name": "Conta inexistente (recusada)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/accounts/{{ _.conta_inexistente }}/balance",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "preRequestScript": "",
+      "afterResponseScript": "insomnia.test('HTTP 404', () => insomnia.expect(insomnia.response.code).to.equal(404));\ninsomnia.test('problem+json', () => insomnia.expect(insomnia.response.headers.get('Content-Type')).to.include('application/problem+json'));\ninsomnia.test('code ACCOUNT_NOT_FOUND', () => insomnia.expect(insomnia.response.json().code).to.equal('ACCOUNT_NOT_FOUND'));",
+      "metaSortKey": 18000,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    }
+  ]
+}

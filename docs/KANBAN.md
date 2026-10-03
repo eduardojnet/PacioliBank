@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 5 | 19.2, 19.3, 26, 27, 28 |
+| A Fazer | 4 | 19.3, 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 34 | 01 a 25, mais 18.1, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 35 | 01 a 25, mais 18.1, 19.2, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -102,18 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 19.2. Testar a API via Insomnia
-
-`prioridade: Média` · `teste`
-
-DESBLOQUEADO em 02/10/2026: o card 19 foi concluído. Antes: BLOQUEADO POR 'Implementar a porta de entrada e os endpoints HTTP'.
-
-Hoje a API tem apenas /health/live e /health/ready. Nenhum endpoint de negócio existe, a connection string não é lida e o store não está registrado na injeção de dependência.
-
-QUANDO DESBLOQUEAR: a coleção sai por importação direta do OpenAPI, e o requests.http que já está no repositório vira útil.
-
-ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI ainda não é gerado, então a coleção do Insomnia não sai por importação direta: sai do `requests.http` ou é montada à mão.
-
 ### 19.3. Escrever os testes de contrato da API
 
 `prioridade: Baixa` · `teste`
@@ -152,7 +140,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. A fila ativa (19 a 25) está concluída; o próximo é o 19.2, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. A fila ativa (19 a 25) está concluída; o próximo é o 19.3, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -676,3 +664,19 @@ ATUALIZAÇÃO 02/10/2026: movido de Backlog para A Fazer por decisão do usuári
 CRITÉRIO ACRESCENTADO AO INICIAR (o cartão não tinha): quatro painéis em `wwwroot` servidos na raiz; executados em navegador real com resultado capturado e sem erro de console; disparo concorrente reproduzindo F07; só API pública; README e diagramas atualizados. Fora do escopo: OpenAPI (card 19.3) e teste automatizado do painel (ADR-0011).
 
 ENTREGA (02/10/2026): `index.html`, `painel.css`, `painel.js`, sem dependência externa. Contas `3333…`, `4444…`, `5555…` no script de massa (não há endpoint de criação de conta); `entriesReplayed` na posição (EF 1.4). VERIFICAÇÃO em Chrome headless, repetida: 10 aceitos, 40 recusados, mínimo 0,00; posição em três instantes passados; reenvio `201`/`200` com o mesmo SHA-256 e `409` com outro valor; âncora de snapshot com `entriesReplayed` 0. Sem erro de JavaScript; um `404` de favicon achado e eliminado. ADR-0011 com nota de implementação; README, C2 e ESTADO atualizados. Fila ativa 19 a 25 concluída.
+
+### 19.2. Testar a API via Insomnia
+
+`prioridade: Média` · `teste`
+
+DESBLOQUEADO em 02/10/2026: o card 19 foi concluído. Antes: BLOQUEADO POR 'Implementar a porta de entrada e os endpoints HTTP'.
+
+Hoje a API tem apenas /health/live e /health/ready. Nenhum endpoint de negócio existe, a connection string não é lida e o store não está registrado na injeção de dependência.
+
+QUANDO DESBLOQUEAR: a coleção sai por importação direta do OpenAPI, e o requests.http que já está no repositório vira útil.
+
+ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI ainda não é gerado, então a coleção do Insomnia não sai por importação direta: sai do `requests.http` ou é montada à mão.
+
+CRITÉRIO ACRESCENTADO AO INICIAR: coleção versionada, importável, com testes embutidos, que roda inteira pelo `inso` contra o `docker compose`.
+
+ENTREGA (02/10/2026): `insomnia/pacioli-ledger.insomnia.json`, 15 requisições e 43 testes: saúde; crédito, reenvio, conflito, débito, saldo insuficiente, chave ausente, estorno e estorno duplicado; posição corrente, histórica e futura, extrato e conta inexistente. Chave de idempotência gerada antes de cada escrita; reenvio e estorno encadeados ao resultado anterior. VERIFICAÇÃO com `inso` 13.3.0 (binário oficial da release do Insomnia): 43 de 43 em três execuções seguidas, código de saída 0; apontada para conta inexistente, 26 testes reprovam e o código de saída é 1. README com importação e execução pela linha de comando.

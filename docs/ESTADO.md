@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima terceira revisão)
+**Última atualização:** 2026-10-02 (vigésima quarta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
 **Testes:** 107 passando (59 de domínio, 48 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -148,6 +148,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Projeto | Quantidade | Escopo |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
+| Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Integration.Tests` | 48 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
@@ -316,7 +317,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 
 1. ~~**[19] Endpoints HTTP e tratamento de erro** (L-03, L-07)~~ concluído em 2026-10-02
    - ~~**[19.1] Caminho de persistência do estorno** (L-08)~~ concluído em 2026-10-02
-   - **[19.2] Teste via Insomnia**, desbloqueado pelo 19. `requests.http` já cobre os 5 endpoints
+   - ~~**[19.2] Teste via Insomnia**~~ concluído em 2026-10-02: coleção versionada com 43 testes, executada pelo `inso`
    - **[19.3] Testes de contrato da API**, exige gerar o documento OpenAPI
    - ~~**[19.5] Resposta da repetição devolvida do `response_body`**~~ concluído em 2026-10-02, opção (b) por decisão do usuário
    - ~~**[19.4] Repetição idempotente recusada quando o estado da conta mudou** (L-10)~~ concluído em 2026-10-02, antecipado ao 23 por decisão do usuário
@@ -443,3 +444,4 @@ confirmação.
 | 2026-10-02 | Card 19.5 concluído, opção (b): a repetição devolve o `response_body` gravado, no formato do contrato; coluna de `jsonb` para `json` para preservar o texto exato. ADR-0006 revisado. 2 testes novos (107 verdes); no Docker, primeira resposta, reenvio e coluna com o mesmo SHA-256 |
 | 2026-10-02 | Card 21.2 concluído: o `CLAUDE.md` descrevia a idempotência como "nunca por consulta prévia" (superado pelas revisões 19.4 e 19.5 do ADR-0006) e a EF na versão 1.1 (está na 1.3) |
 | 2026-10-02 | Card 25 concluído: painel de evidência em `wwwroot`, quatro demonstrações (concorrência, linha do tempo, reenvio, origem do cálculo). Contas `3333…`, `4444…`, `5555…` no script de massa; `entriesReplayed` na posição (EF 1.4). Verificado em Chrome headless, repetidamente. Com isso, a fila ativa 19 a 25 está concluída |
+| 2026-10-02 | Card 19.2 concluído: o teste manual no Insomnia virou coleção versionada com testes embutidos (15 requisições, 43 testes), executada pelo `inso` 13.3.0 contra o `docker compose`: verde em três execuções seguidas; apontada para conta inexistente, reprova com código de saída 1 |

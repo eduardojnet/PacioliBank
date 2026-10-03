@@ -58,7 +58,7 @@ Com o ambiente no ar, abra **<http://localhost:8080/>**. Quatro demonstrações,
 
 ## Usar a API
 
-Contrato completo na [EF §8](./docs/specs/EF-especificacao-funcional.md). As mesmas chamadas estão em [`requests.http`](./requests.http), executável no VS Code ou no Rider.
+Contrato completo na [EF §8](./docs/specs/EF-especificacao-funcional.md). As mesmas chamadas estão em [`requests.http`](./requests.http), executável no VS Code ou no Rider, e numa [coleção do Insomnia](#coleção-do-insomnia) com testes embutidos.
 
 | Verbo | Rota | O que faz |
 |---|---|---|
@@ -107,6 +107,19 @@ curl -i -X POST $A/entries/<entryId>/reversals \
   -H 'Idempotency-Key: estorno-001' -H 'Content-Type: application/json' \
   -d '{"occurredAt":"2026-10-02T12:00:00Z"}'
 ```
+
+### Coleção do Insomnia
+
+[`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 15 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 43 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`.
+
+- **No aplicativo:** *Import*, escolher o arquivo, e *Run* na coleção
+- **Pela linha de comando**, com o [`inso`](https://github.com/Kong/insomnia/releases) (verificado na versão 13.3.0), o mesmo motor do aplicativo:
+
+```bash
+inso run collection wrk_pacioli_ledger -w insomnia/pacioli-ledger.insomnia.json --env env_pacioli_base
+```
+
+O código de saída é 0 só com todos os testes verdes, então o comando serve para CI.
 
 ### Erros
 
@@ -207,6 +220,7 @@ tests/
 db/init/                           esquema, papéis, privilégios e contas de exemplo
 docs/                              diagramas, ADRs, especificações, estado do projeto
 requests.http                      chamadas prontas para todos os endpoints
+insomnia/                          colecao do Insomnia, com testes, executavel pelo inso
 ```
 
 ---
