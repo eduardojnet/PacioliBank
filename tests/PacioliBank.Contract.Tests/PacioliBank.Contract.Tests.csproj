@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PacioliBank.Contract.Tests</RootNamespace>
+    <AssemblyName>PacioliBank.Contract.Tests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <!-- Nomes de teste em portugues com underscore sao intencionais (ver Domain.Tests). -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Mesmas versoes dos demais projetos de teste, ja verificadas com build limpo. -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <!-- Versao igual a do runtime ASP.NET Core instalado (10.0.12), conferida no
+         nuget.org em 02/10/2026. Sobe a API em memoria, sem banco. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PacioliBank.Api\PacioliBank.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Microsoft.OpenApi;
 using Npgsql;
 using PacioliBank.Api.Endpoints;
 using PacioliBank.Api.Events;
@@ -27,12 +29,53 @@ builder.Services.AddSingleton<OutboxDispatcher>();
 builder.Services.AddHostedService<OutboxDispatcherService>();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull);
+{
+    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+
+    // Numero e numero, nunca texto. O padrao da web aceita ler numero escrito
+    // como string, e o OpenAPI passaria a declarar "inteiro ou string". Nenhum
+    // corpo de requisicao deste contrato tem campo numerico: valor monetario
+    // ja e string por decisao (EF secao 8.2).
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+});
 
 // Falha de leitura de corpo ou parametro vira excecao, e a excecao vira o
 // mesmo problem+json dos demais erros. Sem isso, o framework responde 400
 // sem corpo em producao, e o chamador fica sem codigo estavel.
 builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+
+// Contrato publicado em /openapi/v1.json, gerado a partir do codigo. E o que o
+// teste de contrato compara com o instantaneo aprovado (ADR-0010, RNF-039).
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info.Title = "PacioliBank Ledger API";
+        document.Info.Description = "Livro-razão de contas correntes. Contrato descrito na EF §8; valores monetários como string, instantes em ISO 8601 UTC.";
+        return Task.CompletedTask;
+    });
+
+    // Campo anulavel e omitido quando nulo (WhenWritingNull, acima), entao nao
+    // e obrigatorio. Sem esta regra, o documento declararia reversalOf como
+    // sempre presente, e o credito o omite: contrato que a API nao cumpre.
+    options.AddSchemaTransformer((schema, _, _) =>
+    {
+        if (schema.Properties is null || schema.Required is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        foreach (var (nome, propriedade) in schema.Properties)
+        {
+            if (propriedade.Type is { } tipo && tipo.HasFlag(JsonSchemaType.Null))
+            {
+                schema.Required.Remove(nome);
+            }
+        }
+
+        return Task.CompletedTask;
+    });
+});
 
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = LedgerProblems.Customize);
 builder.Services.AddExceptionHandler<LedgerProblems>();
@@ -50,7 +93,7 @@ app.UseStaticFiles();
 
 // RNF-013: vivo e pronto sao verificacoes distintas.
 // Vivo nao depende de nenhuma dependencia externa.
-app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
+app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).WithName("Vivo");
 
 // Pronto reflete o armazenamento primario: sem ele, nenhuma operacao do ledger
 // e possivel, e o orquestrador deve tirar a instancia do balanceamento.
@@ -70,8 +113,12 @@ app.MapGet("/health/ready", async (NpgsqlDataSource dataSource, CancellationToke
     {
         return Results.Json(new { status = "unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
-});
+}).WithName("Pronto");
 
 app.MapLedgerEndpoints();
+app.MapOpenApi();
 
 app.Run();
+
+/// <summary>Exposto para o teste de contrato subir a API em memoria.</summary>
+public partial class Program;

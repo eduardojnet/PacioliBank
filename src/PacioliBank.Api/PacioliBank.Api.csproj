@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Versao igual a do runtime ASP.NET Core instalado (10.0.12), conferida no
+         nuget.org em 02/10/2026. Gera o contrato em /openapi/v1.json (card 19.3). -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PacioliBank.Ledger\PacioliBank.Ledger.csproj" />
     <!-- Somente a raiz de composicao (Program.cs) usa a persistencia. Os
          endpoints conhecem apenas a porta de entrada (ADR-0001). -->

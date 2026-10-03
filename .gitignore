@@ -12,3 +12,7 @@ coverage*.json
 
 # Configuracao local de ferramenta, fora do repositorio
 .claude/
+
+# Teste de contrato: documento recebido quando diverge do aprovado. Revisar e
+# promover a aprovado, nunca versionar (ADR-0010, card 19.3).
+*.received.json

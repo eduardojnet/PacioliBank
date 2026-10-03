@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 4 | 19.3, 26, 27, 28 |
+| A Fazer | 3 | 26, 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 35 | 01 a 25, mais 18.1, 19.2, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 36 | 01 a 25, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -102,14 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 19.3. Escrever os testes de contrato da API
-
-`prioridade: Baixa` · `teste`
-
-Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que alteração acidental de contrato seja detectada antes da publicação (RNF-039).
-
-DEPENDÊNCIA: só faz sentido depois dos endpoints.
-
 ### 26. Escrever os testes de arquitetura com NetArchTest
 
 `prioridade: Média` · `arquitetura` · `teste`
@@ -140,7 +132,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. A fila ativa (19 a 25) está concluída; o próximo é o 19.3, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. A fila ativa (19 a 25) e seus subníveis estão concluídos; o próximo é o 26, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -680,3 +672,15 @@ ATUALIZAÇÃO 02/10: `requests.http` cobre os 5 endpoints. O documento OpenAPI a
 CRITÉRIO ACRESCENTADO AO INICIAR: coleção versionada, importável, com testes embutidos, que roda inteira pelo `inso` contra o `docker compose`.
 
 ENTREGA (02/10/2026): `insomnia/pacioli-ledger.insomnia.json`, 15 requisições e 43 testes: saúde; crédito, reenvio, conflito, débito, saldo insuficiente, chave ausente, estorno e estorno duplicado; posição corrente, histórica e futura, extrato e conta inexistente. Chave de idempotência gerada antes de cada escrita; reenvio e estorno encadeados ao resultado anterior. VERIFICAÇÃO com `inso` 13.3.0 (binário oficial da release do Insomnia): 43 de 43 em três execuções seguidas, código de saída 0; apontada para conta inexistente, 26 testes reprovam e o código de saída é 1. README com importação e execução pela linha de comando.
+
+### 19.3. Escrever os testes de contrato da API
+
+`prioridade: Baixa` · `teste`
+
+Previstos no ADR-0010. Comparação por instantâneo do OpenAPI gerado, para que alteração acidental de contrato seja detectada antes da publicação (RNF-039).
+
+DEPENDÊNCIA: só faz sentido depois dos endpoints.
+
+CRITÉRIO ACRESCENTADO AO INICIAR: OpenAPI servido com os 5 endpoints, corpos e erros; teste de contrato verde que reprova quando o contrato muda; build sem avisos. Fora do escopo: interface de exploração.
+
+ENTREGA (02/10/2026): `Microsoft.AspNetCore.OpenApi` e `Microsoft.AspNetCore.Mvc.Testing` 10.0.12, iguais ao runtime instalado. Endpoints com nome, resumo, corpo de resposta e problemas declarados. Três imprecisões do documento gerado corrigidas antes de aprovar o instantâneo: título fora da convenção; inteiro declarado como "inteiro ou string" (leitura de números passou a estrita); `reversalOf` declarado obrigatório embora omitido quando nulo. Projeto `PacioliBank.Contract.Tests`, comparação por instantâneo sem a biblioteca Verify (registrado no ADR-0010). VERIFICAÇÃO: acrescentar um campo à resposta de posição reprova o teste, com o diff exato; 109 verdes; `/openapi/v1.json` servido no Docker; coleção do Insomnia segue 43/43.

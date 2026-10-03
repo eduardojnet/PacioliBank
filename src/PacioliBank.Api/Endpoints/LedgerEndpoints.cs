@@ -19,7 +19,7 @@ public static class LedgerEndpoints
 {
     public static IEndpointRouteBuilder MapLedgerEndpoints(this IEndpointRouteBuilder app)
     {
-        var account = app.MapGroup("/api/v1/accounts/{accountId:guid}");
+        var account = app.MapGroup("/api/v1/accounts/{accountId:guid}").WithTags("Ledger");
 
         account.MapPost("/credits", (
                 Guid accountId,
@@ -28,7 +28,10 @@ public static class LedgerEndpoints
                 HttpContext http,
                 ILedgerService ledger,
                 CancellationToken cancellationToken) =>
-            PostAsync(EntryDirection.Credit, accountId, body, idempotencyKey, http, ledger, cancellationToken));
+            PostAsync(EntryDirection.Credit, accountId, body, idempotencyKey, http, ledger, cancellationToken))
+            .WithName("RegistrarCredito")
+            .WithSummary("Registra crédito (RF-001)")
+            .ProducesWrite();
 
         account.MapPost("/debits", (
                 Guid accountId,
@@ -37,14 +40,51 @@ public static class LedgerEndpoints
                 HttpContext http,
                 ILedgerService ledger,
                 CancellationToken cancellationToken) =>
-            PostAsync(EntryDirection.Debit, accountId, body, idempotencyKey, http, ledger, cancellationToken));
+            PostAsync(EntryDirection.Debit, accountId, body, idempotencyKey, http, ledger, cancellationToken))
+            .WithName("RegistrarDebito")
+            .WithSummary("Registra débito; recusa se a posição ficaria negativa (RF-002)")
+            .ProducesWrite()
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
-        account.MapPost("/entries/{entryId:guid}/reversals", ReverseAsync);
-        account.MapGet("/balance", GetBalanceAsync);
-        account.MapGet("/entries", GetStatementAsync);
+        account.MapPost("/entries/{entryId:guid}/reversals", ReverseAsync)
+            .WithName("EstornarLancamento")
+            .WithSummary("Estorna um lançamento por compensação (RF-007)")
+            .ProducesWrite()
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        account.MapGet("/balance", GetBalanceAsync)
+            .WithName("ConsultarPosicao")
+            .WithSummary("Posição corrente ou em instante passado (RF-003, RF-004)")
+            .Produces<BalanceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        account.MapGet("/entries", GetStatementAsync)
+            .WithName("ConsultarExtrato")
+            .WithSummary("Extrato paginado por cursor (RF-005)")
+            .Produces<StatementResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return app;
     }
+
+    /// <summary>
+    /// Respostas comuns a toda escrita (EF secao 8.4): 201 para lancamento novo,
+    /// 200 para repeticao, ambos com o corpo de <see cref="PostingResponse"/>. O
+    /// corpo da requisicao nao e declarado aqui: e inferido do parametro de cada
+    /// endpoint (credito e debito recebem PostingBody; estorno, ReversalBody).
+    /// </summary>
+    private static RouteHandlerBuilder ProducesWrite(this RouteHandlerBuilder builder) =>
+        builder
+            .Produces<PostingResponse>(StatusCodes.Status201Created)
+            .Produces<PostingResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
     private static async Task<IResult> PostAsync(
         EntryDirection direction,
