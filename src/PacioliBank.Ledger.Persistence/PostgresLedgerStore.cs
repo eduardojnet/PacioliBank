@@ -103,9 +103,37 @@ public sealed class PostgresLedgerStore : ILedgerStore
 
                 await Task.Delay(BackoffFor(attempt), cancellationToken).ConfigureAwait(false);
             }
+            catch (NpgsqlException ex) when (ex.IsTransient)
+            {
+                throw Unavailable(ex);
+            }
         }
 
         throw new LedgerUnavailableException();
+    }
+
+    /// <summary>
+    /// Falha transitoria do armazenamento (rede, banco fora do ar, tempo
+    /// esgotado) sai da porta como <see cref="LedgerUnavailableException"/>, a
+    /// excecao do contrato, e nao como excecao do driver. Quem conhece o
+    /// PostgreSQL e este adaptador; a borda HTTP so conhece a porta (ADR-0001,
+    /// regra de arquitetura do card 26). Falha nao transitoria segue como esta:
+    /// e defeito, nao indisponibilidade, e nao deve ser apresentada como
+    /// repetivel.
+    /// </summary>
+    private static LedgerUnavailableException Unavailable(NpgsqlException exception) =>
+        new("O armazenamento primario esta indisponivel. A nova tentativa com a mesma chave e segura.", exception);
+
+    private static async Task<T> TranslatingUnavailable<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        catch (NpgsqlException ex) when (ex.IsTransient)
+        {
+            throw Unavailable(ex);
+        }
     }
 
     private async Task<PostEntryResult> PostOnceAsync(
@@ -441,7 +469,13 @@ public sealed class PostgresLedgerStore : ILedgerStore
     }
 
     /// <inheritdoc />
-    public async Task<BalanceResult> GetBalanceAsync(
+    public Task<BalanceResult> GetBalanceAsync(
+        Guid accountId,
+        DateTimeOffset? asOf,
+        CancellationToken cancellationToken) =>
+        TranslatingUnavailable(() => GetBalanceCoreAsync(accountId, asOf, cancellationToken));
+
+    private async Task<BalanceResult> GetBalanceCoreAsync(
         Guid accountId,
         DateTimeOffset? asOf,
         CancellationToken cancellationToken)
@@ -497,7 +531,16 @@ public sealed class PostgresLedgerStore : ILedgerStore
     }
 
     /// <inheritdoc />
-    public async Task<StatementPage> GetStatementAsync(
+    public Task<StatementPage> GetStatementAsync(
+        Guid accountId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        long afterSequence,
+        int limit,
+        CancellationToken cancellationToken) =>
+        TranslatingUnavailable(() => GetStatementCoreAsync(accountId, from, to, afterSequence, limit, cancellationToken));
+
+    private async Task<StatementPage> GetStatementCoreAsync(
         Guid accountId,
         DateTimeOffset? from,
         DateTimeOffset? to,

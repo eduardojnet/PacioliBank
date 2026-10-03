@@ -1,7 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Npgsql;
 using PacioliBank.Ledger.Domain;
 
 namespace PacioliBank.Api.Endpoints;
@@ -109,13 +108,11 @@ public sealed class LedgerProblems : IExceptionHandler
 
         InsufficientFundsException funds => InsufficientFunds(funds),
 
-        // Repetivel: a chave de idempotencia protege o reenvio (RF-008).
+        // Repetivel: a chave de idempotencia protege o reenvio (RF-008). Inclui
+        // o banco fora do ar: o adaptador de dados traduz a falha transitoria do
+        // driver para esta excecao, e a borda HTTP nao conhece o driver.
         LedgerUnavailableException =>
             Problem(503, "SERVICE_UNAVAILABLE", "Servico temporariamente indisponivel", exception.Message),
-
-        NpgsqlException { IsTransient: true } =>
-            Problem(503, "SERVICE_UNAVAILABLE", "Servico temporariamente indisponivel",
-                "O armazenamento primario esta indisponivel. A nova tentativa com a mesma chave e segura."),
 
         _ => null,
     };

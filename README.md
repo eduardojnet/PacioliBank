@@ -154,7 +154,7 @@ Catálogo completo, com a regra de negócio de cada código, na [EF §8.6](./doc
 ## Testes
 
 ```bash
-dotnet test        # 109 testes, sem erro e sem aviso
+dotnet test        # 116 testes, sem erro e sem aviso
 ```
 
 Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integração sobem um PostgreSQL real por execução (Testcontainers) e aplicam o mesmo script de esquema do ambiente local, com os mesmos papéis e privilégios.
@@ -162,8 +162,9 @@ Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integra
 | Projeto | Testes | O que verifica |
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes do agregado, `Money`, validações da porta de entrada. Sem I/O, menos de um segundo |
+| `PacioliBank.Architecture.Tests` | 5 | Regras de dependência (NetArchTest): domínio sem aplicação, Ledger sem banco nem HTTP, Events sem Ledger, endpoints sem banco |
 | `PacioliBank.Contract.Tests` | 2 | Contrato da API: o OpenAPI gerado é comparado com o instantâneo aprovado; mudança de contrato reprova |
-| `PacioliBank.Integration.Tests` | 48 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real e despachante de outbox |
+| `PacioliBank.Integration.Tests` | 50 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real e despachante de outbox |
 
 ```bash
 dotnet test tests/PacioliBank.Domain.Tests                                 # só domínio, sem Docker
@@ -217,8 +218,9 @@ src/
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
 tests/
   PacioliBank.Domain.Tests/        59 testes, sem I/O
+  PacioliBank.Architecture.Tests/  5 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   48 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
+  PacioliBank.Integration.Tests/   50 testes, PostgreSQL real, inclui concorrência, estorno, extrato e outbox
 db/init/                           esquema, papéis, privilégios e contas de exemplo
 docs/                              diagramas, ADRs, especificações, estado do projeto
 requests.http                      chamadas prontas para todos os endpoints
@@ -248,7 +250,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Barramento de eventos real | Pendente: plataforma não definida (ADR-0008) |
 | Migrações versionadas (DbUp) | Pendente: o esquema só é aplicado na criação do volume |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
-| Testes de arquitetura (NetArchTest) | Pendente |
+| Testes de arquitetura (NetArchTest), 5 regras de dependência entre módulos e camadas | Implementado |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
@@ -261,7 +263,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 2. **Barramento de eventos real e expurgo da outbox (ADR-0008).** O despachante já lê a outbox com `FOR UPDATE SKIP LOCKED` e publica com recuo exponencial, mas publica em log: falta ligar a plataforma de mensageria do banco, expurgar as mensagens publicadas e conciliar ledger e outbox (RNF-033).
 3. **Migrações com DbUp (RNF-038).** Hoje mudar o esquema exige recriar o volume. Inaceitável fora do ambiente local.
 4. **CI no GitHub Actions** com build sem avisos, as camadas de teste e varredura de segredos. Transforma o critério de bloqueio do ADR-0010 de declarado em verificado a cada commit.
-5. **Testes de arquitetura (NetArchTest).** Hoje a direção das dependências é garantida pelo compilador só no domínio; o resto depende de revisão. E, de custo menor, a interface de exploração do OpenAPI, que já é gerado.
+5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
 7. **Observabilidade (OpenTelemetry, Serilog),** com uma métrica de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
 8. **Teste de carga** para medir os RNF de desempenho, hoje especificados e não verificados.

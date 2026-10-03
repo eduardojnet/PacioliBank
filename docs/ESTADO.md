@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima quinta revisão)
+**Última atualização:** 2026-10-02 (vigésima sexta revisão)
 **Build:** verde, 0 avisos, 0 erros, os 5 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 109 passando (59 de domínio, 2 de contrato, 48 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Testes:** 116 passando (59 de domínio, 5 de arquitetura, 2 de contrato, 50 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 109 passando |
+| Testes automatizados | Atendido, 116 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -149,8 +149,9 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 |---|---|---|
 | `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
+| `PacioliBank.Architecture.Tests` | 5 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas) |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 48 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
+| `PacioliBank.Integration.Tests` | 50 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10) e despachante de outbox (F08) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -176,7 +177,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Migrações com DbUp | Esquema aplicado pelo entrypoint do PostgreSQL, que só roda na primeira criação do volume |
-| Testes de arquitetura (NetArchTest) | Previstos no ADR-0010, não escritos |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
 
 ---
@@ -334,6 +334,12 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
    - ~~**[24.2] Contrato do payload dos eventos**~~ concluído em 2026-10-02
 8. ~~**[25] Painel de evidência** (ADR-0011)~~ concluído em 2026-10-02; o critério de corte não se aplicou
 
+Previstos por ADR, que entram com a fila ativa vazia:
+
+9. ~~**[26] Testes de arquitetura com NetArchTest**~~ concluído em 2026-10-02
+10. **[27] Migrações com DbUp** (RNF-038)
+11. **[28] AnalysisMode para recommended** (L-06)
+
 ---
 
 ## 8. Como verificar o estado atual
@@ -341,7 +347,7 @@ Regra de triagem adotada: a coluna **Não Classificado permanece vazia**. Um car
 ```bash
 cd pacioli-bank-ledger
 docker compose down -v        # necessário após mudança de esquema
-dotnet test                   # esperado: 109 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 116 passando, 0 falhando, sem avisos
 docker compose up --build     # API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -446,3 +452,4 @@ confirmação.
 | 2026-10-02 | Card 25 concluído: painel de evidência em `wwwroot`, quatro demonstrações (concorrência, linha do tempo, reenvio, origem do cálculo). Contas `3333…`, `4444…`, `5555…` no script de massa; `entriesReplayed` na posição (EF 1.4). Verificado em Chrome headless, repetidamente. Com isso, a fila ativa 19 a 25 está concluída |
 | 2026-10-02 | Card 19.2 concluído: o teste manual no Insomnia virou coleção versionada com testes embutidos (15 requisições, 43 testes), executada pelo `inso` 13.3.0 contra o `docker compose`: verde em três execuções seguidas; apontada para conta inexistente, reprova com código de saída 1 |
 | 2026-10-02 | Card 19.3 concluído: OpenAPI gerado do código em `/openapi/v1.json` (pacote 10.0.12, igual ao runtime), com corpos e problemas declarados por endpoint; três imprecisões corrigidas antes de aprovar (título, inteiro declarado como "inteiro ou string", campo anulável declarado obrigatório). Projeto `PacioliBank.Contract.Tests` com comparação por instantâneo; reprova quando o contrato muda (medido). 109 verdes; coleção do Insomnia segue 43/43 |
+| 2026-10-02 | Card 26 concluído: `PacioliBank.Architecture.Tests` com 5 regras de dependência (NetArchTest 1.3.2, verificado contra assemblies .NET 10). A regra dos endpoints achou uma violação real: o tradutor de erros HTTP conhecia o driver do banco. Corrigido na causa: o adaptador de dados traduz falha transitória do driver para `LedgerUnavailableException` (2 testes novos, que reprovaram antes). 116 verdes; `503` verificado no Docker com o banco parado |

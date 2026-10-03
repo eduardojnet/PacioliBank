@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 3 | 26, 27, 28 |
+| A Fazer | 2 | 27, 28 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 36 | 01 a 25, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 37 | 01 a 26, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -102,16 +102,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 26. Escrever os testes de arquitetura com NetArchTest
-
-`prioridade: Média` · `arquitetura` · `teste`
-
-Previstos no ADR-0010 e no ADR-0001, ainda não escritos. São a defesa automatizada contra o risco R-07, a erosão de fronteiras que originou o sistema legado descrito no enunciado.
-
-REGRAS A VERIFICAR: domínio sem referência a infraestrutura, ASP.NET Core ou acesso a dados; módulos comunicando-se por contrato explícito; Ledger não conhecendo Api, Balances nem Events.
-
-CRITÉRIO: o teste reprova se alguém introduzir uma dependência fora do grafo declarado.
-
 ### 27. Substituir o initdb do PostgreSQL por migrações DbUp
 
 `prioridade: Média` · `codigo` · `infra`
@@ -132,7 +122,7 @@ CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são co
 
 ## Em Andamento
 
-_Vazia. A fila ativa (19 a 25) e seus subníveis estão concluídos; o próximo é o 26, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. A fila ativa (19 a 25) e seus subníveis estão concluídos; o próximo é o 27, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
@@ -684,3 +674,17 @@ DEPENDÊNCIA: só faz sentido depois dos endpoints.
 CRITÉRIO ACRESCENTADO AO INICIAR: OpenAPI servido com os 5 endpoints, corpos e erros; teste de contrato verde que reprova quando o contrato muda; build sem avisos. Fora do escopo: interface de exploração.
 
 ENTREGA (02/10/2026): `Microsoft.AspNetCore.OpenApi` e `Microsoft.AspNetCore.Mvc.Testing` 10.0.12, iguais ao runtime instalado. Endpoints com nome, resumo, corpo de resposta e problemas declarados. Três imprecisões do documento gerado corrigidas antes de aprovar o instantâneo: título fora da convenção; inteiro declarado como "inteiro ou string" (leitura de números passou a estrita); `reversalOf` declarado obrigatório embora omitido quando nulo. Projeto `PacioliBank.Contract.Tests`, comparação por instantâneo sem a biblioteca Verify (registrado no ADR-0010). VERIFICAÇÃO: acrescentar um campo à resposta de posição reprova o teste, com o diff exato; 109 verdes; `/openapi/v1.json` servido no Docker; coleção do Insomnia segue 43/43.
+
+### 26. Escrever os testes de arquitetura com NetArchTest
+
+`prioridade: Média` · `arquitetura` · `teste`
+
+Previstos no ADR-0010 e no ADR-0001, ainda não escritos. São a defesa automatizada contra o risco R-07, a erosão de fronteiras que originou o sistema legado descrito no enunciado.
+
+REGRAS A VERIFICAR: domínio sem referência a infraestrutura, ASP.NET Core ou acesso a dados; módulos comunicando-se por contrato explícito; Ledger não conhecendo Api, Balances nem Events.
+
+CRITÉRIO: o teste reprova se alguém introduzir uma dependência fora do grafo declarado.
+
+ESCOPO AMPLIADO, com motivo: a regra dos endpoints apontou, já na primeira execução, uma violação real (`LedgerProblems` capturava `NpgsqlException`). Corrigida na causa, neste cartão.
+
+ENTREGA (02/10/2026): `PacioliBank.Architecture.Tests`, NetArchTest 1.3.2, 5 regras: Ledger sem banco, HTTP nem outros módulos; domínio sem aplicação; Persistence sem HTTP nem Events; Events sem Ledger; endpoints sem banco. Correção: `PostgresLedgerStore` traduz falha transitória do driver para `LedgerUnavailableException`, nas escritas e nas leituras; `LedgerProblems` deixou de conhecer o Npgsql. VERIFICAÇÃO: regra dos endpoints reprovou o código antigo; regra do domínio reprova dependência inserida de propósito; 2 testes de banco inalcançável reprovaram antes da correção; 116 verdes; no Docker, banco parado dá `503` com `Retry-After`, e religado volta a `200`.

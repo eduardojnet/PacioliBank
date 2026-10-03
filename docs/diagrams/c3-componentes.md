@@ -69,7 +69,7 @@ flowchart TB
 
 ## A dependência aponta para dentro, e o compilador garante
 
-`PacioliBank.Ledger` não declara nenhum `PackageReference`: referenciar Npgsql ou ASP.NET Core no domínio é erro de compilação, não violação de convenção. Os endpoints conhecem só a porta de entrada; só `Program.cs`, a raiz de composição, referencia a persistência (ADR-0001). O teste que verificaria isso automaticamente (NetArchTest) é o card 26.
+`PacioliBank.Ledger` não declara nenhum `PackageReference`: referenciar Npgsql ou ASP.NET Core no domínio é erro de compilação, não violação de convenção. Os endpoints conhecem só a porta de entrada; só `Program.cs`, a raiz de composição, referencia a persistência (ADR-0001). O que o compilador não cobre, o NetArchTest cobre: as 5 regras de `PacioliBank.Architecture.Tests` (card 26) reprovam se o domínio depender da aplicação, se o Ledger depender de banco, HTTP ou de outro módulo, se o Events depender do Ledger, ou se os endpoints conhecerem o banco. A última regra achou uma violação real ao ser escrita: o tradutor de erros HTTP capturava a exceção do driver do banco; corrigido, e a falha de banco agora é traduzida pelo adaptador de dados.
 
 ## Correspondência com o C3 do Lucid
 
