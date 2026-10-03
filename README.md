@@ -218,7 +218,7 @@ src/
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
   PacioliBank.Migrations/          migrador (DbUp): aplica o que falta com o papel de migração e termina
 tests/
-  PacioliBank.Domain.Tests/        59 testes, sem I/O
+  PacioliBank.Domain.Tests/        66 testes, sem I/O
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
   PacioliBank.Integration.Tests/   57 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox e migrações
@@ -253,6 +253,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
+| Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
@@ -303,7 +304,7 @@ Bancos locais criados antes do card 27 não têm o diário de migrações e prec
 
 ## Convenções de build
 
-`Directory.Build.props` aplica a toda a solution `TreatWarningsAsErrors` (aviso de compilação bloqueia o build), `Nullable=enable` e os analisadores do .NET em modo `Default`, a ser elevado a `Recommended` em commit próprio.
+`Directory.Build.props` aplica a toda a solution `TreatWarningsAsErrors` (aviso de compilação bloqueia o build), `Nullable=enable` e os analisadores do .NET em modo `Recommended` (`latest-recommended`, card 28): regra recomendada violada reprova o build. Há duas supressões, ambas com o motivo escrito ao lado: CA1707 nos projetos de teste (nomes de teste em português, com sublinhado, lidos por quem não programa) e CA1031 no despachante de outbox (falha de qualquer tipo no publicador vira nova tentativa, nunca derruba o lote).
 
 Código em inglês, documentação e nomes de teste em português. A assimetria é deliberada: o código segue a convenção da plataforma, e a especificação e os testes precisam ser lidos por negócio e compliance sem tradução.
 

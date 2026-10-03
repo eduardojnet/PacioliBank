@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-02 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-02, a partir de leitura direta do quadro
+**Data:** 2026-10-03 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-03, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 1 | 28 |
+| A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 38 | 01 a 27, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 39 | 01 a 28, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -102,19 +102,13 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 28. Elevar o AnalysisMode para latest-recommended
-
-`prioridade: Baixa` · `codigo`
-
-LACUNA L-06. O ADR-0002 previu latest-recommended após o primeiro build limpo. O build está limpo há vários ciclos.
-
-CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são corrigidos. Commit próprio e pequeno.
+_Vazia. O próximo cartão sai do Backlog/Ideias ou dos Bloqueados, por decisão do usuário._
 
 ---
 
 ## Em Andamento
 
-_Vazia. O 27 foi concluído; o próximo é o 28, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. Cards 27 e 28 concluídos; A Fazer também está vazia._
 
 ---
 
@@ -718,3 +712,29 @@ CRITÉRIO ATENDIDO:
 
 PENDENTE, declarado: regra de compatibilidade entre migração e versão da API para várias instâncias (expandir antes, contrair depois), [NVI], registrada no ADR-0002 e no ESTADO §5.
 TRANSIÇÃO: um último docker compose down -v local, feito.
+
+### 28. Elevar o AnalysisMode para latest-recommended
+
+`prioridade: Baixa` · `codigo`
+
+LACUNA L-06. O ADR-0002 previu latest-recommended após o primeiro build limpo. O build está limpo há vários ciclos.
+
+CRITÉRIO: build continua sem avisos no modo elevado, ou os avisos novos são corrigidos. Commit próprio e pequeno.
+
+--- ENTREGA 03/10/2026 (append-only) ---
+
+ENTREGUE: AnalysisMode=Recommended no Directory.Build.props (equivale a latest-recommended, previsto no ADR-0002). Elevado o modo, o build reprovou com 4 regras, todas corrigidas no código, nenhuma suprimida:
+- CA1716 (palavra reservada como nome de parâmetro): 'to' em ILedgerStore.GetStatementAsync passou a 'until'; o parâmetro SQL (@to) e o da API não mudaram
+- CA1862 (comparação sem distinguir maiúsculas): Currency.TryFromCode compara com OrdinalIgnoreCase. Antes da troca, teste novo fixou o comportamento (7 casos), porque a porta de entrada valida a moeda por esse método e nenhum teste o cobria
+- CA1711 (sufixo reservado no nome do tipo): LedgerCollection dos testes passou a LedgerCollectionDefinition
+- CA1859 (tipo concreto para desempenho): dublê de publicador dos testes expõe List
+
+Supressões que já existiam, com motivo escrito ao lado, continuam: CA1707 nos testes (nomes em português com sublinhado) e CA1031 no OutboxDispatcher. Nenhuma nova.
+
+CRITÉRIO ATENDIDO:
+- Build sem avisos no modo elevado; as duas imagens Docker compilam nele
+- 131 testes verdes (66 + 57 + 6 + 2); o contrato OpenAPI não mudou
+- Filtro de período do extrato e moeda em minúsculas conferidos contra a API no Docker
+- L-06 encerrada; ESTADO, README, CLAUDE.md, ADR-0002 e KANBAN atualizados
+
+ACHADO NO CAMINHO: as contagens de teste do ADR-0010 tinham ficado desatualizadas no card 27 (50 de integração, 5 regras). Corrigidas neste commit e registradas no histórico do ESTADO.

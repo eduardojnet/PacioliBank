@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 124 testes; os de integração exigem Docker
+dotnet test                   # 131 testes; os de integração exigem Docker
 docker compose up --build     # migrador roda e termina; API em http://localhost:8080
 docker compose down -v        # só para recomeçar do zero, de propósito
 ```
@@ -69,7 +69,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP; hospeda o despachante; wwwroot = painel de evidencia
   PacioliBank.Migrations/          migrador DbUp: passo separado, papel de migracao, termina
 tests/
-  PacioliBank.Domain.Tests/        59 testes, sem I/O
+  PacioliBank.Domain.Tests/        66 testes, sem I/O
   PacioliBank.Architecture.Tests/  6 regras de dependencia (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantaneo do OpenAPI (openapi.v1.approved.json)
   PacioliBank.Integration.Tests/   57 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox e migracoes
@@ -104,8 +104,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.1, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest) e 27 (migrações DbUp em passo separado, revisão do ADR-0002) concluídos. Resta em A Fazer o 28 (AnalysisMode); a ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.1, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002) e 28 (analisadores em `Recommended`, L-06) concluídos. A Fazer está vazia: o próximo cartão sai do Backlog, por decisão do usuário. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
 
-Antes de começar, rode `dotnet test`. Esperado: 124 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 131 passando, sem avisos.

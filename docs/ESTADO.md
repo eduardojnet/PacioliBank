@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-02 (vigésima sétima revisão)
-**Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução (`dotnet build`, verificado em 2026-10-02)
-**Testes:** 124 passando (59 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-02)
+**Última atualização:** 2026-10-03 (vigésima oitava revisão)
+**Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
+**Testes:** 131 passando (66 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-03)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -149,7 +149,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 59 | Invariantes puras e validações da porta de entrada, sem I/O |
+| `PacioliBank.Domain.Tests` | 66 | Invariantes puras e validações da porta de entrada, sem I/O |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
@@ -297,9 +297,18 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
-### L-06: `AnalysisMode` ainda em `Default` (BAIXA)
+### L-06: `AnalysisMode` ainda em `Default` (ENCERRADA em 2026-10-03, card 28)
 
 O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build está limpo há três ciclos. Elevar é um commit próprio e pequeno.
+
+**Resolução:** `AnalysisMode=Recommended` no `Directory.Build.props`. Elevado o modo, o build reprovou com 4 regras, todas corrigidas no código e nenhuma suprimida:
+
+- **CA1716** (palavra reservada como nome de parâmetro): `to` em `ILedgerStore.GetStatementAsync` passou a `until`; o nome do parâmetro SQL (`@to`) e o da API não mudaram
+- **CA1862** (comparação sem distinguir maiúsculas): `Currency.TryFromCode` compara com `OrdinalIgnoreCase` em vez de converter para maiúsculas. Antes da troca, um teste novo fixou o comportamento (7 casos: aceita `brl`, `BRL` e ` bRl `; recusa `USD`, `BRLX`, vazio e nulo), porque a validação da porta de entrada passa por esse método e nenhum teste o cobria
+- **CA1711** (sufixo reservado no nome do tipo): `LedgerCollection` dos testes passou a `LedgerCollectionDefinition`
+- **CA1859** (tipo concreto para desempenho): dublê de publicador dos testes expõe `List` em vez de `IReadOnlyList`
+
+Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 nos projetos de teste (nomes em português com sublinhado) e CA1031 em `OutboxDispatcher` (falha do publicador vira nova tentativa). O card não acrescentou nenhuma.
 
 ---
 
@@ -340,7 +349,9 @@ Previstos por ADR, que entram com a fila ativa vazia:
 
 9. ~~**[26] Testes de arquitetura com NetArchTest**~~ concluído em 2026-10-02
 10. ~~**[27] Migrações com DbUp** (RNF-038)~~ concluído em 2026-10-02, em passo separado com o papel de migração (opção b, por decisão do usuário)
-11. **[28] AnalysisMode para recommended** (L-06)
+11. ~~**[28] AnalysisMode para recommended** (L-06)~~ concluído em 2026-10-03
+
+A Fazer está vazia. O próximo cartão sai do Backlog/Ideias (31 a 38) ou dos Bloqueados (29, 30), por decisão do usuário.
 
 ---
 
@@ -348,7 +359,7 @@ Previstos por ADR, que entram com a fila ativa vazia:
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 124 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 131 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -456,3 +467,4 @@ confirmação.
 | 2026-10-02 | Card 19.3 concluído: OpenAPI gerado do código em `/openapi/v1.json` (pacote 10.0.12, igual ao runtime), com corpos e problemas declarados por endpoint; três imprecisões corrigidas antes de aprovar (título, inteiro declarado como "inteiro ou string", campo anulável declarado obrigatório). Projeto `PacioliBank.Contract.Tests` com comparação por instantâneo; reprova quando o contrato muda (medido). 109 verdes; coleção do Insomnia segue 43/43 |
 | 2026-10-02 | Card 26 concluído: `PacioliBank.Architecture.Tests` com 5 regras de dependência (NetArchTest 1.3.2, verificado contra assemblies .NET 10). A regra dos endpoints achou uma violação real: o tradutor de erros HTTP conhecia o driver do banco. Corrigido na causa: o adaptador de dados traduz falha transitória do driver para `LedgerUnavailableException` (2 testes novos, que reprovaram antes). 116 verdes; `503` verificado no Docker com o banco parado |
 | 2026-10-02 | Card 27 concluído: migrações DbUp em projeto próprio (`PacioliBank.Migrations`), executadas num passo separado do `docker compose` com o papel de migração; a API continua só com `SELECT, INSERT` (ADR-0009). Critério do card revisado (opção b, decisão do usuário): "aplicadas na subida da aplicação" exigiria dar à API a credencial de migração. Revisão do ADR-0002 com 4 alternativas rejeitadas. `db/init/` substituído por `db/migrations/` e `db/seed/`; C2 ganha o migrador. 7 testes de integração novos (reprovaram com o esboço) e 1 regra de arquitetura; poder de detecção medido em duas mutações. No Docker: do zero, migrador sai com 0 e API saudável; recriado sobre o mesmo volume, nada reaplicado e dado preservado; painel e Insomnia (43/43) verdes. Transição: um último `down -v` local. 124 verdes |
+| 2026-10-03 | Card 28 concluído: analisadores do .NET elevados a `Recommended`. O build reprovou com 4 regras (CA1716, CA1862, CA1711, CA1859), todas corrigidas no código, nenhuma suprimida; teste novo fixou o comportamento de `Currency.TryFromCode` antes da troca. L-06 encerrada; nenhuma lacuna aberta. Imagens Docker compilam no modo novo; filtro de período do extrato conferido contra a API. Contagens do ADR-0010 corrigidas: tinham ficado desatualizadas no card 27. 131 verdes |

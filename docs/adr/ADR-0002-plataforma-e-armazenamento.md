@@ -96,7 +96,7 @@ O SQL fica confinado aos adaptadores de persistência de cada módulo. O domíni
 
 ## Validação
 
-- Build com `TreatWarningsAsErrors`, `Nullable=enable` e `AnalysisLevel=latest-recommended` em `Directory.Build.props` (RNF-034)
+- Build com `TreatWarningsAsErrors`, `Nullable=enable` e `AnalysisLevel=latest-recommended` em `Directory.Build.props` (RNF-034). *Estado em 2026-10-03:* atendido no card 28 (`AnalysisLevel=latest` com `AnalysisMode=Recommended`, equivalente). Até ali o modo era `Default`; a elevação fez disparar 4 regras, todas corrigidas no código e nenhuma suprimida (lacuna L-06)
 - Teste de integração a partir de banco vazio, aplicando todas as migrações (RNF-038)
 - Analisador proibindo `float`/`double` em código de domínio ([ADR-0004](./ADR-0004-representacao-monetaria.md))
 
