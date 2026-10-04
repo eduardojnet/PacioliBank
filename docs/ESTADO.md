@@ -351,7 +351,9 @@ Previstos por ADR, que entram com a fila ativa vazia:
 10. ~~**[27] Migrações com DbUp** (RNF-038)~~ concluído em 2026-10-02, em passo separado com o papel de migração (opção b, por decisão do usuário)
 11. ~~**[28] AnalysisMode para recommended** (L-06)~~ concluído em 2026-10-03
 
-A Fazer está vazia. O próximo cartão sai do Backlog/Ideias (31 a 38) ou dos Bloqueados (29, 30), por decisão do usuário.
+Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
+
+12. **[31] CI no GitHub Actions** (ADR-0010), em A Fazer desde 2026-10-04
 
 ---
 
@@ -468,3 +470,4 @@ confirmação.
 | 2026-10-02 | Card 26 concluído: `PacioliBank.Architecture.Tests` com 5 regras de dependência (NetArchTest 1.3.2, verificado contra assemblies .NET 10). A regra dos endpoints achou uma violação real: o tradutor de erros HTTP conhecia o driver do banco. Corrigido na causa: o adaptador de dados traduz falha transitória do driver para `LedgerUnavailableException` (2 testes novos, que reprovaram antes). 116 verdes; `503` verificado no Docker com o banco parado |
 | 2026-10-02 | Card 27 concluído: migrações DbUp em projeto próprio (`PacioliBank.Migrations`), executadas num passo separado do `docker compose` com o papel de migração; a API continua só com `SELECT, INSERT` (ADR-0009). Critério do card revisado (opção b, decisão do usuário): "aplicadas na subida da aplicação" exigiria dar à API a credencial de migração. Revisão do ADR-0002 com 4 alternativas rejeitadas. `db/init/` substituído por `db/migrations/` e `db/seed/`; C2 ganha o migrador. 7 testes de integração novos (reprovaram com o esboço) e 1 regra de arquitetura; poder de detecção medido em duas mutações. No Docker: do zero, migrador sai com 0 e API saudável; recriado sobre o mesmo volume, nada reaplicado e dado preservado; painel e Insomnia (43/43) verdes. Transição: um último `down -v` local. 124 verdes |
 | 2026-10-03 | Card 28 concluído: analisadores do .NET elevados a `Recommended`. O build reprovou com 4 regras (CA1716, CA1862, CA1711, CA1859), todas corrigidas no código, nenhuma suprimida; teste novo fixou o comportamento de `Currency.TryFromCode` antes da troca. L-06 encerrada; nenhuma lacuna aberta. Imagens Docker compilam no modo novo; filtro de período do extrato conferido contra a API. Contagens do ADR-0010 corrigidas: tinham ficado desatualizadas no card 27. 131 verdes |
+| 2026-10-04 | Card 31 (CI no GitHub Actions) movido do Backlog para A Fazer por decisão do usuário, com critério de conclusão escrito ao entrar (cinco camadas de teste, cobertura informativa, varredura de segredos, poder de detecção medido) |

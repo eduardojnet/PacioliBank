@@ -2,15 +2,15 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-03 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-03, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 8 | 31 a 38 |
-| A Fazer | 0 | |
+| Backlog/Ideias | 7 | 32 a 38 |
+| A Fazer | 1 | 31 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
@@ -25,14 +25,6 @@ _Vazia, e esse é o estado correto. Todo item do projeto foi triado para uma col
 ---
 
 ## Backlog/Ideias
-
-### 31. Configurar CI no GitHub Actions
-
-`prioridade: Média` · `infra`
-
-Pipeline executando build sem avisos, as cinco camadas de teste, cobertura e varredura de segredos.
-
-VALOR NO DESAFIO: badge verde no README é evidência visível de que o critério de bloqueio do ADR-0010 é real e não apenas declarado.
 
 ### 32. Implementar daily_balances para consulta histórica
 
@@ -102,13 +94,35 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-_Vazia. O próximo cartão sai do Backlog/Ideias ou dos Bloqueados, por decisão do usuário._
+### 31. Configurar CI no GitHub Actions
+
+`prioridade: Média` · `infra`
+
+Pipeline executando build sem avisos, as cinco camadas de teste, cobertura e varredura de segredos.
+
+VALOR NO DESAFIO: badge verde no README é evidência visível de que o critério de bloqueio do ADR-0010 é real e não apenas declarado.
+
+--- ATUALIZAÇÃO 04/10/2026, ao entrar em A Fazer (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário, com A Fazer vazia após o card 28. Primeiro item da lista 'com mais tempo' do README que não depende de terceiros.
+
+CRITÉRIO:
+- Workflow em .github/workflows/, disparado em push e pull request para main
+- Build com TreatWarningsAsErrors e AnalysisMode=Recommended: aviso reprova o pipeline
+- As cinco camadas: domínio, arquitetura, contrato, integração (Testcontainers com o Docker do runner) e a coleção do Insomnia pelo inso contra o docker compose
+- Cobertura coletada (coverlet, já no projeto) e publicada como artefato. Sem limite mínimo: o número é informativo, e a força das asserções é assunto do card 36
+- Varredura de segredos no histórico; ações de terceiros fixadas por SHA
+- Badge no README
+- PODER DE DETECÇÃO medido: o pipeline fica vermelho num ramo com um aviso de compilação introduzido de propósito, e verde de novo sem ele
+- Execução verde registrada em main, com o link da execução no cartão
+
+[NVI] Tempo de execução no runner e disponibilidade do Docker para o Testcontainers no ubuntu-latest: confirmar na primeira execução.
 
 ---
 
 ## Em Andamento
 
-_Vazia. Cards 27 e 28 concluídos; A Fazer também está vazia._
+_Vazia. O próximo é o 31, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
 
 ---
 
