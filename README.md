@@ -1,5 +1,7 @@
 # PacioliBank Ledger
 
+[![CI](https://github.com/eduardojnet/PacioliBank/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardojnet/PacioliBank/actions/workflows/ci.yml)
+
 Livro-razão de contas correntes: registra movimentações financeiras de clientes e responde à posição consolidada em qualquer instante, com consistência forte por conta.
 
 O nome é uma referência a Luca Pacioli, que codificou o método das partidas dobradas em 1494. A escolha não é ornamental: o sistema adota ledger append-only com correção por lançamento compensatório, que é exatamente o método que Pacioli descreveu. Registro imutável, erro corrigido por contrapartida, nunca por rasura.

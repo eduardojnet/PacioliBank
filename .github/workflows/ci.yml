@@ -1,0 +1,129 @@
+# Integracao continua (card 31, ADR-0010). Torna verificado a cada commit o
+# que antes era so declarado: build sem avisos e as cinco camadas de teste.
+#
+# Acoes de terceiros fixadas por SHA de commit, com a versao em comentario:
+# tag pode ser movida, SHA nao. Binarios baixados conferidos por checksum.
+
+name: CI
+
+# Push em qualquer ramo: o ramo e verificado antes de virar pull request.
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-test:
+    name: Build sem avisos e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar pacotes
+        run: dotnet restore
+
+      # TreatWarningsAsErrors e AnalysisMode=Recommended vem do
+      # Directory.Build.props: um aviso reprova este passo.
+      - name: Compilar (aviso e erro)
+        run: dotnet build --no-restore -c Release
+
+      # Dominio, arquitetura, contrato e integracao. A integracao sobe
+      # PostgreSQL real pelo Testcontainers, com o Docker do proprio runner.
+      - name: Testes de dominio, arquitetura, contrato e integracao
+        run: >-
+          dotnet test --no-build -c Release
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --logger trx
+
+      # Cobertura informativa, sem limite minimo: forca das assercoes e
+      # assunto do teste de mutacao (card 36), nao de percentual de linhas.
+      - name: Publicar resultados e cobertura
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: resultados-e-cobertura
+          path: TestResults
+          if-no-files-found: error
+
+  insomnia:
+    name: Colecao do Insomnia contra o docker compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      INSO_VERSION: 13.3.0
+      INSO_SHA256: b9cc5f827d510048a9e259e2a1687ca78fb57c21020b832d4630f96740a90864
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # O mesmo comando do README: banco, migrador e API.
+      - name: Subir o ambiente
+        run: docker compose up --build -d
+
+      - name: Aguardar a API pronta
+        run: |
+          for i in $(seq 60); do
+            curl -sf http://localhost:8080/health/ready && exit 0
+            sleep 2
+          done
+          echo "API nao ficou pronta em 120 s" >&2
+          exit 1
+
+      - name: Instalar o inso
+        run: |
+          curl -sSL -o inso.tar.xz "https://github.com/Kong/insomnia/releases/download/core%40${INSO_VERSION}/inso-linux-x64-${INSO_VERSION}.tar.xz"
+          echo "${INSO_SHA256}  inso.tar.xz" | sha256sum --check
+          tar xJf inso.tar.xz
+          ./inso --version
+
+      - name: Executar a colecao (15 requisicoes, 43 testes)
+        run: ./inso run collection wrk_pacioli_ledger -w insomnia/pacioli-ledger.insomnia.json --env env_pacioli_base --ci
+
+      - name: Logs do ambiente, em caso de falha
+        if: failure()
+        run: docker compose logs
+
+      - name: Derrubar o ambiente
+        if: always()
+        run: docker compose down -v
+
+  secrets:
+    name: Varredura de segredos no historico
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      # Historico completo: segredo apagado num commit posterior continua
+      # exposto nos anteriores.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Instalar o gitleaks
+        run: |
+          curl -sSL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
+          tar xzf gitleaks.tar.gz gitleaks
+
+      # Falsos positivos conhecidos ficam no .gitleaksignore, um a um.
+      - name: Varrer
+        run: ./gitleaks git --redact --no-banner --verbose .

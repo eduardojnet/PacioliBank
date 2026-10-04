@@ -1,0 +1,10 @@
+# Falsos positivos da varredura de segredos (gitleaks), ignorados um a um
+# pela impressao digital, nunca pela regra inteira: um segredo real na mesma
+# regra continua reprovando o CI (card 31).
+#
+# EF secao 8, exemplo de requisicao HTTP: "Idempotency-Key" com um UUID
+# ilustrativo. Chave de idempotencia e escolhida pelo cliente e nao da acesso
+# a nada; a regra generic-api-key a confunde com chave de API pelo nome do
+# cabecalho. A mesma linha aparece em dois commits.
+510afd69ed5b3b2d46dbae425beb88672deafb80:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
+431dfed7058576491274c67546944459bf4727e2:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
