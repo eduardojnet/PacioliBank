@@ -220,7 +220,7 @@ src/
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
   PacioliBank.Migrations/          migrador (DbUp): aplica o que falta com o papel de migração e termina
 tests/
-  PacioliBank.Domain.Tests/        85 testes, sem I/O; cobertura do domínio ≥ 85% exigida no CI
+  PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
   PacioliBank.Integration.Tests/   60 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações e snapshot
@@ -255,6 +255,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
+| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,81% |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
@@ -270,7 +271,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 1. **Autenticação e autorização por titularidade (RF-009).** É a maior distância entre o especificado e o implementado, e a única que impediria uso real. O desenho está pronto no ADR-0009: JWT validado contra o provedor de identidade, titularidade conferida no domínio e não só na borda, `404` para conta de terceiro para não revelar existência.
 2. **Barramento de eventos real e expurgo da outbox (ADR-0008).** O despachante já lê a outbox com `FOR UPDATE SKIP LOCKED` e publica com recuo exponencial, mas publica em log: falta ligar a plataforma de mensageria do banco, expurgar as mensagens publicadas e conciliar ledger e outbox (RNF-033).
 3. **Regra de compatibilidade entre migração e versão da API.** As migrações já rodam em passo separado (card 27), mas com várias instâncias a migração precisa ser compatível com a versão anterior enquanto as duas coexistem (expandir antes, contrair depois). Hoje há uma instância só, e a regra não está escrita.
-4. **Teste de mutação (Stryker) no domínio.** O CI já aplica todo o critério de bloqueio do ADR-0010, inclusive cobertura mínima de 85% (cards 31, 31.1 e 31.2); cobertura mede o que roda, não se a asserção pegaria o erro.
+4. **Teste de mutação no adaptador de dados.** O domínio já tem mutação no CI (card 36); o adaptador PostgreSQL só tem teste de integração, e mutar exigiria banco por mutante. Fica para quando o tempo de execução couber.
 5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
 7. **Observabilidade (OpenTelemetry, Serilog),** com uma métrica de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.

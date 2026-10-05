@@ -9,12 +9,12 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 7 | 32, 33, 34.1, 35 a 38 |
+| Backlog/Ideias | 6 | 32, 33, 34.1, 35, 37, 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 46 | 01 a 31, 30.1, 31.1, 31.2 e 34, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 47 | 01 a 31, 30.1, 31.1, 31.2, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -65,14 +65,6 @@ O ADR-0002 fixou a 17. A 18 tem suporte até 2030 contra 2029 e traz uuidv7() na
 [NVI] A disponibilidade de uuidv7() na 18 precisa de confirmação na documentação oficial antes de virar decisão.
 
 EXIGE: revisão do ADR-0002 e uma linha do docker-compose.
-
-### 36. Adicionar teste de mutação com Stryker
-
-`prioridade: Nenhuma` · `teste`
-
-Mede a força das asserções, que é exatamente a lacuna que a métrica de cobertura não cobre. Cobertura alta com asserção fraca é autoengano.
-
-Fora do escopo atual por custo de execução. Evolução natural do ADR-0010.
 
 ### 37. Particionar o ledger por tempo
 
@@ -930,3 +922,45 @@ CRITÉRIO ATENDIDO:
 - Auditoria: nenhum pacote vulnerável nos 9 projetos
 - ESTADO §9 atualizada e completada: quatro pacotes estavam sem registro (OpenAPI, Mvc.Testing, NetArchTest, coverlet.msbuild)
 - xunit v3 no card 34.1, no Backlog com gatilho
+
+### 36. Adicionar teste de mutação com Stryker
+
+`prioridade: Nenhuma` · `teste`
+
+Mede a força das asserções, que é exatamente a lacuna que a métrica de cobertura não cobre. Cobertura alta com asserção fraca é autoengano.
+
+Fora do escopo atual por custo de execução. Evolução natural do ADR-0010.
+
+--- ATUALIZAÇÃO 04/10/2026, ao iniciar (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário. A cobertura do domínio passou a ter limite no CI (card 31.2), e o ADR-0010 registra como gatilho de revisão justamente 'teste de mutação mostrando asserções fracas com cobertura alta'.
+
+ESCOPO: Stryker.NET como ferramenta local versionada (manifesto dotnet-tools), sobre o projeto PacioliBank.Ledger com os testes de domínio.
+
+CRITÉRIO:
+- Execução reproduzível por um comando, com a versão fixada no repositório
+- Pontuação de mutação medida e registrada, com o tempo de execução
+- Mutantes sobreviventes analisados um a um: os que revelam asserção fraca ganham teste que os mata; os equivalentes (não mudam comportamento) ficam registrados com o motivo
+- Decisão sobre o CI tomada a partir do custo medido (a cada push, agendado ou manual), com limite de reprovação se entrar no CI
+- ADR-0010 e ESTADO atualizados
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ENTREGUE:
+- Stryker.NET 5.0.0 como ferramenta local (dotnet-tools.json) e tests/PacioliBank.Domain.Tests/stryker-config.json; um comando: dotnet tool restore && (cd tests/PacioliBank.Domain.Tests && dotnet stryker)
+- 13 testes de domínio sobre asserções fracas de verdade: limites da página (1 e 200), período de um único instante, cursor que não chegava ao armazenamento (trocar 'AfterSequence ?? 0' por 0 sobrevivia), precisão de milissegundo na impressão do comando, ReversalOf na impressão, sequência 1 na reidratação, Subtract e Compare com moeda divergente, código de moeda vazio, dados de cinco rejeições
+- Teste de valor fixo da impressão do comando (SHA-256 calculado em Python a partir do formato documentado): ela é gravada em idempotency_records, e mudar o formato entre versões transformaria reenvio legítimo em conflito
+- CI: tarefa 'Teste de mutação do domínio', com relatório publicado, reprova abaixo de 85%
+- ADR-0010 revisado com decisão, sobreviventes aceitos e 4 alternativas rejeitadas
+
+CRITÉRIO ATENDIDO:
+- Custo medido: 17 segundos por execução localmente, 64 no runner, em paralelo; por isso a cada push
+- Verde em main: https://github.com/eduardojnet/PacioliBank/actions/runs/37253763435
+- Vermelho no ramo de prova sem os testes de contrato: https://github.com/eduardojnet/PacioliBank/actions/runs/37253765926 (tarefa de mutação e limite de cobertura reprovaram, cada um no seu passo)
+- Pontuação: 57,49% na primeira medição; 89,81% depois, estável em quatro execuções
+- Sobreviventes (16) todos explicados: 9 equivalentes (Guid 'D' e '' dão o mesmo texto), 3 dados de exceções lançadas só pelo adaptador, valor padrão de ResponseBody, guarda de Money.Parse, texto de diagnóstico
+- Excluídos com motivo: guardas ThrowIfNull, mensagens de exceção, construtor estático de Currency
+- Limite com poder de detecção: sem os testes de contrato, 82,28% e a execução falha (localmente e num ramo de prova no CI, apagado)
+- Cobertura do domínio subiu de 86,4% para 88,15%; 166 testes verdes, build sem avisos
+
+ACHADO: o construtor de Currency roda uma vez por processo, na inicialização estática; mutado, contaminava o processo de teste e a pontuação oscilava entre 89,24% e 91,14% sem mudança de código. Diagnosticado comparando quatro relatórios; excluído da mutação com o motivo no código.

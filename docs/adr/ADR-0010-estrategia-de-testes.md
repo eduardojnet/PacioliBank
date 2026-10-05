@@ -137,6 +137,18 @@ As camadas de domínio, arquitetura e contrato executam em segundos e rodam a ca
 **Neutras**
 
 - Teste de mutação (Stryker.NET) não entra no escopo atual, por custo de execução. Fica registrado como evolução natural para medir a força das asserções, que é a lacuna que a métrica de cobertura não cobre
+
+> **Revisão de 2026-10-04 (card 36): teste de mutação no CI.** O custo que o tirava do escopo não existe neste tamanho de domínio: **17 segundos** por execução localmente, 64 segundos no runner do GitHub, em paralelo com as demais tarefas. Decidido: Stryker.NET 5.0.0, fixado no manifesto `dotnet-tools.json`, sobre o `PacioliBank.Ledger` com os testes de domínio, numa tarefa própria do CI que **reprova abaixo de 85%** de mutantes mortos. Pontuação: **57,49% na primeira medição, 89,81% depois**, estável em quatro execuções.
+>
+> - **Os mutantes mostraram asserções fracas de verdade**, que a cobertura de 86,4% não mostrava: nenhum teste conferia os limites da página (1 e 200), o período de um único instante, a passagem do cursor do extrato ao armazenamento, a precisão de milissegundo na impressão do comando, nem os dados de cinco rejeições. 13 testes novos as cobrem
+> - **A impressão do comando ganhou teste de valor fixo** (SHA-256 calculado fora do .NET, a partir do formato documentado). Ela é gravada em `idempotency_records`; mudar o formato entre versões transformaria o reenvio legítimo em conflito
+> - **Fora da mutação, com o motivo no código ou na configuração:** guardas `ArgumentNullException.ThrowIfNull` (com tipos não anuláveis, o compilador já recusa nulo); textos de mensagens de exceção (o contrato é o código da EF §8.6); e o construtor de `Currency`, que roda uma vez por processo, na inicialização estática, e contaminava o processo de teste: a pontuação oscilava entre 89,24% e 91,14% sem mudança de código
+> - **Sobreviventes aceitos (16), todos explicados:** 9 equivalentes (`Guid.ToString("D")` e `""` dão o mesmo texto), 3 dados de exceções lançadas só pelo adaptador de dados (fora do alcance dos testes de domínio), o valor padrão de `ResponseBody` (o armazenamento sempre o preenche), a guarda de `Money.Parse` (a porta de entrada recusa o vazio antes) e o texto de diagnóstico de valor sem moeda
+> - **Poder de detecção do limite:** sem os testes de contrato, 82,28% e a execução falha
+>
+> *Alternativas rejeitadas:* **sem limite, só relatório**, porque relatório sem consequência é ignorado; **agendado ou manual em vez de a cada push**, desnecessário com 17 segundos; **limite em 90%**, porque a folga de 4 pontos absorve um teste mais fraco sem bloquear uma entrega legítima, como no limite de cobertura; **incluir os testes de integração**, porque exigiria PostgreSQL por mutante e multiplicaria o tempo, para cobrir código que já tem teste de integração próprio.
+>
+> *Gatilho de revisão:* tempo de execução acima de 5 minutos, ou pontuação estável acima de 95% (o limite pode subir).
 - Teste de carga não integra o pipeline de commit, executando em ciclo próprio ([ENF](../specs/ENF-especificacao-nao-funcional.md) §10)
 
 ## Análise das opções rejeitadas

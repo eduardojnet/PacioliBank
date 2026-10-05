@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 153 passando (85 de domínio, 6 de arquitetura, 2 de contrato, 60 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 86,4%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%
+**Testes:** 166 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 60 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -151,7 +151,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 85 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 86,4% |
+| `PacioliBank.Domain.Tests` | 98 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 88,15%; teste de mutação 89,81% (card 36) |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
@@ -165,7 +165,9 @@ A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em 
 
 Auditoria de dependências (card 31.1): o restore audita as dependências, transitivas inclusive, e alerta alto ou crítico vira erro (`NuGetAudit` explícito no `Directory.Build.props`, modo `all`, nível `high`); vale localmente, no CI e na imagem. O CI lista as demais severidades num passo informativo. Em 2026-10-04, nenhum pacote vulnerável em nenhuma severidade.
 
-Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release (`coverlet.msbuild`), e reprova abaixo de 85%. Hoje: 86,4%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010.
+Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release (`coverlet.msbuild`), e reprova abaixo de 85%. Hoje: 88,15%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010.
+
+Teste de mutação (card 36): tarefa própria do CI roda o Stryker.NET 5.0.0 (fixado em `dotnet-tools.json`) sobre o domínio, em 17 segundos localmente e 64 no runner, em paralelo, e reprova abaixo de 85% de mutantes mortos. Num ramo de prova sem os testes de contrato, a tarefa reprovou (ramo apagado). Hoje: 89,81%, estável. Exclusões e sobreviventes aceitos, todos com motivo, na revisão do ADR-0010. Localmente: `dotnet tool restore` e, em `tests/PacioliBank.Domain.Tests`, `dotnet stryker`.
 
 ### Especificações e diagramas
 
@@ -420,6 +422,8 @@ Do Backlog, por decisão do usuário:
 15. ~~**[34] Atualizar as dependências NuGet**~~ concluído em 2026-10-04, dentro do xunit v2
    - **[34.1] Migrar os testes para xunit v3**, no Backlog com gatilho (fim do suporte ao v2 ou recurso exclusivo do v3)
 
+16. ~~**[36] Teste de mutação com Stryker**~~ concluído em 2026-10-04: 57,49% para 89,81%, limite de 85% no CI
+
 A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
@@ -428,7 +432,7 @@ A Fazer está vazia. Próximos por decisão do usuário.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 153 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 166 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -463,6 +467,7 @@ Revisada no card 34 (2026-10-04): `dotnet list package --outdated` mostrou defas
 | Microsoft.NET.Test.Sdk | 18.10.1 (card 34) | testes |
 | coverlet.collector | 10.1.0 (card 34) | testes |
 | coverlet.msbuild | 10.1.0 (card 34; limite de cobertura, card 31.2) | Domain.Tests |
+| dotnet-stryker | 5.0.0 (ferramenta local, `dotnet-tools.json`; card 36) | teste de mutação |
 
 ---
 
@@ -551,3 +556,4 @@ confirmação.
 | 2026-10-04 | Card 30 encerrado como decisão registrada, por decisão do usuário: sem ambiente de carga nem volume real. Na conferência, a ENF dava RNF-003 e RNF-006 por realizadas sem ressalva, e o README dizia o snapshot "com testes": vale só na posição corrente, por construção, sem teste automatizado; a histórica soma todo o histórico. Lacuna L-15 aberta e encerrada; ENF 1.4; o teste virou o card 30.1 |
 | 2026-10-04 | Card 30.1 concluído: `SnapshotTests`, três testes de integração do snapshot (gravação na centésima escrita, posição corrente partindo dele com no máximo 99 somados, posição histórica sem snapshot), sempre conferidos contra a soma do ledger. Três mutações detectadas. A mutação 2 mostrou que snapshot errado contaminaria o `balance_after` dos lançamentos seguintes: registrado no ADR-0007. ENF 1.5. 153 verdes |
 | 2026-10-04 | Card 34 concluído: ferramentas de teste atualizadas dentro do xunit v2 (xunit 2.9.3, runner 4.0.0, Test.Sdk 18.10.1, coverlet 10.1.0); produção já estava na última versão. Mesmos 153 testes, build sem avisos, auditoria sem alerta, cobertura de linha do domínio igual (86,4%) e limite funcionando. xunit v3 separado no card 34.1, no Backlog com gatilho. §9 completada: quatro pacotes estavam sem registro |
+| 2026-10-04 | Card 36 concluído: teste de mutação com Stryker.NET 5.0.0 no domínio, 17 s por execução, tarefa própria do CI com limite de 85%. Pontuação de 57,49% para 89,81%, estável: 13 testes novos sobre asserções fracas de verdade (limites da página, período de um instante, cursor que não chegava ao armazenamento, precisão da impressão, dados das rejeições) e teste de valor fixo da impressão do comando, que é gravada. Achado: o construtor estático de `Currency` deixava a pontuação instável; excluído com motivo. ADR-0010 revisado. 166 verdes |
