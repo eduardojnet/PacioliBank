@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 5 | 32, 34.1, 35, 37, 38 |
-| A Fazer | 1 | 33.2 |
+| A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 49 | 01 a 31, 30.1, 31.1, 31.2, 33, 33.1, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 50 | 01 a 31, 30.1, 31.1, 31.2, 33, 33.1, 33.2, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -80,17 +80,7 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 33.2. Métricas de negócio (RNF-032)
-
-`prioridade: Baixa` · `codigo` · `observabilidade`
-
-SEPARADO DO CARD 33 (04/10/2026).
-
-CRITÉRIO:
-- Métricas da RNF-032 com System.Diagnostics.Metrics: lançamentos por tipo, rejeições por motivo (código da EF §8.6), lançamentos somados além do snapshot, profundidade da fila de eventos e consultas por origem do cálculo (computedFrom), de onde sai a taxa de computedFrom=ledger
-- Exportadas pelo mesmo caminho do ADR-0012
-- Teste automatizado que lê as medições depois de operações conhecidas; poder de detecção medido
-- ENF §11: RNF-032 passa a realizada
+_Vazia. Próximos por decisão do usuário._
 
 ---
 
@@ -1041,3 +1031,34 @@ CRITÉRIO ATENDIDO:
 - CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37316632032
 
 ACHADO: na primeira inspeção do painel, dezenas de traços de um span só, das consultas do despachante de outbox a cada segundo. Filtro aplicado e coberto por teste.
+
+### 33.2. Métricas de negócio (RNF-032)
+
+`prioridade: Baixa` · `codigo` · `observabilidade`
+
+SEPARADO DO CARD 33 (04/10/2026).
+
+CRITÉRIO:
+- Métricas da RNF-032 com System.Diagnostics.Metrics: lançamentos por tipo, rejeições por motivo (código da EF §8.6), lançamentos somados além do snapshot, profundidade da fila de eventos e consultas por origem do cálculo (computedFrom), de onde sai a taxa de computedFrom=ledger
+- Exportadas pelo mesmo caminho do ADR-0012
+- Teste automatizado que lê as medições depois de operações conhecidas; poder de detecção medido
+- ENF §11: RNF-032 passa a realizada
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário (depois do 33.1).
+
+DESENHO: as medições de negócio saem do mesmo decorador de ILedgerService do 33.1, que vê comando, resultado e exceção; o código da rejeição vem do mesmo mapa que produz o problem+json, para que métrica e resposta nunca divirjam. A profundidade da fila vem de uma consulta à outbox, lida só quando a métrica é coletada.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE: medidor PacioliBank.Ledger com seis instrumentos: ledger.entries.recorded (sentido, operação), ledger.replays (operação), ledger.rejections (código da EF 8.6, operação), ledger.balance.queries (origem do cálculo, posição histórica), ledger.balance.entries_replayed (histograma) e ledger.outbox.messages (pendente, estacionada). Exportado por OTLP com os traços; no compose, a cada 10 s. ADR-0012 revisado com 3 alternativas rejeitadas; ENF 1.8.
+
+CRITÉRIO ATENDIDO:
+- MetricsTests, API e PostgreSQL reais, sequência conhecida: 1 crédito e 1 débito gravados, 1 reenvio, 1 rejeição INSUFFICIENT_FUNDS, 1 consulta corrente e 1 histórica pelo ledger, histograma 2 medições somando 4, fila igual à contagem no banco. Reprovou antes da implementação
+- Poder de detecção, quatro mutações reprovadas: reenvio contado como lançamento; rejeição pelo nome da exceção; histograma não registrado; medidor da fila nunca criado
+- Painel local: as seis métricas, com rejeições por código e operação depois da coleção do Insomnia (43/43)
+- gitleaks limpo nos dois modos antes do push; 178 testes verdes; build sem avisos
+- CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37317571539
+
+DECLARADO: 'atraso de snapshot' da ENF medido como lançamentos somados além dele; o snapshot é síncrono (ADR-0007), sem atraso de tempo. Alertas sobre as métricas não fazem parte deste card.

@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.7
+**Versão:** 1.8
 **Data:** 2026-10-05
 **Status:** Proposto
 
@@ -300,7 +300,7 @@ O enunciado declara que não é necessário esgotar as possibilidades técnicas.
 | Desempenho | RNF-006 **só na posição corrente**: snapshot a cada 100 lançamentos, então no máximo 99 somados depois dele (com teste de integração e poder de detecção medido, card 30.1). RNF-003: o mesmo mecanismo limita o custo da posição corrente, mas a latência nunca foi medida | RNF-001, RNF-002, RNF-005, RNF-007 (exigem ambiente de carga; card 30 encerrado como decisão). RNF-003 e RNF-006 na **posição histórica**, que soma todo o histórico até o instante, sem snapshot (card 32, com gatilho) |
 | Resiliência | RNF-010, RNF-011, RNF-013, RNF-016 | RNF-014, RNF-015, RNF-017, RNF-018 |
 | Segurança | RNF-020, RNF-021, RNF-022, RNF-024 (varredura de segredos no CI, card 31), RNF-025, RNF-026 (auditoria no restore, transitivas inclusive, card 31.1) | RNF-023, RNF-027 |
-| Observabilidade | RNF-030 (requisição, caso de uso e PostgreSQL no mesmo traço, exportado por OTLP, card 33.1), RNF-031 (log JSON com correlação e mascarado, card 33; ADR-0012) | RNF-032 (card 33.2), RNF-033 |
+| Observabilidade | RNF-030 (traço ponta a ponta, card 33.1), RNF-031 (log JSON com correlação e mascarado, card 33), RNF-032 (seis métricas de negócio, inclusive a taxa de `computedFrom=ledger`, card 33.2); ADR-0012 | RNF-033 |
 | Manutenibilidade | RNF-034, RNF-035, RNF-036 (86,4%, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` (10.1.0 desde o card 34, mesma medida) restrito ao assembly `PacioliBank.Ledger`; o CI reprova abaixo de 85%, card 31.2), RNF-037, RNF-038, RNF-039 | n/a |
 
 Declarar essa separação é parte da entrega. Apresentar requisito especificado como se estivesse implementado seria, em contrato real, informação incorreta prestada ao cliente.
@@ -353,4 +353,5 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-006 na posição corrente passa a ter teste de integração (`SnapshotTests`, card 30.1), com três mutações detectadas |
 | 1.6 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-031 e RNF-032 constavam como realizadas sem nada no código (lacuna L-16). RNF-031 passa a realizada de fato no card 33 (Serilog, JSON, correlação, mascaramento, com teste pelo caminho completo); RNF-032 volta a apenas especificada até o card 33.2; RNF-030, até o card 33.1 |
 | 1.7 | 2026-10-05 | Eduardo J. G. do Carmo | §11: RNF-030 realizada (card 33.1): traço ponta a ponta com teste automatizado e inspeção no painel local |
+| 1.8 | 2026-10-05 | Eduardo J. G. do Carmo | §11: RNF-032 realizada (card 33.2). "Atraso de snapshot" medido como lançamentos somados além dele: o snapshot é síncrono (ADR-0007) e não tem atraso de tempo |
 

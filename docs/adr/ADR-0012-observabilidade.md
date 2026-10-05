@@ -1,6 +1,6 @@
 # ADR-0012: Log estruturado mascarado no formatador, correlação fora do adaptador HTTP e telemetria exportada por OTLP
 
-- **Status:** Aceito; log (card 33) e rastreamento (card 33.1) implementados, métricas especificadas (card 33.2). Revisado em 2026-10-05
+- **Status:** Aceito e implementado: log (card 33), rastreamento (card 33.1) e métricas (card 33.2). Revisado em 2026-10-05
 - **Data:** 2026-10-04
 - **Decisor:** Eduardo J. G. do Carmo
 - **Requisitos dirigentes:** RNF-021, RNF-030, RNF-031, RNF-032, [ADR-0002](./ADR-0002-plataforma-e-armazenamento.md), [ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md) §5
@@ -122,4 +122,38 @@ As connection strings locais desligam a negociação GSS do Npgsql (`GSS Encrypt
 - `TracingTests` (2), API e PostgreSQL reais, exportador em memória: uma escrita produz o span da requisição, o do caso de uso como filho dele e os do PostgreSQL como filhos do caso de uso, no mesmo traço; nenhum span do PostgreSQL sem pai; nenhum identificador de conta íntegro em nome ou tag de span; a rejeição marca o span com status de erro e o tipo da exceção
 - Poder de detecção, quatro mutações, todas reprovadas: sem o decorador; sem a instrumentação do PostgreSQL; caminho sem mascarar; sem o filtro de comando
 - No `docker compose`, o painel mostrou só traços com raiz em requisição: a escrita com 10 spans, a consulta de posição com 4. Antes do filtro, mostrava dezenas de traços soltos do despachante
+
+## Revisão de 2026-10-05 (card 33.2): métricas de negócio implementadas
+
+### Decisões
+
+Medidor `PacioliBank.Ledger`, alimentado pelo mesmo decorador do card 33.1, exportado por OTLP junto com os traços:
+
+| Instrumento | Tipo | Tags | O que responde (RNF-032) |
+|---|---|---|---|
+| `ledger.entries.recorded` | contador | `direction`, `operation` | Lançamentos por tipo |
+| `ledger.replays` | contador | `operation` | Reenvios idempotentes, contados à parte para a contagem de lançamentos bater com o ledger |
+| `ledger.rejections` | contador | `code`, `operation` | Rejeições por motivo, com o código da EF §8.6 |
+| `ledger.balance.queries` | contador | `computed_from`, `point_in_time` | Taxa de `computedFrom=ledger`, o indicador antecedente da ENF §6 |
+| `ledger.balance.entries_replayed` | histograma | `computed_from`, `point_in_time` | Lançamentos somados além do snapshot (RNF-006) |
+| `ledger.outbox.messages` | medidor observável | `state` (`pending`, `parked`) | Profundidade da fila de eventos |
+
+- **O código da rejeição sai do mesmo mapa que monta o `problem+json`** (`LedgerProblems.CodeOf`). Métrica e resposta não podem divergir. Exceção fora do mapa entra como `UNEXPECTED`
+- **A fila da outbox é lida do banco só na coleta**, não a cada escrita: é estado do banco, e o despachante pode rodar em outra instância. Banco fora do ar na coleta resulta em ausência de medição, não em falha
+- **Nenhum identificador nas tags**, pelo mesmo motivo dos spans
+- No `docker compose`, o intervalo de exportação é de 10 segundos, para o painel local; o padrão do OpenTelemetry, 60 segundos, vale fora dele
+
+### Alternativas rejeitadas nesta revisão
+
+**Rejeição marcada pelo tipo da exceção, como no span.** Rejeitada para a métrica: o tipo é detalhe de implementação, o código da EF §8.6 é contrato e é o que o operador cruza com as respostas. No span, o tipo fica, porque ajuda a depurar.
+
+**Contar a fila da outbox a cada escrita e publicação.** Rejeitada: com mais de uma instância, cada processo veria só a sua parte, e o número divergiria do banco.
+
+**Métrica de "atraso de snapshot" medida em tempo.** A ENF fala em atraso; neste desenho o snapshot é síncrono, gravado na própria escrita ([ADR-0007](./ADR-0007-snapshot-e-projecao.md)), e não há atraso de tempo a medir. O que pode crescer é a quantidade de lançamentos somados além dele, e é isso que o histograma mede.
+
+### Validação feita
+
+- `MetricsTests`, API e PostgreSQL reais, exportador em memória, despachante retirado para a fila ficar estável. Sequência conhecida (crédito, reenvio do crédito, débito recusado, débito, posição corrente, posição histórica) e conferência de cada número: 1 crédito e 1 débito gravados, 1 reenvio, 1 rejeição `INSUFFICIENT_FUNDS`, 1 consulta corrente e 1 histórica calculadas pelo ledger, histograma com 2 medições somando 4, fila pendente igual à contagem feita no banco
+- Poder de detecção, quatro mutações, todas reprovadas: reenvio contado como lançamento; rejeição pelo nome da exceção; histograma não registrado; medidor da fila nunca criado
+- No painel local, depois da coleção do Insomnia: as seis métricas do medidor, com rejeições por código (`ACCOUNT_NOT_FOUND` e outros cinco) e por operação
 

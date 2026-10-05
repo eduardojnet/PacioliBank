@@ -19,7 +19,7 @@ docker compose up --build -d
 curl http://localhost:8080/health/ready        # {"status":"ready"}
 ```
 
-Os traços de cada requisição (HTTP, caso de uso e PostgreSQL) aparecem no painel de observabilidade em **http://localhost:18888**, só no ambiente local.
+Os traços de cada requisição (HTTP, caso de uso e PostgreSQL) e as métricas de negócio aparecem no painel de observabilidade em **http://localhost:18888**, só no ambiente local.
 
 O banco é criado, o migrador aplica as migrações pendentes e termina, e só então a API sobe. Os papéis com privilégio mínimo são provisionados e cinco contas de exemplo, ativas e em BRL, já existem:
 
@@ -225,7 +225,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   71 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, log e traço
+  PacioliBank.Integration.Tests/   72 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, log, traço e métricas
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
@@ -260,7 +260,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,81% |
 | Log estruturado em JSON, com correlação e identificadores mascarados (RNF-031, ADR-0009 §5) | Implementado, com teste pelo caminho completo ([ADR-0012](./docs/adr/ADR-0012-observabilidade.md)) |
 | Rastreamento ponta a ponta (RNF-030): requisição, caso de uso e PostgreSQL no mesmo traço, com painel local | Implementado, com teste |
-| Métricas de negócio (RNF-032) | Pendente (card 33.2) |
+| Métricas de negócio (RNF-032): lançamentos, reenvios, rejeições por código, origem do cálculo da posição, fila da outbox | Implementado, com teste |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
@@ -279,7 +279,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 4. **Teste de mutação no adaptador de dados.** O domínio já tem mutação no CI (card 36); o adaptador PostgreSQL só tem teste de integração, e mutar exigiria banco por mutante. Fica para quando o tempo de execução couber.
 5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
-7. **Métricas de negócio (RNF-032).** Log e traço já estão no ar (cards 33 e 33.1); faltam as métricas (card 33.2), com a de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
+7. **Alertas sobre as métricas.** Log, traço e métricas estão no ar (cards 33, 33.1 e 33.2); falta o alerta, principalmente sobre a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar, e sobre a fila estacionada da outbox.
 8. **Teste de carga** para medir os RNF de desempenho, hoje especificados e não verificados.
 9. **Itens com gatilho declarado, que não devem ser feitos antes dele:** posição diária pré-calculada para consulta histórica (quando o p99 passar do alvo), particionamento do ledger por tempo (depende da política de retenção, QA-004), transferência entre contas (exige novo ADR e bloqueio em ordem determinística).
 

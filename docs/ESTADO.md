@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 177 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 71 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
+**Testes:** 178 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 72 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -139,6 +139,7 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 | `Endpoints/Correlation.cs` | `X-Correlation-Id` aceito ou gerado, devolvido inclusive em resposta de erro |
 | `Observability/` | Card 33, ADR-0012: log em JSON na saída padrão (Serilog), uma linha por entrada; correlação da requisição em toda entrada emitida durante ela; uma linha de resumo por requisição; mascaramento no formatador (todo GUID truncado aos quatro últimos caracteres, CPF e token por marcador), coberto por teste pelo caminho completo |
 | `Observability/ObservedLedgerService.cs` | Card 33.1: decorador de `ILedgerService` que abre o span do caso de uso; requisição, caso de uso e PostgreSQL no mesmo traço, exportado por OTLP só com `OTEL_EXPORTER_OTLP_ENDPOINT`. Só comando dentro de traço é rastreado. Painel Aspire 13.6.0 no `docker compose`, em `http://localhost:18888` |
+| `Observability/LedgerTelemetry.cs`, `OutboxMetrics.cs` | Card 33.2: seis métricas de negócio (RNF-032) no medidor `PacioliBank.Ledger`: lançamentos por sentido, reenvios, rejeições pelo código da EF §8.6, consultas por origem do cálculo, lançamentos somados além do snapshot e fila da outbox (pendente e estacionada) |
 
 Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo idêntico ao original; lançamento novo responde `201`.
 
@@ -158,7 +159,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 71 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais) e rastreamento (2, card 33.1) |
+| `PacioliBank.Integration.Tests` | 72 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1) e métricas (1, card 33.2) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -195,7 +196,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
-| Métricas de negócio (RNF-032) | Não implementadas; card 33.2 |
 | Limite de replay e custo constante na posição histórica (RNF-003, RNF-006) | Não implementado: a consulta histórica soma todo o histórico até o instante; card 32, com gatilho |
 
 ---
@@ -440,9 +440,9 @@ Do Backlog, por decisão do usuário:
 
 17. ~~**[33] Log estruturado com correlação e mascaramento** (RNF-031, L-16)~~ concluído em 2026-10-04; ADR-0012
    - ~~**[33.1] Rastreamento ponta a ponta** (RNF-030)~~ concluído em 2026-10-05
-   - **[33.2] Métricas de negócio** (RNF-032), em A Fazer
+   - ~~**[33.2] Métricas de negócio** (RNF-032)~~ concluído em 2026-10-05
 
-Próximo: 33.2.
+A Fazer está vazia. Próximos por decisão do usuário (proposta: 35).
 
 ---
 
@@ -450,7 +450,7 @@ Próximo: 33.2.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 177 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 178 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -584,3 +584,4 @@ confirmação.
 | 2026-10-04 | Card 33 concluído, dividido em 33, 33.1 e 33.2: log em JSON (Serilog) com correlação e mascaramento no formatador, coberto por 9 testes, inclusive um pelo caminho completo com API e PostgreSQL reais; três mutações detectadas. Lacuna L-16 encerrada: a ENF dava RNF-031 e RNF-032 por realizadas sem nada no código. ADR-0012 com 6 alternativas rejeitadas; ENF 1.6. Achado: aviso do Npgsql em texto livre (GSS), desligado nas connection strings locais. No Docker, 100% das linhas da API em JSON e nenhum GUID íntegro fora dos campos preservados. 175 verdes |
 | 2026-10-05 | Card 33, correção pós-entrega: o CI reprovou na varredura de segredos. O teste de mascaramento trazia um JWT sintético escrito inteiro, que o gitleaks tomou por credencial. Histórico publicado não se reescreve: a ocorrência do commit `481b566` foi ignorada pela impressão digital, com motivo, e o teste passou a montar o token em tempo de execução. Falha minha: rodei o gitleaks antes do card 33, não depois |
 | 2026-10-05 | Card 33.1 concluído: rastreamento ponta a ponta (RNF-030). Decorador de `ILedgerService` na API abre o span do caso de uso, e não código no núcleo, para não baixar a pontuação de mutação; requisição, caso de uso e PostgreSQL no mesmo traço, sem identificador integro. Filtro do Npgsql: só comando dentro de traço, senão o despachante geraria um traço solto por segundo (achado no painel). Painel Aspire no compose. 2 testes, quatro mutações detectadas. ADR-0012 revisado; ENF 1.7. 177 verdes |
+| 2026-10-05 | Card 33.2 concluído: seis métricas de negócio (RNF-032) pelo mesmo decorador do 33.1; código da rejeição do mesmo mapa do problem+json; fila da outbox lida do banco na coleta. 1 teste com sequência conhecida, quatro mutações detectadas; métricas conferidas no painel local. ADR-0012 revisado; ENF 1.8. Com o 33, 33.1 e 33.2, a RNF-030, a RNF-031 e a RNF-032 estão realizadas. 178 verdes |
