@@ -158,21 +158,21 @@ Catálogo completo, com a regra de negócio de cada código, na [EF §8.6](./doc
 ## Testes
 
 ```bash
-dotnet test        # 116 testes, sem erro e sem aviso
+dotnet test        # 192 testes, sem erro e sem aviso; xunit v3 na Microsoft Testing Platform (global.json)
 ```
 
 Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integração sobem um PostgreSQL real por execução (Testcontainers) e aplicam o mesmo script de esquema do ambiente local, com os mesmos papéis e privilégios.
 
 | Projeto | Testes | O que verifica |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 59 | Invariantes do agregado, `Money`, validações da porta de entrada. Sem I/O, menos de um segundo |
-| `PacioliBank.Architecture.Tests` | 5 | Regras de dependência (NetArchTest): domínio sem aplicação, Ledger sem banco nem HTTP, Events sem Ledger, endpoints sem banco |
+| `PacioliBank.Domain.Tests` | 98 | Invariantes do agregado, `Money`, validações da porta de entrada. Sem I/O, menos de um segundo |
+| `PacioliBank.Architecture.Tests` | 6 | Regras de dependência (NetArchTest): domínio sem aplicação, Ledger sem banco nem HTTP, Events sem Ledger, endpoints sem banco |
 | `PacioliBank.Contract.Tests` | 2 | Contrato da API: o OpenAPI gerado é comparado com o instantâneo aprovado; mudança de contrato reprova |
-| `PacioliBank.Integration.Tests` | 50 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real e despachante de outbox |
+| `PacioliBank.Integration.Tests` | 86 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real, despachante de outbox, migrações, fechamento diário, particionamento, log, rastreamento e métricas |
 
 ```bash
-dotnet test tests/PacioliBank.Domain.Tests                                 # só domínio, sem Docker
-dotnet test tests/PacioliBank.Integration.Tests --filter ConcurrencyTests  # só concorrência
+dotnet test --project tests/PacioliBank.Domain.Tests                                         # só domínio, sem Docker
+dotnet test --project tests/PacioliBank.Integration.Tests --filter-class "*ConcurrencyTests"  # só concorrência
 ```
 
 **Por que banco real, e não repositório em memória:** as invariantes que importam aqui vivem na interação entre código e banco. Posição não negativa depende de bloqueio de linha; sequência sem lacunas, de constraint; idempotência sob envio simultâneo, de chave primária; imutabilidade, de privilégio. Um teste de concorrência contra memória passa na implementação ingênua, o que é pior que não testar ([ADR-0010](./docs/adr/ADR-0010-estrategia-de-testes.md)).
@@ -257,7 +257,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
-| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,81% |
+| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,17% |
 | Log estruturado em JSON, com correlação e identificadores mascarados (RNF-031, ADR-0009 §5) | Implementado, com teste pelo caminho completo ([ADR-0012](./docs/adr/ADR-0012-observabilidade.md)) |
 | Rastreamento ponta a ponta (RNF-030): requisição, caso de uso e PostgreSQL no mesmo traço, com painel local | Implementado, com teste |
 | Métricas de negócio (RNF-032): lançamentos, reenvios, rejeições por código, origem do cálculo da posição, fila da outbox | Implementado, com teste |
@@ -265,7 +265,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Ledger particionado por mês de registro, com as garantias de unicidade mantidas no banco ([ADR-0013](./docs/adr/ADR-0013-particionamento-do-ledger.md)) | Implementado, com testes; arquivamento de períodos pendente da política de retenção (QA-004) |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
-| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 86,4% |
+| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 94,45% (coverlet.MTP) |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---

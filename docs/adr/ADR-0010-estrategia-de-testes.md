@@ -149,6 +149,21 @@ As camadas de domínio, arquitetura e contrato executam em segundos e rodam a ca
 > *Alternativas rejeitadas:* **sem limite, só relatório**, porque relatório sem consequência é ignorado; **agendado ou manual em vez de a cada push**, desnecessário com 17 segundos; **limite em 90%**, porque a folga de 4 pontos absorve um teste mais fraco sem bloquear uma entrega legítima, como no limite de cobertura; **incluir os testes de integração**, porque exigiria PostgreSQL por mutante e multiplicaria o tempo, para cobrir código que já tem teste de integração próprio.
 >
 > *Gatilho de revisão:* tempo de execução acima de 5 minutos, ou pontuação estável acima de 95% (o limite pode subir).
+
+> **Revisão de 2026-10-05 (card 34.1): executor de testes e coletor de cobertura.** Por antecipação decidida pelo usuário (o xunit v2 segue suportado), os quatro projetos passam ao **xunit v3 (4.0.1) na Microsoft Testing Platform**, declarada no `global.json`. O VSTest sai (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`). A cobertura passa ao **`coverlet.MTP` 10.1.0**, no lugar do `coverlet.collector` e do `coverlet.msbuild`, e o Stryker usa o executor `mtp`. O que esta decisão mede não muda: linha do `PacioliBank.Ledger`, só pelos testes de domínio, em Release, limite de 85%; mutação com limite de 85%.
+>
+> - **Medidas com as ferramentas novas:** cobertura **94,45%** (era 88,15% com o `coverlet.msbuild`). Os coletores instrumentam de modo diferente e os números não são comparáveis; a causa da diferença não foi decomposta [NVI]. Mutação **89,17%**, igual em duas execuções (era 89,81% no VSTest; diferença não decomposta [NVI])
+> - **Poder de detecção dos dois limites, verificado de novo:** sem os testes de contrato, a cobertura cai a 77,83% e o passo reprova; com o limite em 95%, também reprova. Com o limite de mutação em 95%, o Stryker falha
+> - **Achado:** três testes de observabilidade liam o exportador em memória com a API ainda viva; sob o v3 passaram a falhar de forma intermitente (coleção alterada durante a leitura). A API agora é encerrada antes da leitura
+> - O gatilho "cobertura estável muito acima do limite" ficou perto: 94,45% numa medida só. O limite **não** sobe nesta revisão; subir é decisão própria, depois de a medida se mostrar estável
+>
+> *Alternativas rejeitadas, medidas:*
+> - **Ficar no xunit v2 com VSTest.** Funcionava; rejeitada por decisão do usuário de antecipar o card. *Voltaria a ser considerada* se a plataforma nova trouxesse regressão que o v2 não tem
+> - **xunit v3 mantendo o VSTest** (`xunit.v3.mtp-off`), o escopo inicial. A suíte passa e a cobertura funciona, mas o Stryker 5 não exercita o código mutado: pontuação 0%, os 157 mutantes "sobrevivem". O limite de mutação deixaria de medir qualquer coisa
+> - **xunit v3 com a plataforma ligada e o `dotnet test` em modo VSTest.** O SDK 10 recusa a combinação ("Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK")
+> - **Manter o `coverlet.msbuild`.** Ele se prende ao alvo de teste do VSTest, que deixou de existir; o `coverlet.MTP` é o coletor da plataforma, do mesmo projeto e na mesma versão
+>
+> *Gatilho de revisão:* o Stryker ou o coverlet deixarem de suportar a plataforma, ou uma versão do SDK mudar de novo o contrato do `dotnet test`.
 - Teste de carga não integra o pipeline de commit, executando em ciclo próprio ([ENF](../specs/ENF-especificacao-nao-funcional.md) §10)
 
 ## Análise das opções rejeitadas

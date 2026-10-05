@@ -9,12 +9,12 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 2 | 34.1, 38 |
+| Backlog/Ideias | 1 | 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 52 | 01 a 34, 36 e 37, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1 e 33.2. O 35 foi removido do quadro |
+| Concluído | 53 | 01 a 34, 36 e 37, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
 
 ---
 
@@ -25,18 +25,6 @@ _Vazia, e esse é o estado correto. Todo item do projeto foi triado para uma col
 ---
 
 ## Backlog/Ideias
-
-### 34.1. Migrar os testes para xunit v3
-
-`prioridade: Baixa` · `teste`
-
-SEPARADO DO CARD 34 (04/10/2026), como o próprio card 34 manda: xunit v3 muda o modelo de execução (o projeto de teste vira executável), troca o pacote (xunit para xunit.v3) e afeta fixture compartilhada, IAsyncLifetime e o coletor de cobertura.
-
-POR QUE NÃO AGORA: a suíte em xunit 2.9.x funciona, está verificada e roda no CI. Migrar sem necessidade troca um risco conhecido por um desconhecido.
-
-GATILHO DE ADOÇÃO: fim do suporte ao xunit v2, ou necessidade de recurso exclusivo do v3 (por exemplo, Microsoft Testing Platform no lugar do VSTest).
-
-CRITÉRIO, quando entrar: mesma contagem de testes, verde localmente e no CI; fixture compartilhada do PostgreSQL preservada; limite de cobertura do domínio medido de novo e funcionando.
 
 ### 38. Incluir transferência entre contas no escopo
 
@@ -1102,3 +1090,39 @@ CRITÉRIO ATENDIDO:
 - CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37327840453
 
 DECLARADO: retenção (QA-004) sem resposta, nada arquivado. Custo da inserção a mais e da busca por sequência em várias partições não medido sob carga [NVI].
+
+### 34.1. Migrar os testes para xunit v3
+
+`prioridade: Baixa` · `teste`
+
+SEPARADO DO CARD 34 (04/10/2026), como o próprio card 34 manda: xunit v3 muda o modelo de execução (o projeto de teste vira executável), troca o pacote (xunit para xunit.v3) e afeta fixture compartilhada, IAsyncLifetime e o coletor de cobertura.
+
+POR QUE NÃO AGORA: a suíte em xunit 2.9.x funciona, está verificada e roda no CI. Migrar sem necessidade troca um risco conhecido por um desconhecido.
+
+GATILHO DE ADOÇÃO: fim do suporte ao xunit v2, ou necessidade de recurso exclusivo do v3 (por exemplo, Microsoft Testing Platform no lugar do VSTest).
+
+CRITÉRIO, quando entrar: mesma contagem de testes, verde localmente e no CI; fixture compartilhada do PostgreSQL preservada; limite de cobertura do domínio medido de novo e funcionando.
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+ANTECIPAÇÃO POR DECISÃO DO USUÁRIO: o gatilho não ocorreu (o xunit v2 segue suportado). Escopo inicial: xunit.v3 mantendo o VSTest.
+
+--- ATUALIZAÇÃO 05/10/2026, durante (append-only) ---
+
+ESCOPO REVISTO, porque o anterior se mostrou impossível (medido): com a Microsoft Testing Platform ligada, o dotnet test do SDK 10 recusa VSTest; com ela desligada (xunit.v3.mtp-off), o Stryker pontua 0%. NOVO ESCOPO: adotar a Microsoft Testing Platform, coverlet.MTP, Stryker com executor mtp, CI reescrito.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE:
+- Quatro projetos de teste em xunit.v3 4.0.1, executáveis, na Microsoft Testing Platform declarada no global.json; saem Microsoft.NET.Test.Sdk, xunit.runner.visualstudio, coverlet.collector e coverlet.msbuild; entra coverlet.MTP 10.1.0
+- Fixture compartilhada do PostgreSQL preservada (IAsyncLifetime com ValueTask); 15 chamadas recebem o token de cancelamento do teste (analisador xUnit1051); ambiguidade de TestResult resolvida
+- CI: testes e cobertura com as opções da plataforma; Stryker com test-runner mtp
+- ADR-0010 revisado com 4 alternativas rejeitadas, medidas; ENF 1.11
+
+CRITÉRIO ATENDIDO:
+- Mesmos 192 testes, verdes localmente e no CI; build sem avisos
+- Cobertura do domínio 94,45% com o coletor novo (88,15% com o antigo; não comparáveis, causa não decomposta [NVI]); limite verificado: sem os testes de contrato, 77,83% e reprova; com limite 95%, reprova
+- Mutação 89,17%, igual em duas execuções; com limite 95%, o Stryker falha
+- Achado: três testes de observabilidade liam o exportador em memória com a API viva, intermitentes sob o v3; a API passa a ser encerrada antes da leitura
+- gitleaks limpo
+

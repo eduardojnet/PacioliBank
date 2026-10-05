@@ -2,9 +2,9 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-04 (vigésima nona revisão)
+**Última atualização:** 2026-10-05 (trigésima revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 192 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 86 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
+**Testes:** 192 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 86 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-05). Cobertura de linha do domínio: 94,45% (coverlet.MTP, card 34.1), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,17% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -155,7 +155,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 98 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 88,15%; teste de mutação 89,81% (card 36) |
+| `PacioliBank.Domain.Tests` | 98 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 94,45% (coverlet.MTP); teste de mutação 89,17% (cards 36 e 34.1) |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
@@ -169,9 +169,9 @@ A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em 
 
 Auditoria de dependências (card 31.1): o restore audita as dependências, transitivas inclusive, e alerta alto ou crítico vira erro (`NuGetAudit` explícito no `Directory.Build.props`, modo `all`, nível `high`); vale localmente, no CI e na imagem. O CI lista as demais severidades num passo informativo. Em 2026-10-04, nenhum pacote vulnerável em nenhuma severidade.
 
-Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release (`coverlet.msbuild`), e reprova abaixo de 85%. Hoje: 88,15%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010.
+Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release, e reprova abaixo de 85%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010. Desde o card 34.1, o coletor é o `coverlet.MTP`: hoje 94,45%, contra 88,15% na última medida do `coverlet.msbuild`. Os números não são comparáveis entre os coletores; a causa da diferença não foi decomposta [NVI]. O limite foi verificado de novo: sem os testes de contrato, 77,83%, e o passo reprova.
 
-Teste de mutação (card 36): tarefa própria do CI roda o Stryker.NET 5.0.0 (fixado em `dotnet-tools.json`) sobre o domínio, em 17 segundos localmente e 64 no runner, em paralelo, e reprova abaixo de 85% de mutantes mortos. Num ramo de prova sem os testes de contrato, a tarefa reprovou (ramo apagado). Hoje: 89,81%, estável. Exclusões e sobreviventes aceitos, todos com motivo, na revisão do ADR-0010. Localmente: `dotnet tool restore` e, em `tests/PacioliBank.Domain.Tests`, `dotnet stryker`.
+Teste de mutação (card 36): tarefa própria do CI roda o Stryker.NET 5.0.0 (fixado em `dotnet-tools.json`) sobre o domínio, em 17 segundos localmente e 64 no runner, em paralelo, e reprova abaixo de 85% de mutantes mortos. Num ramo de prova sem os testes de contrato, a tarefa reprovou (ramo apagado). Hoje: 89,17%, igual em duas execuções, com o executor `mtp` do Stryker (card 34.1; era 89,81% no VSTest, diferença não decomposta [NVI]); com limite de 95% a execução falha, o que confirma o limite. Exclusões e sobreviventes aceitos, todos com motivo, na revisão do ADR-0010. Localmente: `dotnet tool restore` e, em `tests/PacioliBank.Domain.Tests`, `dotnet stryker`.
 
 ### Especificações e diagramas
 
@@ -434,7 +434,7 @@ Bloqueados, encerrados como decisão registrada por decisão do usuário:
 Do Backlog, por decisão do usuário:
 
 15. ~~**[34] Atualizar as dependências NuGet**~~ concluído em 2026-10-04, dentro do xunit v2
-   - **[34.1] Migrar os testes para xunit v3**, no Backlog com gatilho (fim do suporte ao v2 ou recurso exclusivo do v3)
+   - ~~**[34.1] Migrar os testes para xunit v3**~~ concluído em 2026-10-05 por antecipação: xunit v3 na Microsoft Testing Platform, que sai do VSTest
 
 16. ~~**[36] Teste de mutação com Stryker**~~ concluído em 2026-10-04: 57,49% para 89,81%, limite de 85% no CI
 
@@ -448,7 +448,9 @@ Do Backlog, por antecipação decidida pelo usuário (gatilho não ocorrido):
 
 19. ~~**[37] Particionar o ledger por tempo** (R-04)~~ concluído em 2026-10-05 por antecipação, opção b2: chaves de unicidade numa tabela não particionada (ADR-0013)
 
-A Fazer está vazia. Próximos por decisão do usuário.
+A Fazer está vazia. Por decisão do usuário, a seguir:
+
+20. **[38] Transferência entre contas** (fora do escopo pela EF 3.2), do Backlog
 
 ---
 
@@ -475,6 +477,8 @@ Os testes de integração exigem Docker em execução.
 
 Congeladas porque estão verificadas com build limpo e suíte verde, não porque são as mais recentes. Atualização de dependências é item próprio da fila, com verificação própria.
 
+Revisada no card 34.1 (2026-10-05): saem o VSTest (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`), o `xunit` 2.x e os dois coletores do coverlet; entram `xunit.v3` e `coverlet.MTP`.
+
 Revisada no card 34 (2026-10-04): `dotnet list package --outdated` mostrou defasadas só as ferramentas de teste, atualizadas dentro do xunit v2; os pacotes de produção já estavam na última versão. A tabela também passou a listar todos os pacotes da solução: quatro tinham entrado sem registro aqui.
 
 | Pacote | Versão | Onde |
@@ -492,11 +496,8 @@ Revisada no card 34 (2026-10-04): `dotnet list package --outdated` mostrou defas
 | Imagem `mcr.microsoft.com/dotnet/aspire-dashboard` | 13.6.0 (card 33.1) | `docker compose`, só local |
 | NetArchTest.Rules | 1.3.2 (card 26) | Architecture.Tests |
 | Testcontainers.PostgreSql | 4.15.0 | Integration.Tests |
-| xunit | 2.9.3 (card 34; v3 no card 34.1) | testes |
-| xunit.runner.visualstudio | 4.0.0 (card 34) | testes |
-| Microsoft.NET.Test.Sdk | 18.10.1 (card 34) | testes |
-| coverlet.collector | 10.1.0 (card 34) | testes |
-| coverlet.msbuild | 10.1.0 (card 34; limite de cobertura, card 31.2) | Domain.Tests |
+| xunit.v3 | 4.0.1 (card 34.1; na Microsoft Testing Platform, executor declarado no `global.json`) | testes |
+| coverlet.MTP | 10.1.0 (card 34.1; limite de cobertura, card 31.2) | testes |
 | dotnet-stryker | 5.0.0 (ferramenta local, `dotnet-tools.json`; card 36) | teste de mutação |
 
 ---
@@ -594,3 +595,4 @@ confirmação.
 | 2026-10-05 | Card 35 (avaliar o PostgreSQL 18) removido do quadro por decisão do usuário. Motivo: sem gatilho (o 17 tem suporte até 2029) e o ganho citado, UUID v7 na chave primária, não depende do banco, porque o identificador é gerado pela aplicação, e o .NET 10 já tem `Guid.CreateVersion7()` |
 | 2026-10-05 | Card 32 concluído por antecipação (o gatilho, p99 da histórica acima da RNF-002, não foi medido): fechamento diário síncrono, mantido na transação do lançamento, com correção dos dias seguintes a um retroativo; migração 0002 com preenchimento; `computedFrom` = `dailyBalance` (EF 1.6). Revisão do ADR-0007 com 3 alternativas rejeitadas, inclusive a recomputação assíncrona que o próprio ADR previa. 5 testes, cinco mutações detectadas. A 0002 foi aplicada ao volume local em uso, sem recriar o banco: nenhuma divergência. ENF 1.9. 183 verdes |
 | 2026-10-05 | Card 37 concluído por antecipação (QA-004 sem resposta), opção b2 decidida pelo usuário: ledger particionado por mês de `recorded_at`; as quatro restrições de unicidade, verificadas como recusadas pelo PostgreSQL em tabela particionada, foram para `entry_keys`, não particionada, com os mesmos nomes; regra 6 preservada. Migração 0003 com cópia dos dados e repontamento das chaves estrangeiras; função de partição chamada pelo migrador. 9 testes, mutações detectadas; duas mutações (sequência e partição por fato) são recusadas pela própria estrutura. No volume local: 260 lançamentos e a mesma soma antes e depois. ADR-0013 com 5 alternativas rejeitadas. 192 verdes |
+| 2026-10-05 | Card 34.1 concluído por antecipação (o xunit v2 segue suportado): xunit v3 4.0.1 nos quatro projetos. O escopo inicial, manter o VSTest, se mostrou impossível, medido: o `dotnet test` do SDK 10 recusa VSTest com a Microsoft Testing Platform ligada, e com ela desligada o Stryker pontua 0% (não exercita o código mutado). Adotada a Microsoft Testing Platform: `global.json` declara o executor, `coverlet.MTP` no lugar dos dois coletores, Stryker com executor `mtp`, CI reescrito. Mesmos 192 testes. Cobertura do domínio 94,45% com o coletor novo (88,15% com o antigo; não comparáveis) e mutação 89,17%; os dois limites verificados de novo, reprovando. Achado: um teste de métricas e dois de rastreamento liam o exportador em memória com a API viva, intermitente sob o v3; a API passou a ser encerrada antes da leitura. ADR-0010 revisado; ENF 1.11 |
