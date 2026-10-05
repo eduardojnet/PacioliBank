@@ -11,10 +11,10 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 0 | |
 | A Fazer | 0 | |
-| Em Andamento | 1 | 38, entregue e aguardando a reexecução do CI (falha de runner do GitHub). Limite de 1 em curso, por decisão. |
+| Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 54 | 01 a 34, 36, 37 e 39, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
+| Concluído | 55 | 01 a 34, 36 a 39, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
 
 ---
 
@@ -38,7 +38,7 @@ _Vazia. Próximos por decisão do usuário._
 
 ## Em Andamento
 
-**38. Incluir transferência entre contas no escopo:** código, testes e documentos entregues (seção do card abaixo, em Concluído, já com a ENTREGA). Dois jobs do CI não conseguiram runner do GitHub e foram cancelados; o card fecha quando o CI reexecutado ficar verde.
+_Vazia. Cards 38 e 39 concluídos em 2026-10-05._
 
 ---
 
@@ -1153,6 +1153,7 @@ CRITÉRIO ATENDIDO:
 - Mutação do domínio 87,06% (sobreviventes novas das categorias já aceitas); cobertura 95,41%
 - Insomnia 52/52 duas vezes; 0004 aplicada ao volume local em uso; curl: 201, reenvio 200, 400 e 422
 - 230 testes verdes; build sem avisos; gitleaks limpo
+- CI: na execução do commit 8cd327f, dois jobs foram cancelados por falta de runner do GitHub (infraestrutura); no push seguinte (0927bd4, que contém este código), verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37369728227
 
 DECLARADO: estorno de transferência, tarifa, limites e moedas diferentes pendentes da QA-009; evento sem o identificador da transferência; custo de uq_entries_leg e da contenção com dois bloqueios não medido sob carga [NVI].
 
@@ -1167,3 +1168,5 @@ SITUAÇÃO: a linha Build dizia "os 6 projetos da solução" (são 9: 5 de produ
 --- ENTREGA 05/10/2026 (append-only) ---
 
 ENTREGUE: build reverificado do zero (`dotnet build --no-incremental`): 9 projetos, 0 avisos, 0 erros. Linha corrigida e datada, com o commit verificado. Linhas de testes e de verificação manual conferidas: já datadas de hoje, por execução de hoje. ESTADO §11 registra a correção.
+
+CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37369728227
