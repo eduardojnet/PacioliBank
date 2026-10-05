@@ -283,6 +283,45 @@ public class AccountTests
     }
 
     [Fact]
+    public void Conta_sem_identificador_e_recusada_na_reidratacao()
+    {
+        var erro = Assert.Throws<ArgumentException>(() => Account.Rehydrate(
+            Guid.Empty, Titular, Currency.Brl, AccountStatus.Active, 0, Money.Zero(Currency.Brl)));
+
+        Assert.Equal("accountId", erro.ParamName);
+    }
+
+    [Fact]
+    public void Conta_reidratada_preserva_o_titular_que_baseia_o_controle_de_acesso()
+    {
+        // RF-009: a titularidade sera conferida contra este campo.
+        Assert.Equal(Titular, Conta().CustomerId);
+    }
+
+    [Fact]
+    public void Valor_sem_moeda_e_recusado_como_moeda_divergente()
+    {
+        // default(Money) nao tem moeda. Nao nasce de Money.Of, mas pode nascer
+        // de um mapeamento descuidado; o agregado nao confia na origem.
+        var conta = Conta(saldo: 100.00m);
+        var comando = new PostingRequest(EntryDirection.Credit, default, Agora, "k", Guid.NewGuid());
+
+        Assert.Throws<CurrencyMismatchException>(() => conta.Post(comando));
+        Assert.Equal(0, conta.LastSequence);
+    }
+
+    [Fact]
+    public void Lancamento_sem_instante_do_fato_e_recusado()
+    {
+        var conta = Conta(saldo: 0m);
+
+        var erro = Assert.Throws<ArgumentException>(
+            () => conta.Post(Comando(EntryDirection.Credit, 10.00m, quando: default(DateTimeOffset))));
+
+        Assert.Equal("occurredAt", erro.ParamName);
+    }
+
+    [Fact]
     public void Sequencia_negativa_na_reidratacao_e_recusada()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => Account.Rehydrate(

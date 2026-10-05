@@ -142,6 +142,20 @@ public class LedgerServiceTests
                 new StatementQuery(Conta, Agora, Agora.AddDays(-1), null, null), CancellationToken.None));
     }
 
+    // ---------------------------------------------------------------- RF-007
+
+    [Fact]
+    public async Task Estorno_chega_ao_armazenamento_com_a_impressao_de_estorno()
+    {
+        var lancamento = Guid.NewGuid();
+        var comando = new ReversalCommand(Conta, lancamento, Agora, "estorno-1", Guid.NewGuid());
+
+        await _service.ReverseAsync(comando, CancellationToken.None);
+
+        Assert.Equal(new ReversalRequest(Agora, "estorno-1", comando.CorrelationId), _store.LastReversal);
+        Assert.Equal(RequestFingerprint.OfReversal(Conta, lancamento, _store.LastReversal!), _store.LastHash);
+    }
+
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
@@ -164,10 +178,16 @@ public class LedgerServiceTests
                 Guid.NewGuid(), accountId, 1, request.Direction, request.Amount, request.OccurredAt, Agora, request.Amount, false));
         }
 
+        public ReversalRequest? LastReversal { get; private set; }
+
         public Task<PostEntryResult> ReverseAsync(Guid accountId, Guid entryId, ReversalRequest request, ReadOnlyMemory<byte> requestHash, CancellationToken cancellationToken)
         {
             Called = true;
-            throw new NotSupportedException();
+            LastHash = requestHash.ToArray();
+            LastReversal = request;
+            var valor = Money.Of(10.00m, Currency.Brl);
+            return Task.FromResult(new PostEntryResult(
+                Guid.NewGuid(), accountId, 2, EntryDirection.Debit, valor, request.OccurredAt, Agora, Money.Zero(Currency.Brl), false));
         }
 
         public Task<BalanceResult> GetBalanceAsync(Guid accountId, DateTimeOffset? asOf, CancellationToken cancellationToken)

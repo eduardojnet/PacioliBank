@@ -113,6 +113,19 @@ public class MoneyTests
     }
 
     [Fact]
+    public void Valor_sem_moeda_definida_e_recusado()
+    {
+        Assert.Throws<UnsupportedCurrencyException>(() => Money.Of(10.00m, default));
+    }
+
+    [Fact]
+    public void Representacao_textual_traz_a_moeda_e_o_valor_no_formato_do_contrato()
+    {
+        Assert.Equal("BRL 1234.50", Money.Of(1234.5m, Currency.Brl).ToString());
+        Assert.Equal("BRL", Currency.Brl.ToString());
+    }
+
+    [Fact]
     public void Representacao_de_contrato_usa_cultura_invariante()
     {
         // EF secao 8.2: o separador decimal nao pode depender da cultura do servidor.

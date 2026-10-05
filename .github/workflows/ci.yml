@@ -60,10 +60,24 @@ jobs:
           --results-directory TestResults
           --logger trx
 
-      # Cobertura informativa, sem limite minimo: forca das assercoes e
-      # assunto do teste de mutacao (card 36), nao de percentual de linhas.
+      # RNF-036 e criterio de bloqueio do ADR-0010 (card 31.2): cobertura de
+      # linha do projeto de dominio (PacioliBank.Ledger) medida SO pelos testes
+      # de dominio, a base da piramide, e nao pela soma com a integracao.
+      # Abaixo de 85%, reprova.
+      - name: Cobertura do dominio, limite de 85%
+        run: >-
+          dotnet test tests/PacioliBank.Domain.Tests --no-build -c Release
+          -p:CollectCoverage=true
+          -p:Include="[PacioliBank.Ledger]*"
+          -p:Threshold=85
+          -p:ThresholdType=line
+          -p:CoverletOutputFormat=cobertura
+          -p:CoverletOutput=${{ github.workspace }}/TestResults/dominio/
+
       # Publica sempre que os testes rodaram, inclusive com falha; se o build
       # reprovou, nao ha o que publicar e o passo nao acrescenta outra falha.
+      # Alem do limite do dominio, a cobertura dos demais projetos e
+      # informativa: forca das assercoes e assunto do teste de mutacao (card 36).
       - name: Publicar resultados e cobertura
         if: always() && steps.testes.outcome != 'skipped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

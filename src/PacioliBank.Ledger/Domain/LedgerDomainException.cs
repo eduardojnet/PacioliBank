@@ -1,12 +1,16 @@
 namespace PacioliBank.Ledger.Domain;
 
 /// <summary>Raiz das excecoes de invariante do dominio do ledger.</summary>
+/// <remarks>
+/// Cada excecao tem so os construtores que o codigo usa, em regra o que exige
+/// os dados da rejeicao. Os construtores "padrao" (sem argumento, so mensagem,
+/// mensagem com excecao interna) foram removidos no card 31.2: ninguem os
+/// chamava, e permitiam criar, por exemplo, saldo insuficiente sem os valores
+/// que a borda HTTP devolve ao chamador. A regra CA1032, que os exigiria, nao
+/// esta ativa no modo Recommended.
+/// </remarks>
 public class LedgerDomainException : Exception
 {
-    public LedgerDomainException()
-    {
-    }
-
     public LedgerDomainException(string message)
         : base(message)
     {
@@ -21,33 +25,18 @@ public class LedgerDomainException : Exception
 /// <summary>Moeda fora do catalogo suportado. Ver RN-007.</summary>
 public sealed class UnsupportedCurrencyException : LedgerDomainException
 {
-    public UnsupportedCurrencyException()
-        : base("Moeda nao suportada.")
-    {
-    }
-
     public UnsupportedCurrencyException(string code)
         : base($"Moeda nao suportada: '{code}'.")
     {
         Code = code;
     }
 
-    public UnsupportedCurrencyException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-
-    public string? Code { get; }
+    public string Code { get; }
 }
 
 /// <summary>Valor com mais casas decimais do que a moeda expoe. Ver RN-002.</summary>
 public sealed class InvalidMoneyScaleException : LedgerDomainException
 {
-    public InvalidMoneyScaleException()
-        : base("Escala monetaria invalida.")
-    {
-    }
-
     public InvalidMoneyScaleException(decimal amount, string currencyCode)
         : base($"O valor {amount} excede a escala da moeda '{currencyCode}'.")
     {
@@ -55,24 +44,14 @@ public sealed class InvalidMoneyScaleException : LedgerDomainException
         CurrencyCode = currencyCode;
     }
 
-    public InvalidMoneyScaleException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-
     public decimal Amount { get; }
 
-    public string? CurrencyCode { get; }
+    public string CurrencyCode { get; }
 }
 
 /// <summary>Operacao aritmetica entre moedas distintas. Ver RN-007.</summary>
 public sealed class CurrencyMismatchException : LedgerDomainException
 {
-    public CurrencyMismatchException()
-        : base("Operacao entre moedas distintas.")
-    {
-    }
-
     public CurrencyMismatchException(string left, string right)
         : base($"Operacao entre moedas distintas: '{left}' e '{right}'.")
     {
@@ -80,24 +59,14 @@ public sealed class CurrencyMismatchException : LedgerDomainException
         Right = right;
     }
 
-    public CurrencyMismatchException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
+    public string Left { get; }
 
-    public string? Left { get; }
-
-    public string? Right { get; }
+    public string Right { get; }
 }
 
 /// <summary>A conta nao aceita lancamentos na situacao atual. Ver RN-008.</summary>
 public sealed class AccountInactiveException : LedgerDomainException
 {
-    public AccountInactiveException()
-        : base("A conta nao aceita lancamentos.")
-    {
-    }
-
     public AccountInactiveException(Guid accountId, string status)
         : base($"A conta '{accountId}' nao aceita lancamentos na situacao '{status}'.")
     {
@@ -105,29 +74,14 @@ public sealed class AccountInactiveException : LedgerDomainException
         Status = status;
     }
 
-    public AccountInactiveException(string message)
-        : base(message)
-    {
-    }
-
-    public AccountInactiveException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-
     public Guid AccountId { get; }
 
-    public string? Status { get; }
+    public string Status { get; }
 }
 
 /// <summary>Valor de lancamento nao positivo. Ver RN-002.</summary>
 public sealed class InvalidEntryAmountException : LedgerDomainException
 {
-    public InvalidEntryAmountException()
-        : base("O valor do lancamento deve ser positivo.")
-    {
-    }
-
     public InvalidEntryAmountException(decimal amount)
         : base($"O valor do lancamento deve ser positivo. Recebido: {amount}.")
     {
@@ -155,15 +109,6 @@ public sealed class MissingIdempotencyKeyException : LedgerDomainException
     {
     }
 
-    public MissingIdempotencyKeyException(string message)
-        : base(message)
-    {
-    }
-
-    public MissingIdempotencyKeyException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
 }
 
 /// <summary>
@@ -172,26 +117,11 @@ public sealed class MissingIdempotencyKeyException : LedgerDomainException
 /// </summary>
 public sealed class InsufficientFundsException : LedgerDomainException
 {
-    public InsufficientFundsException()
-        : base("Saldo insuficiente.")
-    {
-    }
-
     public InsufficientFundsException(decimal availableBalance, decimal requestedAmount)
         : base($"Saldo insuficiente. Disponivel: {availableBalance}. Solicitado: {requestedAmount}.")
     {
         AvailableBalance = availableBalance;
         RequestedAmount = requestedAmount;
-    }
-
-    public InsufficientFundsException(string message)
-        : base(message)
-    {
-    }
-
-    public InsufficientFundsException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public decimal AvailableBalance { get; }
@@ -202,26 +132,11 @@ public sealed class InsufficientFundsException : LedgerDomainException
 /// <summary>Tentativa de estornar lancamento de outra conta.</summary>
 public sealed class EntryNotFromThisAccountException : LedgerDomainException
 {
-    public EntryNotFromThisAccountException()
-        : base("O lancamento nao pertence a esta conta.")
-    {
-    }
-
     public EntryNotFromThisAccountException(Guid entryId, Guid accountId)
         : base($"O lancamento '{entryId}' nao pertence a conta '{accountId}'.")
     {
         EntryId = entryId;
         AccountId = accountId;
-    }
-
-    public EntryNotFromThisAccountException(string message)
-        : base(message)
-    {
-    }
-
-    public EntryNotFromThisAccountException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public Guid EntryId { get; }
@@ -232,25 +147,10 @@ public sealed class EntryNotFromThisAccountException : LedgerDomainException
 /// <summary>Estorno de estorno e proibido. Ver RN-004.</summary>
 public sealed class CannotReverseReversalException : LedgerDomainException
 {
-    public CannotReverseReversalException()
-        : base("Nao e possivel estornar um lancamento de estorno.")
-    {
-    }
-
     public CannotReverseReversalException(Guid entryId)
         : base($"O lancamento '{entryId}' ja e um estorno e nao pode ser estornado.")
     {
         EntryId = entryId;
-    }
-
-    public CannotReverseReversalException(string message)
-        : base(message)
-    {
-    }
-
-    public CannotReverseReversalException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public Guid EntryId { get; }
@@ -259,25 +159,10 @@ public sealed class CannotReverseReversalException : LedgerDomainException
 /// <summary>Conta inexistente.</summary>
 public sealed class AccountNotFoundException : LedgerDomainException
 {
-    public AccountNotFoundException()
-        : base("Conta nao encontrada.")
-    {
-    }
-
     public AccountNotFoundException(Guid accountId)
         : base($"Conta nao encontrada: '{accountId}'.")
     {
         AccountId = accountId;
-    }
-
-    public AccountNotFoundException(string message)
-        : base(message)
-    {
-    }
-
-    public AccountNotFoundException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public Guid AccountId { get; }
@@ -288,11 +173,6 @@ public sealed class AccountNotFoundException : LedgerDomainException
 /// </summary>
 public sealed class IdempotencyConflictException : LedgerDomainException
 {
-    public IdempotencyConflictException()
-        : base("A chave de idempotencia ja foi usada com conteudo diferente.")
-    {
-    }
-
     public IdempotencyConflictException(Guid accountId, string idempotencyKey)
         : base($"A chave de idempotencia '{idempotencyKey}' ja foi usada na conta '{accountId}' com conteudo diferente.")
     {
@@ -300,19 +180,9 @@ public sealed class IdempotencyConflictException : LedgerDomainException
         IdempotencyKey = idempotencyKey;
     }
 
-    public IdempotencyConflictException(string message)
-        : base(message)
-    {
-    }
-
-    public IdempotencyConflictException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-
     public Guid AccountId { get; }
 
-    public string? IdempotencyKey { get; }
+    public string IdempotencyKey { get; }
 }
 
 /// <summary>
@@ -324,11 +194,6 @@ public sealed class LedgerUnavailableException : LedgerDomainException
 {
     public LedgerUnavailableException()
         : base("O ledger esta temporariamente indisponivel. A nova tentativa e segura.")
-    {
-    }
-
-    public LedgerUnavailableException(string message)
-        : base(message)
     {
     }
 
@@ -345,25 +210,10 @@ public sealed class LedgerUnavailableException : LedgerDomainException
 /// </summary>
 public sealed class EntryNotFoundException : LedgerDomainException
 {
-    public EntryNotFoundException()
-        : base("Lancamento nao encontrado.")
-    {
-    }
-
     public EntryNotFoundException(Guid entryId)
         : base($"Lancamento nao encontrado: '{entryId}'.")
     {
         EntryId = entryId;
-    }
-
-    public EntryNotFoundException(string message)
-        : base(message)
-    {
-    }
-
-    public EntryNotFoundException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public Guid EntryId { get; }
@@ -375,25 +225,10 @@ public sealed class EntryNotFoundException : LedgerDomainException
 /// </summary>
 public sealed class EntryAlreadyReversedException : LedgerDomainException
 {
-    public EntryAlreadyReversedException()
-        : base("O lancamento ja foi estornado.")
-    {
-    }
-
     public EntryAlreadyReversedException(Guid entryId)
         : base($"O lancamento '{entryId}' ja foi estornado.")
     {
         EntryId = entryId;
-    }
-
-    public EntryAlreadyReversedException(string message)
-        : base(message)
-    {
-    }
-
-    public EntryAlreadyReversedException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public Guid EntryId { get; }
@@ -402,26 +237,11 @@ public sealed class EntryAlreadyReversedException : LedgerDomainException
 /// <summary>Limite de pagina do extrato acima do maximo admitido. Ver RF-005.</summary>
 public sealed class PageSizeExceededException : LedgerDomainException
 {
-    public PageSizeExceededException()
-        : base("Limite de pagina invalido.")
-    {
-    }
-
     public PageSizeExceededException(int requested, int maximum)
         : base($"Limite de pagina invalido: {requested}. O maximo admitido e {maximum}.")
     {
         Requested = requested;
         Maximum = maximum;
-    }
-
-    public PageSizeExceededException(string message)
-        : base(message)
-    {
-    }
-
-    public PageSizeExceededException(string message, Exception innerException)
-        : base(message, innerException)
-    {
     }
 
     public int Requested { get; }
@@ -432,18 +252,9 @@ public sealed class PageSizeExceededException : LedgerDomainException
 /// <summary>Instante de consulta invalido: futuro, ou intervalo invertido. Ver RN-009 e RF-004.</summary>
 public sealed class InvalidPointInTimeException : LedgerDomainException
 {
-    public InvalidPointInTimeException()
-        : base("Instante de consulta invalido.")
-    {
-    }
-
     public InvalidPointInTimeException(string message)
         : base(message)
     {
     }
 
-    public InvalidPointInTimeException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
 }
