@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.4
-**Data:** 2026-10-02
+**Versão:** 1.5
+**Data:** 2026-10-04
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -249,7 +249,7 @@ O sistema **deve** exigir chave de idempotência em todo comando de escrita, dev
 O sistema **deve** permitir reverter o efeito de um lançamento por meio de lançamento compensatório que referencia o original. **Não deve** permitir estorno em duplicidade nem estorno de estorno.
 
 - Justificativa da inferência: decorre logicamente de RN-003; sem estorno, erro operacional seria incorrigível
-- Questão aberta: QA-003
+- Questão QA-003: decidida, o estorno não pode negativar a conta (§10)
 - Aceite: [BDD](./BDD-comportamento.md) F06
 
 ### RF-008: Operar sob falha parcial `[Origem: enunciado]`
@@ -537,16 +537,18 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 
 | ID | Questão | Por que altera a decisão | Como obter | Conduta provisória |
 |---|---|---|---|---|
-| QA-001 | Existe limite, cheque especial ou saldo bloqueado? | Altera RN-001 e o cálculo de disponível | Produto e risco de crédito | Posição não negativa, com a validação isolada em política substituível |
+| QA-001 | Existe limite, cheque especial ou saldo bloqueado? | Altera RN-001 e o cálculo de disponível | Produto e risco de crédito | Posição não negativa. A validação está num único ponto do agregado (`Account.Post`); não há política substituível nem configuração |
 | QA-002 | Lançamento retroativo é permitido? Com que limite? | Altera RN-012, RF-004 e conciliação contábil | Operações e contabilidade | Permitido, com validação de saldo pela posição corrente |
-| QA-003 | Estorno pode gerar posição negativa? | Altera RF-007 | Operações | Rejeitar, com política configurável |
+| QA-003 | Estorno pode gerar posição negativa? | Altera RF-007 | Operações | **Decidida** (ESTADO §3): não; o estorno respeita RN-001 pela mesma validação de `Account.Post`. Não há política configurável |
 | QA-004 | Qual a retenção e a política de arquivamento do ledger? | Altera dimensionamento, custo e LGPD | Compliance e jurídico | Retenção integral no escopo do desafio |
 | QA-005 | Há exigência multimoeda? | Altera RN-007 e `Money` | Produto | BRL, com `Money` portando moeda desde o início |
 | QA-006 | Volume esperado: lançamentos por segundo, contas, taxa de leitura? | Dimensiona toda a ENF | Dados do legado | Premissa declarada na [ENF](./ENF-especificacao-nao-funcional.md) §3, explicitamente marcada como premissa |
-| QA-007 | Quem são os originadores e qual o modelo de autenticação vigente? | Altera RF-009 | Arquitetura corporativa | JWT validado contra emissor externo |
-| QA-008 | Qual o tamanho máximo de página do extrato? | Altera RF-005 e a proteção contra abuso (RNF-012) | Produto e canais | Padrão 50, máximo 200, acima disso `400 PAGE_SIZE_EXCEEDED`. Número escolhido na implementação, não informado pelo negócio |
+| QA-007 | Quem são os originadores e qual o modelo de autenticação vigente? | Altera RF-009 | Arquitetura corporativa | Especificada: JWT validado contra emissor externo (ADR-0009). **Não implementada:** hoje não há autenticação, e qualquer chamador opera qualquer conta (RF-009 pendente) |
+| QA-008 | Qual o tamanho máximo de página do extrato? | Altera RF-005 e a proteção contra abuso (RNF-012) | Produto e canais | Padrão 50, máximo 200, acima disso `400 PAGE_SIZE_EXCEEDED`. Número escolhido na implementação, não informado pelo negócio; constantes da porta de entrada (`LedgerService`), não configuração |
 
-**Compromisso de método:** nenhuma destas lacunas foi preenchida com número apresentado como fato. Cada conduta provisória é reversível e está isolada em ponto de extensão, de modo que a resposta do negócio altere configuração ou uma política, não o núcleo do domínio.
+**Compromisso de método:** nenhuma destas lacunas foi preenchida com número apresentado como fato, e cada conduta provisória é reversível.
+
+> **Revisão de 2026-10-04 (card 29, lacuna L-14).** O texto original dizia que cada conduta estava "isolada em ponto de extensão, de modo que a resposta do negócio altere configuração ou uma política, não o núcleo do domínio". Conferido contra o código, isso não vale: não há política nem configuração para nenhuma delas. O que existe é **um único ponto de mudança por questão**: a validação de saldo em `Account.Post` (QA-001, QA-003); a validação de saldo pela posição corrente, e não pela data do fato (QA-002); o catálogo de `Currency`, com `Money` já portando moeda (QA-005); as constantes de página em `LedgerService` (QA-008). A resposta do negócio muda esse ponto, no domínio ou na aplicação, com teste que já o cobre. Criar as políticas antes da resposta seria construir contra premissa não validada. QA-004 e QA-006 não têm ponto no código: retenção integral é a ausência de expurgo, e o volume é premissa da ENF §3. QA-007 está só especificada. As questões continuam sem resposta, porque o desafio não tem interlocutor de negócio; o card 29 foi encerrado como decisão registrada.
 
 ---
 
@@ -577,3 +579,4 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | 1.2 | 2026-10-02 | Eduardo J. G. do Carmo | §9: nomes dos eventos e identificador de deduplicação alinhados ao código (`pacioli.ledger.*.v1`, `message_id`); payload declarado como não especificado, com os defeitos conhecidos (card 24.2) |
 | 1.3 | 2026-10-02 | Eduardo J. G. do Carmo | §9: payload dos eventos especificado, campo a campo, com formatos da API; justificativa de manter `v1` (card 24.2) |
 | 1.4 | 2026-10-02 | Eduardo J. G. do Carmo | §8.5: campo `entriesReplayed` na posição consolidada, exibido pelo painel de evidência (card 25) |
+| 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §10: condutas provisórias corrigidas contra o código (lacuna L-14). Não há política substituível nem configuração; há um ponto único de mudança por questão. QA-003 marcada como decidida, coerente com o ESTADO §3. QA-007 declarada como especificada e não implementada (card 29) |

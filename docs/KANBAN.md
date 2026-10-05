@@ -13,8 +13,8 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
-| Bloqueado | 2 | 29, 30 |
-| Concluído | 42 | 01 a 28, 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Bloqueado | 1 | 30 |
+| Concluído | 43 | 01 a 29, 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -111,23 +111,6 @@ _Vazia. Os dois cartões que ocupavam a coluna (21 e 22) foram concluídos em 20
 ---
 
 ## Bloqueado
-
-### 29. Responder às 6 questões de negócio em aberto
-
-`prioridade: Média` · `spec` · `risco`
-
-BLOQUEADO POR: ausência de interlocutor de negócio. No desafio não há cliente para perguntar, então cada uma tem conduta provisória declarada e isolada em ponto de extensão.
-
-QA-001 limite ou cheque especial por conta
-QA-002 política de lançamento retroativo
-QA-004 retenção e arquivamento do ledger
-QA-005 exigência multimoeda
-QA-006 volume real: lançamentos por segundo, contas, taxa de leitura
-QA-007 modelo corporativo de identidade e escopos
-
-JÁ DECIDIDAS: QA-003 (estorno não negativa a conta) e RN-012 (bitemporalidade mantida).
-
-VALOR NO DESAFIO: este card É a entrega. Demonstra que as lacunas foram identificadas e tratadas como risco declarado, em vez de preenchidas com suposição silenciosa.
 
 ### 30. Executar testes de carga e validar os RNF de desempenho
 
@@ -839,3 +822,33 @@ CRITÉRIO ATENDIDO:
 - Verde em main com o limite ligado: https://github.com/eduardojnet/PacioliBank/actions/runs/37246866504
 - ENF §11 diz a verdade: RNF-036 realizada, com número e método. L-13 encerrada
 - Build sem avisos; 150 testes verdes (85 + 57 + 6 + 2)
+
+### 29. Responder às 6 questões de negócio em aberto
+
+`prioridade: Média` · `spec` · `risco`
+
+BLOQUEADO POR: ausência de interlocutor de negócio. No desafio não há cliente para perguntar, então cada uma tem conduta provisória declarada e isolada em ponto de extensão.
+
+QA-001 limite ou cheque especial por conta
+QA-002 política de lançamento retroativo
+QA-004 retenção e arquivamento do ledger
+QA-005 exigência multimoeda
+QA-006 volume real: lançamentos por segundo, contas, taxa de leitura
+QA-007 modelo corporativo de identidade e escopos
+
+JÁ DECIDIDAS: QA-003 (estorno não negativa a conta) e RN-012 (bitemporalidade mantida).
+
+VALOR NO DESAFIO: este card É a entrega. Demonstra que as lacunas foram identificadas e tratadas como risco declarado, em vez de preenchidas com suposição silenciosa.
+
+--- ENCERRAMENTO 04/10/2026, como decisão registrada (append-only) ---
+
+DECIDIDO PELO USUÁRIO: encerrar como decisão registrada (PROCESSO-KANBAN, coluna Bloqueado: sai 'quando o bloqueio cai, ou quando é reclassificado como decisão'). O bloqueio não caiu: o desafio não tem interlocutor de negócio. O que o desafio pode entregar é a lacuna declarada, com conduta provisória e risco.
+
+CONFERÊNCIA ANTES DE ENCERRAR: as condutas da EF §10 foram comparadas com o código. Três afirmações não valiam (lacuna L-14, aberta e encerrada neste card):
+- 'Isolada em ponto de extensão', alterável por 'configuração ou uma política': não há política nem configuração. A validação de saldo de QA-001 e QA-003 está em Account.Post
+- QA-007 com conduta 'JWT validado contra emissor externo': não há autenticação (RF-009 pendente)
+- QA-003 decidida no ESTADO §3 e aberta na EF e no BDD
+
+CORRIGIDO: EF 1.5 e BDD 1.2 descrevem um ponto único de mudança por questão, coberto por teste; QA-003 decidida nos três documentos; QA-007 especificada e não implementada. As políticas não foram criadas: seria construir contra premissa não validada.
+
+OBSERVAÇÃO: o card listava 6 questões; a EF tem também a QA-008 (tamanho de página), acrescentada no card 21, igualmente sem resposta do negócio.

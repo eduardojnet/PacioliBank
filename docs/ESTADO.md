@@ -61,7 +61,7 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 
 | ID | Questão | Decisão |
 |---|---|---|
-| QA-003 | Estorno pode gerar posição negativa? | **Não.** Respeita RN-001, com política isolada para troca futura |
+| QA-003 | Estorno pode gerar posição negativa? | **Não.** Respeita RN-001, pela mesma validação de `Account.Post`. Trocar a decisão é mudar esse ponto; não há política isolada (corrigido no card 29, L-14) |
 | RN-012 | Manter bitemporalidade (`occurredAt` separado de `recordedAt`)? | **Sim**, mantida no escopo |
 
 ### Decisões de processo, fora de ADR
@@ -75,7 +75,9 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 
 ### Questões de negócio ainda abertas
 
-QA-001 (limite ou cheque especial), QA-002 (política de lançamento retroativo), QA-004 (retenção do ledger), QA-005 (multimoeda), QA-006 (volume real), QA-007 (modelo de identidade). Detalhes e conduta provisória na [EF §10](./specs/EF-especificacao-funcional.md).
+QA-001 (limite ou cheque especial), QA-002 (política de lançamento retroativo), QA-004 (retenção do ledger), QA-005 (multimoeda), QA-006 (volume real), QA-007 (modelo de identidade), QA-008 (tamanho de página). Detalhes, conduta provisória e o ponto do código que cada resposta mudaria na [EF §10](./specs/EF-especificacao-funcional.md).
+
+Continuam sem resposta porque o desafio não tem interlocutor de negócio. O card 29, que pedia respondê-las, foi **encerrado como decisão registrada** em 2026-10-04: o que o desafio pode entregar é a lacuna declarada, com conduta provisória e risco, e não a resposta.
 
 ---
 
@@ -305,6 +307,18 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
+### L-14: Ponto de extensão declarado e inexistente nas questões de negócio (ENCERRADA em 2026-10-04, card 29)
+
+Ao encerrar o card 29, as condutas provisórias da EF §10 foram conferidas contra o código. Três afirmações não valiam:
+
+- A EF dizia que cada conduta estava "isolada em ponto de extensão", alterável por "configuração ou uma política". Não há política nem configuração para nenhuma. A validação de saldo de QA-001 (limite) e QA-003 (estorno) está escrita em `Account.Post`; o ESTADO §3 chamava isso de "política isolada para troca futura"
+- QA-007 tinha como conduta "JWT validado contra emissor externo", mas não há autenticação alguma (RF-009 pendente, já declarado no README e na §5)
+- QA-003 estava decidida no ESTADO §3 e aberta na EF e no BDD
+
+**Corrigido:** EF 1.5 e BDD 1.2 descrevem o que existe, um ponto único de mudança por questão, coberto por teste; QA-003 marcada como decidida nos três documentos; QA-007 como especificada e não implementada. As políticas não foram criadas: fazê-lo antes da resposta do negócio seria construir contra premissa não validada.
+
+**Severidade BAIXA:** nenhum comportamento muda; a afirmação exagerava a flexibilidade do desenho. Mesma família da L-09 e da L-13.
+
 ### L-13: RNF-036 declarada realizada sem nunca ter sido medida (ENCERRADA em 2026-10-04, card 31.2)
 
 A ENF §11 listava a RNF-036 (cobertura de linha ≥ 85% no projeto de domínio) como "realizada no código", e o ADR-0010 a põe no critério de bloqueio. Ninguém tinha medido. Medida no card 31, no projeto `PacioliBank.Ledger`, com o coverlet: **56,8%** só com os testes de domínio, **49,9%** só com os de integração, **74,9%** somando os dois (união das linhas cobertas).
@@ -381,6 +395,10 @@ Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 12. ~~**[31] CI no GitHub Actions** (ADR-0010)~~ concluído em 2026-10-04
    - ~~**[31.1] Auditoria de dependências vulneráveis no CI** (RNF-026)~~ concluído em 2026-10-04
    - ~~**[31.2] Cobertura do domínio abaixo da RNF-036** (L-13)~~ concluído em 2026-10-04, opção (a)
+
+Bloqueados, encerrados como decisão registrada por decisão do usuário:
+
+13. ~~**[29] Responder às questões de negócio em aberto**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-14
 
 A Fazer está vazia. Próximos por decisão do usuário.
 
@@ -503,3 +521,4 @@ confirmação.
 | 2026-10-04 | Card 31 concluído: CI no GitHub Actions com três jobs (build e testes, coleção do Insomnia, `gitleaks`), ações fixadas por SHA, verde em `main` em cerca de um minuto; vermelho num ramo com aviso plantado (prova apagada depois). Descobertos e viraram cards: 31.1 (auditoria de dependências) e 31.2, com a lacuna L-13: a ENF dava a RNF-036 por realizada, e a cobertura medida do domínio é 74,9%. ENF corrigida para 1.2 |
 | 2026-10-04 | Card 31.1 concluído: auditoria de dependências no restore, explícita (`NuGetAudit`, modo `all`, nível `high`). Medido localmente: nível `high` reprova o alerta alto e `critical` deixa passar; modo `all` pega a vulnerabilidade transitiva e `direct` deixa passar. No CI, um ramo com dependência transitiva vulnerável ficou vermelho (apagado depois). Nenhum pacote vulnerável hoje. RNF-026 realizada |
 | 2026-10-04 | Card 31.2 concluído, opção (a): cobertura de linha do domínio, medida pelos testes de domínio em Release, de 56,8% para 86,4%, com limite de 85% no CI. 40 construtores de exceção sem uso removidos e 19 testes de domínio escritos. Sem os testes de contrato, 72,8%: o passo reprova (medido no CI). L-13 encerrada; nenhuma lacuna aberta. ADR-0010 revisado com o método e 3 alternativas rejeitadas; ENF 1.3. 150 verdes |
+| 2026-10-04 | Card 29 encerrado como decisão registrada, por decisão do usuário: as questões de negócio seguem sem interlocutor. Antes de encerrar, as condutas provisórias foram conferidas contra o código: a EF prometia política substituível e configuração que não existem, QA-007 dava como conduta um JWT não implementado e QA-003 estava decidida num documento e aberta em dois. Lacuna L-14 aberta e encerrada; EF 1.5 e BDD 1.2 |

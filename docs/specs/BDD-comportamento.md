@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 1 de 3 do pacote de especificação
-**Versão:** 1.1
-**Data:** 2026-10-02
+**Versão:** 1.2
+**Data:** 2026-10-04
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -657,9 +657,9 @@ Funcionalidade: Consistência da posição pré-calculada
 
 | ID | Questão | Impacto se não respondida | Conduta provisória |
 |---|---|---|---|
-| QA-001 | Existe limite ou cheque especial por conta? | Altera RN-001 | Assumir saldo não negativo, com ponto de extensão isolado |
+| QA-001 | Existe limite ou cheque especial por conta? | Altera RN-001 | Assumir saldo não negativo; validação num único ponto do agregado, sem política substituível (EF §10) |
 | QA-002 | Lançamento retroativo é permitido pelo negócio? | Altera RN-012 e F04 | Permitir, validando saldo contra posição corrente |
-| QA-003 | Estorno pode gerar posição negativa? | Altera F06 | Rejeitar, com política configurável |
+| QA-003 | Estorno pode gerar posição negativa? | Altera F06 | **Decidida:** rejeitar (ESTADO §3). Sem política configurável |
 | QA-004 | Qual a política de retenção do ledger? | Altera dimensionamento e LGPD | Assumir retenção integral no escopo do desafio |
 | QA-005 | Há exigência de operação multimoeda? | Altera RN-007 e modelo de `Money` | Assumir BRL, com `Money` preparado para moeda |
 
@@ -673,3 +673,4 @@ Nenhuma destas lacunas foi preenchida com número ou política inventada. Todas 
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | F09: conta de terceiro responde `ACCOUNT_NOT_FOUND`, e não `FORBIDDEN`, para não revelar existência ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3; lacuna L-05) |
+| 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §8: QA-001 e QA-003 corrigidas contra o código; QA-003 decidida (lacuna L-14, card 29) |
