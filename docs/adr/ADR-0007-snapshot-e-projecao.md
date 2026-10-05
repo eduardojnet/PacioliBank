@@ -1,6 +1,6 @@
 # ADR-0007: Gerar snapshot de posição de forma síncrona amortizada, sem componente assíncrono no caminho de leitura
 
-- **Status:** Aceito
+- **Status:** Aceito, revisado em 2026-10-05 (card 32: fechamento diário implementado)
 - **Data:** 2026-10-02
 - **Decisor:** Eduardo J. G. do Carmo
 - **Requisitos dirigentes:** RF-003, RF-004, RF-010, RN-010, RNF-002, RNF-003, RNF-006, R-03
@@ -126,9 +126,45 @@ Um comando administrativo reconstrói todos os snapshots de uma conta a partir d
 >
 > **Observado na mutação 2:** "descartável" vale para **apagar**, não para **errar**. Como a escrita parte do snapshot para validar o saldo (RN-001) e gravar `balance_after`, um snapshot com valor errado contaminaria todos os lançamentos seguintes e o extrato. As defesas que existem: o snapshot é gravado na mesma transação, a partir do saldo que ela calculou; o papel da aplicação não tem `UPDATE` em `balance_snapshots` (ADR-0009); e o teste acima compara o `balance_after` com a soma do ledger.
 
+## Revisão de 2026-10-05 (card 32): fechamento diário implementado, de forma síncrona
+
+### Por que agora
+
+**Antecipação por decisão do usuário, não gatilho atendido.** O gatilho abaixo (p99 da consulta histórica acima do alvo da RNF-002) nunca foi medido: não há ambiente de carga (card 30). O registro é feito como antecipação, para não apresentar decisão de prazo como resposta a medição.
+
+### Decisão
+
+O texto acima previa o fechamento diário com **invalidação e recomputação assíncrona**. Implementado de outra forma: **fechamento mantido de forma síncrona, na transação do lançamento, sob o bloqueio da conta.**
+
+- Tabela `daily_balances (account_id, day, closing_balance, last_sequence)`, migração `0002_saldo_diario.sql`, preenchida a partir do ledger existente. Derivada, como o snapshot ([ADR-0003](./ADR-0003-ledger-append-only.md)): pode ser reconstruída pelo mesmo `SELECT` do preenchimento
+- **Escrita:** o lançamento do dia `d` cria ou soma o fechamento de `d` e soma o valor a todo fechamento de dia posterior que já exista. Lançamento retroativo, portanto, corrige os dias seguintes **na mesma transação**: nenhuma consulta vê fechamento desatualizado
+- **Leitura:** posição no instante `T` = fechamento do último dia anterior ao dia de `T` + lançamentos do próprio dia até `T`, num único comando. `entriesReplayed` passa a ser só os lançamentos daquele dia; `computedFrom` ganha `dailyBalance` (EF §8.5). Sem fechamento anterior, a origem continua `ledger`
+- **Dia em UTC, pela data do fato.** É partição interna: não aparece no contrato, e a posição em qualquer instante não depende dela. Fechamento contábil em horário de Brasília, se algum dia for exposto, é outra decisão
+- **Privilégio:** a aplicação recebe `SELECT, INSERT, UPDATE` em `daily_balances`, nunca `DELETE`. É a primeira tabela derivada com `UPDATE`; o ledger continua só `SELECT, INSERT` ([ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md))
+
+### Alternativas rejeitadas
+
+**Invalidação e recomputação assíncrona, como o texto original previa.** Exige processo de fechamento, marcação de dias inválidos e, na leitura, um caminho alternativo enquanto o dia está inválido. Rejeitada: acrescenta um componente e um estado intermediário para resolver o que a atualização síncrona resolve dentro da transação que já existe. *Voltaria a ser considerada* se o custo de corrigir os dias seguintes aparecesse no p99 de escrita (gatilho 5 abaixo).
+
+**Movimento líquido por dia, em vez de fechamento.** Cada lançamento atualizaria uma única linha, sem corrigir dias seguintes; a leitura somaria os movimentos de todos os dias anteriores. Rejeitada: a leitura voltaria a crescer com o histórico, na proporção dos dias ativos. Com a premissa da ENF §3, cerca de 400 lançamentos por ano, dias ativos e lançamentos são da mesma ordem, e o ganho seria quase nenhum.
+
+**Snapshot ancorado em data do fato.** Rejeitada pelo mesmo motivo que impede usar o snapshot atual na consulta histórica: o snapshot serve à posição corrente, ancorada em sequência, e a escrita parte dele para validar o saldo. Misturar as duas ordens no mesmo artefato tornaria os dois casos mais difíceis de provar.
+
+### Custo conhecido
+
+Lançamento retroativo atualiza uma linha por dia ativo posterior. Lançamento no dia corrente, o caso comum, atualiza uma linha. Com a premissa da ENF §3, um retroativo de um ano atualiza no máximo algumas centenas de linhas pequenas, sob o bloqueio da conta que a escrita já detém. [NVI] Não medido sob carga.
+
+### Validação feita
+
+- `DailyBalanceTests` (4), PostgreSQL real, conferidos contra a soma do ledger calculada por fora: posição histórica e `computedAtSequence` em 63 instantes, com retroativos gravados depois dos posteriores, débitos, estorno, lançamento à meia-noite exata e no último microssegundo do dia; todo fechamento igual ao ledger; consulta que parte do fechamento soma só o dia; papel da aplicação não apaga fechamento
+- `MigrationTests`: banco com o esquema 0001 e lançamentos gravados recebe a 0002 e fica com os fechamentos corretos
+- Poder de detecção, cinco mutações, todas reprovadas: sem corrigir os dias seguintes; dia novo sem o fechamento anterior; leitura usando o fechamento do próprio dia; limite do dia exclusivo (perde a meia-noite exata); preenchimento sem soma acumulada
+- No ambiente local, a 0002 foi aplicada sobre o volume já em uso, sem recriar o banco (card 27): 13 fechamentos em 5 contas, nenhuma divergência; depois de um crédito retroativo pela API, posições históricas iguais à soma no banco em seis instantes, e ainda nenhuma divergência
+
 ## Gatilho de revisão
 
-1. p99 da consulta histórica ultrapassando o alvo de RNF-002, que dispara a implementação de `daily_balances`
+1. ~~p99 da consulta histórica ultrapassando o alvo de RNF-002, que dispara a implementação de `daily_balances`~~ Implementado por antecipação no card 32, ver a revisão acima
 2. Volume real de lançamentos por conta superando em 100% a premissa da [ENF](../specs/ENF-especificacao-nao-funcional.md) §3 (QA-006)
 3. `entriesReplayed` no p99 consistentemente acima de `N`, indicando calibração inadequada
 4. Latência da inserção de snapshot aparecendo no p99 de escrita, que levaria a reconsiderar a geração assíncrona
+5. Atualização dos fechamentos dos dias seguintes a um retroativo aparecendo no p99 de escrita, que reabriria a recomputação assíncrona

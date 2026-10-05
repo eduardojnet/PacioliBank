@@ -1,6 +1,6 @@
 # Esquema do ledger: entidades e relacionamentos
 
-As 5 tabelas do esquema `ledger`, transcritas de [`db/migrations/0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql) coluna por coluna. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
+As 6 tabelas do esquema `ledger`, transcritas das migrações [`0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql) e [`0002_saldo_diario.sql`](../../db/migrations/0002_saldo_diario.sql) coluna por coluna. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
 
 **Por que este diagrama importa:** neste sistema, várias regras de negócio não estão no código, estão no banco. Lançamento positivo, sequência sem duplicata, um único estorno por lançamento e chave de idempotência única são constraints; a imutabilidade do ledger é ausência de privilégio. Ler o esquema é ler as invariantes.
 
@@ -8,6 +8,7 @@ As 5 tabelas do esquema `ledger`, transcritas de [`db/migrations/0001_esquema_in
 erDiagram
     accounts ||--o{ ledger_entries : "account_id"
     accounts ||--o{ balance_snapshots : "account_id"
+    accounts ||--o{ daily_balances : "account_id"
     accounts ||--o{ idempotency_records : "account_id"
     ledger_entries ||--o| idempotency_records : "entry_id"
     ledger_entries |o--o| ledger_entries : "reversal_of: no máximo um estorno"
@@ -44,6 +45,13 @@ erDiagram
         numeric balance "numeric(19,4)"
         timestamptz as_of
         timestamptz created_at "DEFAULT now()"
+    }
+
+    daily_balances {
+        uuid account_id PK, FK
+        date day PK "dia do fato, em UTC"
+        numeric closing_balance "numeric(19,4), posição ao fim do dia"
+        bigint last_sequence "CHECK maior ou igual a 1"
     }
 
     outbox_messages {
@@ -84,7 +92,9 @@ O que a FK **não** garante, e por isso fica com o agregado (`Account.Reverse`):
 
 A chave primária de `balance_snapshots` é composta por `(account_id, up_to_sequence)`: o snapshot diz "a posição depois do lançamento de sequência N", não "a posição no dia D". A posição corrente é o snapshot mais recente somado aos lançamentos de sequência maior ([ADR-0007](../adr/ADR-0007-snapshot-e-projecao.md)).
 
-**Consequência:** a consulta histórica (`?asOf=`) não usa snapshot. Sequência é ordem de registro; `occurred_at` é ordem do fato. Com lançamento retroativo, as duas ordens divergem, e um snapshot "até a sequência N" pode conter um fato posterior ao instante pedido. A consulta histórica agrega `ledger_entries` pelo índice `ix_entries_account_occurred`, que cobre as colunas do cálculo. É limitação assumida e declarada no ADR-0007.
+**Consequência:** a consulta histórica (`?asOf=`) não usa snapshot. Sequência é ordem de registro; `occurred_at` é ordem do fato. Com lançamento retroativo, as duas ordens divergem, e um snapshot "até a sequência N" pode conter um fato posterior ao instante pedido.
+
+**Desde o card 32**, a consulta histórica parte de `daily_balances`, que é ancorado na **data do fato**: fechamento do último dia anterior mais os lançamentos do próprio dia até o instante, estes pelo índice `ix_entries_account_occurred`. Lançamento retroativo corrige os fechamentos dos dias seguintes na mesma transação ([ADR-0007](../adr/ADR-0007-snapshot-e-projecao.md), revisão).
 
 ### 3. Toda mensagem da outbox aponta para um lançamento
 
@@ -124,6 +134,7 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 |---|---|---|
 | `ledger_entries` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `balance_snapshots` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
+| `daily_balances` | `SELECT`, `INSERT`, `UPDATE` (corrigir os dias seguintes a um retroativo) | `DELETE` |
 | `idempotency_records` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `outbox_messages` | `SELECT`, `INSERT`, `UPDATE` | `DELETE` |
 | `accounts` | `SELECT`, e `UPDATE` só na coluna `last_sequence` | Alterar status, moeda ou titular |
@@ -133,6 +144,10 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 ## Conferência contra o script
 
 Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql` (movido sem alteração de esquema para `db/migrations/0001_esquema_inicial.sql` no card 27), linha por linha, e contra o catálogo do PostgreSQL com o script aplicado (`information_schema.columns` e `pg_constraint`), por comparação automática de nome, tipo e ordem de cada coluna:
+
+**Reconferido em 2026-10-05, com a migração 0002 (card 32)**, contra o catálogo do PostgreSQL: 6 tabelas, 44 colunas (as 40 da conferência original abaixo mais 4 de `daily_balances`), 6 PK, 7 FK, 3 UNIQUE, 6 CHECK (mais `ck_daily_last_sequence`); privilégios de `daily_balances` conforme a tabela de privilégios.
+
+Conferência original, de 2026-10-02:
 
 | Item do script | No diagrama |
 |---|---|

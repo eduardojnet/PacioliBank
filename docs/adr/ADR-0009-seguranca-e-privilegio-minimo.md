@@ -50,6 +50,8 @@ GRANT SELECT, INSERT ON ledger.balance_snapshots  TO pacioli_runtime;
 GRANT SELECT, INSERT ON ledger.idempotency_records TO pacioli_runtime;
 GRANT SELECT, INSERT, UPDATE ON ledger.outbox_messages TO pacioli_runtime;
 GRANT SELECT, UPDATE (last_sequence) ON ledger.accounts TO pacioli_runtime;
+-- Card 32: fechamento diario, tabela derivada, corrigida na transacao do lancamento.
+GRANT SELECT, INSERT, UPDATE ON ledger.daily_balances TO pacioli_runtime;
 
 -- Consulta operacional e auditoria. Somente leitura.
 CREATE ROLE pacioli_readonly;

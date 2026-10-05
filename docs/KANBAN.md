@@ -9,12 +9,12 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 4 | 32, 34.1, 37, 38 |
+| Backlog/Ideias | 3 | 34.1, 37, 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 50 | 01 a 31, 30.1, 31.1, 31.2, 33, 33.1, 33.2, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 51 | 01 a 34 e 36, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1 e 33.2. O 35 foi removido do quadro |
 
 ---
 
@@ -25,16 +25,6 @@ _Vazia, e esse é o estado correto. Todo item do projeto foi triado para uma col
 ---
 
 ## Backlog/Ideias
-
-### 32. Implementar daily_balances para consulta histórica
-
-`prioridade: Baixa` · `codigo` · `desempenho`
-
-ADR-0007, evolução especificada e deliberadamente não implementada.
-
-O snapshot é ancorado em sequência (ordem de registro) e a consulta histórica usa occurred_at (ordem do fato). Com lançamento retroativo, as duas divergem, então hoje a consulta histórica agrega pelo índice.
-
-GATILHO DE ADOÇÃO: p99 da consulta histórica ultrapassar o alvo de RNF-002. Construir antes disso é construir contra premissa não validada.
 
 ### 34.1. Migrar os testes para xunit v3
 
@@ -1052,3 +1042,36 @@ CRITÉRIO ATENDIDO:
 - CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37317571539
 
 DECLARADO: 'atraso de snapshot' da ENF medido como lançamentos somados além dele; o snapshot é síncrono (ADR-0007), sem atraso de tempo. Alertas sobre as métricas não fazem parte deste card.
+
+### 32. Implementar daily_balances para consulta histórica
+
+`prioridade: Baixa` · `codigo` · `desempenho`
+
+ADR-0007, evolução especificada e deliberadamente não implementada.
+
+O snapshot é ancorado em sequência (ordem de registro) e a consulta histórica usa occurred_at (ordem do fato). Com lançamento retroativo, as duas divergem, então hoje a consulta histórica agrega pelo índice.
+
+GATILHO DE ADOÇÃO: p99 da consulta histórica ultrapassar o alvo de RNF-002. Construir antes disso é construir contra premissa não validada.
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+ANTECIPAÇÃO POR DECISÃO DO USUÁRIO: o gatilho não ocorreu (o p99 da consulta histórica nunca foi medido; o card 30 ficou sem ambiente de carga). Registrado como antecipação (PROCESSO-KANBAN §3), não como gatilho atendido.
+
+DESENHO (revisão do ADR-0007): fechamento diário por conta mantido de forma SÍNCRONA, na transação do lançamento, sob o bloqueio da conta; lançamento retroativo corrige os fechamentos seguintes na mesma transação. Posição no instante T = fechamento do último dia anterior ao dia de T + lançamentos do próprio dia até T. Dia em UTC, partição interna.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE:
+- Migração 0002_saldo_diario.sql: tabela daily_balances (account_id, day, closing_balance, last_sequence), preenchida a partir do ledger por soma acumulada; aplicação com SELECT, INSERT, UPDATE, nunca DELETE; leitor com SELECT
+- Escrita: fechamento do dia do fato criado ou somado e dias seguintes corrigidos, na mesma transação
+- Leitura histórica num único comando: fechamento anterior + lançamentos do dia; computedFrom = dailyBalance (EF 1.6); entriesReplayed = lançamentos do dia
+- Revisão do ADR-0007 com 3 alternativas rejeitadas (inclusive a recomputação assíncrona que o próprio ADR previa); ADR-0009, ERD (reconferido no catálogo: 6 tabelas, 44 colunas), C2, ENF 1.9
+
+CRITÉRIO ATENDIDO:
+- DailyBalanceTests (4), conferidos contra a soma do ledger: 63 instantes com retroativos fora de ordem, débitos, estorno, meia-noite exata e último microssegundo; todo fechamento igual ao ledger; origem e lançamentos somados; papel da aplicação não apaga fechamento. Reprovaram antes da implementação
+- MigrationTests: banco com a 0001 e lançamentos recebe a 0002 com os fechamentos corretos
+- Poder de detecção, cinco mutações reprovadas: sem corrigir os dias seguintes; dia novo sem o fechamento anterior; leitura com o fechamento do próprio dia; limite do dia exclusivo; preenchimento sem soma acumulada
+- Volume local em uso recebeu a 0002 sem recriar o banco: 13 fechamentos, nenhuma divergência; depois de um retroativo pela API, posições históricas iguais ao banco em seis instantes
+- Insomnia 43/43; gitleaks limpo; 183 testes verdes; build sem avisos
+
+AJUSTES EM TESTES EXISTENTES: o teste do snapshot que registrava o comportamento antigo da consulta histórica ('não desejado') passou a verificar o novo; o de métricas, a nova origem; os de migração, a sexta tabela e o segundo script. O mapeamento do contrato HTTP deixaria a nova origem sair como 'ledger': corrigido com um valor por origem.

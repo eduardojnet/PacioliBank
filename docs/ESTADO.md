@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 178 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 72 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
+**Testes:** 183 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 77 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -147,7 +147,7 @@ Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo 
 
 O esquema é aplicado por migrações numeradas (DbUp, `dbup-postgresql` 7.0.1), num passo separado do `docker compose` (`pacioli-migrations`): roda com `pacioli_migrator`, aplica só o que falta, registra em `public.schema_versions` e termina. A API depende de `service_completed_successfully` e continua com `pacioli_runtime`. Transação por script: migração com erro não deixa alteração parcial nem registro. A massa local (`db/seed/`) tem diário próprio e só roda com `PACIOLI_SEED_LOCAL=true`. Os testes de integração montam o banco pelo mesmo `SchemaMigrator`. Decisão e alternativas rejeitadas na revisão do ADR-0002.
 
-Esquema `ledger` com 5 tabelas e 3 papéis. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
+Esquema `ledger` com 6 tabelas e 3 papéis. A sexta, `daily_balances` (migração 0002, card 32), guarda o fechamento diário por conta: a posição em instante passado parte do fechamento do dia anterior e soma só os lançamentos do próprio dia; a escrita mantém os fechamentos, inclusive os dias seguintes a um retroativo, na mesma transação. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
 
 O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar um lançamento gravado é impossível para a aplicação, qualquer que seja o código.
 
@@ -159,7 +159,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 72 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1) e métricas (1, card 33.2) |
+| `PacioliBank.Integration.Tests` | 77 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1), métricas (1, card 33.2) e fechamento diário (5, card 32: posição histórica contra o ledger em 63 instantes, fechamentos, origem, privilégio e preenchimento pela migração) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -196,7 +196,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
-| Limite de replay e custo constante na posição histórica (RNF-003, RNF-006) | Não implementado: a consulta histórica soma todo o histórico até o instante; card 32, com gatilho |
 
 ---
 
@@ -442,6 +441,10 @@ Do Backlog, por decisão do usuário:
    - ~~**[33.1] Rastreamento ponta a ponta** (RNF-030)~~ concluído em 2026-10-05
    - ~~**[33.2] Métricas de negócio** (RNF-032)~~ concluído em 2026-10-05
 
+Do Backlog, por antecipação decidida pelo usuário (gatilho não ocorrido):
+
+18. ~~**[32] Fechamento diário para a consulta histórica** (ADR-0007)~~ concluído em 2026-10-05
+
 A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
@@ -450,7 +453,7 @@ A Fazer está vazia. Próximos por decisão do usuário.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 178 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 183 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -586,3 +589,4 @@ confirmação.
 | 2026-10-05 | Card 33.1 concluído: rastreamento ponta a ponta (RNF-030). Decorador de `ILedgerService` na API abre o span do caso de uso, e não código no núcleo, para não baixar a pontuação de mutação; requisição, caso de uso e PostgreSQL no mesmo traço, sem identificador integro. Filtro do Npgsql: só comando dentro de traço, senão o despachante geraria um traço solto por segundo (achado no painel). Painel Aspire no compose. 2 testes, quatro mutações detectadas. ADR-0012 revisado; ENF 1.7. 177 verdes |
 | 2026-10-05 | Card 33.2 concluído: seis métricas de negócio (RNF-032) pelo mesmo decorador do 33.1; código da rejeição do mesmo mapa do problem+json; fila da outbox lida do banco na coleta. 1 teste com sequência conhecida, quatro mutações detectadas; métricas conferidas no painel local. ADR-0012 revisado; ENF 1.8. Com o 33, 33.1 e 33.2, a RNF-030, a RNF-031 e a RNF-032 estão realizadas. 178 verdes |
 | 2026-10-05 | Card 35 (avaliar o PostgreSQL 18) removido do quadro por decisão do usuário. Motivo: sem gatilho (o 17 tem suporte até 2029) e o ganho citado, UUID v7 na chave primária, não depende do banco, porque o identificador é gerado pela aplicação, e o .NET 10 já tem `Guid.CreateVersion7()` |
+| 2026-10-05 | Card 32 concluído por antecipação (o gatilho, p99 da histórica acima da RNF-002, não foi medido): fechamento diário síncrono, mantido na transação do lançamento, com correção dos dias seguintes a um retroativo; migração 0002 com preenchimento; `computedFrom` = `dailyBalance` (EF 1.6). Revisão do ADR-0007 com 3 alternativas rejeitadas, inclusive a recomputação assíncrona que o próprio ADR previa. 5 testes, cinco mutações detectadas. A 0002 foi aplicada ao volume local em uso, sem recriar o banco: nenhuma divergência. ENF 1.9. 183 verdes |

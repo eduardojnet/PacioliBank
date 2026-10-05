@@ -225,7 +225,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   72 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, log, traço e métricas
+  PacioliBank.Integration.Tests/   77 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, fechamento diário, log, traço e métricas
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
@@ -245,7 +245,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Esquema, papéis e privilégio mínimo | Implementado |
 | Agregado Conta, `Money`, invariantes e lançamento imutável | Implementado, com testes |
 | Bloqueio por conta e idempotência, inclusive sob envio simultâneo | Implementado, com testes |
-| Posição corrente com snapshot amortizado, e posição em instante passado | Implementado, com testes, inclusive do snapshot e do limite de 99 lançamentos somados (card 30.1). A posição histórica não usa snapshot e soma todo o histórico até o instante (card 32) |
+| Posição corrente com snapshot amortizado, e posição em instante passado a partir do fechamento diário | Implementado, com testes: snapshot com limite de 99 lançamentos somados (card 30.1); posição histórica conferida contra o ledger, inclusive com lançamentos retroativos (card 32) |
 | Estorno por lançamento compensatório | Implementado, com testes |
 | Extrato paginado por cursor | Implementado, com testes |
 | Porta de entrada e os 5 endpoints de negócio | Implementado |

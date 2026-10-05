@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.5
-**Data:** 2026-10-04
+**Versão:** 1.6
+**Data:** 2026-10-05
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -436,7 +436,7 @@ GET /api/v1/accounts/7f3a.../balance?asOf=2026-01-20T00:00:00Z HTTP/1.1
 }
 ```
 
-O campo `computedFrom` assume `snapshot` ou `ledger` e é instrumento de observabilidade: frequência elevada de `ledger` indica atraso na projeção, antes que vire problema de desempenho percebido. `entriesReplayed` é quantos lançamentos foram somados além do snapshot, a métrica de RNF-006; em consulta histórica, que não usa snapshot, é o total de lançamentos até o instante. *Acrescentado na versão 1.4, para o painel de evidência (ADR-0011).*
+O campo `computedFrom` assume `snapshot` (posição corrente a partir do snapshot), `dailyBalance` (posição em instante passado a partir do fechamento do dia anterior, ADR-0007, card 32) ou `ledger` (sem ponto de partida derivado) e é instrumento de observabilidade: frequência elevada de `ledger` indica atraso na projeção, antes que vire problema de desempenho percebido. `entriesReplayed` é quantos lançamentos foram somados além do snapshot, a métrica de RNF-006; em consulta histórica, que não usa snapshot, é o total de lançamentos até o instante. *Acrescentado na versão 1.4, para o painel de evidência (ADR-0011).*
 
 ### 8.6 Catálogo de códigos de erro
 
@@ -580,3 +580,4 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | 1.3 | 2026-10-02 | Eduardo J. G. do Carmo | §9: payload dos eventos especificado, campo a campo, com formatos da API; justificativa de manter `v1` (card 24.2) |
 | 1.4 | 2026-10-02 | Eduardo J. G. do Carmo | §8.5: campo `entriesReplayed` na posição consolidada, exibido pelo painel de evidência (card 25) |
 | 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §10: condutas provisórias corrigidas contra o código (lacuna L-14). Não há política substituível nem configuração; há um ponto único de mudança por questão. QA-003 marcada como decidida, coerente com o ESTADO §3. QA-007 declarada como especificada e não implementada (card 29) |
+| 1.6 | 2026-10-05 | Eduardo J. G. do Carmo | §8.5: `computedFrom` ganha o valor `dailyBalance`, para a posição em instante passado calculada a partir do fechamento diário (card 32, ADR-0007). `entriesReplayed`, nesse caso, conta só os lançamentos do dia consultado |
