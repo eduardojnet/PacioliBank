@@ -257,7 +257,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
-| Auditoria de dependências vulneráveis no CI (RNF-026) | Pendente (card 31.1) |
+| Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
 | Cobertura de linha do domínio ≥ 85% (RNF-036) | **Não atendida: 74,9% medidos, sem limite no CI** (lacuna L-13, card 31.2) |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 

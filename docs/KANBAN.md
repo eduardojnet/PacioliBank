@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 7 | 32 a 38 |
-| A Fazer | 2 | 31.1, 31.2 |
+| A Fazer | 1 | 31.2 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 40 | 01 a 28 e 31, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 41 | 01 a 28, 31 e 31.1, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -94,18 +94,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 31.1. Auditar dependências vulneráveis no CI
-
-`prioridade: Média` · `infra`
-
-DESCOBERTO NO CARD 31 (04/10/2026). O ADR-0010 lista 'vulnerabilidade de severidade alta em dependência' no critério de bloqueio, o ADR-0009 pede auditoria de pacotes no pipeline e a RNF-026 exige zero alertas altos ou críticos. O CI do card 31 não faz essa auditoria.
-
-CRITÉRIO:
-- Passo no CI que lista pacotes vulneráveis, inclusive transitivos (dotnet list package --vulnerable --include-transitive), e reprova com severidade alta ou crítica
-- Poder de detecção medido: reprova com um pacote sabidamente vulnerável, num ramo de prova apagado depois
-- Resultado atual registrado (quais alertas existem hoje, se existirem)
-- ENF §11 e ESTADO atualizados: RNF-026 passa a realizada no CI
-
 ### 31.2. Tratar a cobertura do domínio abaixo da RNF-036 (L-13)
 
 `prioridade: Média` · `codigo` · `doc`
@@ -123,7 +111,7 @@ CRITÉRIO (qualquer opção): ENF §11 deixa de afirmar o que não é verdade; o
 
 ## Em Andamento
 
-_Vazia. O 31 foi concluído; o próximo é o 31.1._
+_Vazia. Os cards 31 e 31.1 foram concluídos; o próximo é o 31.2._
 
 ---
 
@@ -800,3 +788,31 @@ CORRIGIDO NO CAMINHO: na prova, o passo de publicar cobertura acusava uma segund
 DESCOBERTO, virou card (regra 10):
 - 31.1: auditoria de dependências vulneráveis (RNF-026, ADR-0009, critério de bloqueio do ADR-0010), que o CI ainda não faz
 - 31.2 / L-13: a ENF §11 dizia a RNF-036 (cobertura >= 85% no domínio) 'realizada'; nunca tinha sido medida. Medida: 56,8% (testes de domínio), 49,9% (integração), 74,9% (os dois). ENF corrigida para 1.2; a resolução depende de decisão do usuário
+
+### 31.1. Auditar dependências vulneráveis no CI
+
+`prioridade: Média` · `infra`
+
+DESCOBERTO NO CARD 31 (04/10/2026). O ADR-0010 lista 'vulnerabilidade de severidade alta em dependência' no critério de bloqueio, o ADR-0009 pede auditoria de pacotes no pipeline e a RNF-026 exige zero alertas altos ou críticos. O CI do card 31 não faz essa auditoria.
+
+CRITÉRIO:
+- Passo no CI que lista pacotes vulneráveis, inclusive transitivos (dotnet list package --vulnerable --include-transitive), e reprova com severidade alta ou crítica
+- Poder de detecção medido: reprova com um pacote sabidamente vulnerável, num ramo de prova apagado depois
+- Resultado atual registrado (quais alertas existem hoje, se existirem)
+- ENF §11 e ESTADO atualizados: RNF-026 passa a realizada no CI
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ACHADO AO COMEÇAR: o SDK 10 já auditava no restore e, com TreatWarningsAsErrors, um alerta alto (NU1903) já reprovava. Mas por padrão implícito do SDK, e reprovando também baixa e moderada, mais rígido que a RNF-026.
+
+ENTREGUE:
+- Directory.Build.props com NuGetAudit explícito: modo all (transitivas inclusive) e nível high (alta e crítica reprovam). Vale localmente, no CI e na imagem Docker
+- CI: passo 'Restaurar pacotes e auditar dependências' (reprova) e passo informativo que lista todas as severidades (dotnet list package --vulnerable --include-transitive)
+
+CRITÉRIO ATENDIDO:
+- Resultado atual: nenhum pacote vulnerável, em nenhuma severidade, nos 9 projetos
+- Poder de detecção medido localmente: nível high reprova o Newtonsoft.Json 12.0.1 (alerta alto) e critical deixa passar; modo all pega a mesma vulnerabilidade vinda por dependência transitiva (Newtonsoft.Json.Bson 1.0.2) e direct deixa passar
+- No CI: ramo ci/prova-auditoria com a dependência transitiva vulnerável ficou vermelho no passo de restore (https://github.com/eduardojnet/PacioliBank/actions/runs/37246291115); o job do Insomnia também, porque a imagem restaura com a mesma regra. Causa confirmada reproduzindo o mesmo commit localmente: um único erro, NU1903. Ramo apagado
+- ENF §11, ADR-0010, README, ESTADO e CLAUDE.md atualizados: RNF-026 realizada
+
+OBSERVADO: o GitHub avisa que o rótulo ubuntu-latest migra para o Ubuntu 26 a partir de 19/10/2026. Não fixei a versão do runner neste card; fica registrado para decisão.

@@ -161,7 +161,9 @@ Os testes de concorrência usam barreira de sincronização para liberar as tare
 
 A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em paralelo, em cerca de um minuto: build em Release com aviso tratado como erro e os quatro projetos de teste (integração com Testcontainers no Docker do runner), com resultados e cobertura publicados como artefato; a coleção do Insomnia pelo `inso` contra o `docker compose`; e o `gitleaks` no histórico completo. Ações fixadas por SHA; binários conferidos por sha256. Poder de detecção medido: um aviso plantado num ramo deixou o pipeline vermelho, com a anotação na linha. Um falso positivo do `gitleaks` está ignorado pela impressão digital em `.gitleaksignore`.
 
-Do critério de bloqueio do ADR-0010, faltam no CI a cobertura mínima (L-13) e a auditoria de dependências (card 31.1).
+Auditoria de dependências (card 31.1): o restore audita as dependências, transitivas inclusive, e alerta alto ou crítico vira erro (`NuGetAudit` explícito no `Directory.Build.props`, modo `all`, nível `high`); vale localmente, no CI e na imagem. O CI lista as demais severidades num passo informativo. Em 2026-10-04, nenhum pacote vulnerável em nenhuma severidade.
+
+Do critério de bloqueio do ADR-0010, falta no CI só a cobertura mínima (L-13, card 31.2).
 
 ### Especificações e diagramas
 
@@ -186,7 +188,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
-| Auditoria de dependências vulneráveis no CI (RNF-026) | Não implementada; card 31.1 |
 | Cobertura mínima do domínio (RNF-036) | Não atendida: 74,9% medidos, sem limite no CI (L-13, card 31.2) |
 
 ---
@@ -372,7 +373,7 @@ Previstos por ADR, que entram com a fila ativa vazia:
 Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 
 12. ~~**[31] CI no GitHub Actions** (ADR-0010)~~ concluído em 2026-10-04
-   - **[31.1] Auditoria de dependências vulneráveis no CI** (RNF-026), descoberto no 31
+   - ~~**[31.1] Auditoria de dependências vulneráveis no CI** (RNF-026)~~ concluído em 2026-10-04
    - **[31.2] Cobertura do domínio abaixo da RNF-036** (L-13), descoberto no 31; espera decisão do usuário
 
 ---
@@ -492,3 +493,4 @@ confirmação.
 | 2026-10-03 | Card 28 concluído: analisadores do .NET elevados a `Recommended`. O build reprovou com 4 regras (CA1716, CA1862, CA1711, CA1859), todas corrigidas no código, nenhuma suprimida; teste novo fixou o comportamento de `Currency.TryFromCode` antes da troca. L-06 encerrada; nenhuma lacuna aberta. Imagens Docker compilam no modo novo; filtro de período do extrato conferido contra a API. Contagens do ADR-0010 corrigidas: tinham ficado desatualizadas no card 27. 131 verdes |
 | 2026-10-04 | Card 31 (CI no GitHub Actions) movido do Backlog para A Fazer por decisão do usuário, com critério de conclusão escrito ao entrar (cinco camadas de teste, cobertura informativa, varredura de segredos, poder de detecção medido) |
 | 2026-10-04 | Card 31 concluído: CI no GitHub Actions com três jobs (build e testes, coleção do Insomnia, `gitleaks`), ações fixadas por SHA, verde em `main` em cerca de um minuto; vermelho num ramo com aviso plantado (prova apagada depois). Descobertos e viraram cards: 31.1 (auditoria de dependências) e 31.2, com a lacuna L-13: a ENF dava a RNF-036 por realizada, e a cobertura medida do domínio é 74,9%. ENF corrigida para 1.2 |
+| 2026-10-04 | Card 31.1 concluído: auditoria de dependências no restore, explícita (`NuGetAudit`, modo `all`, nível `high`). Medido localmente: nível `high` reprova o alerta alto e `critical` deixa passar; modo `all` pega a vulnerabilidade transitiva e `direct` deixa passar. No CI, um ramo com dependência transitiva vulnerável ficou vermelho (apagado depois). Nenhum pacote vulnerável hoje. RNF-026 realizada |
