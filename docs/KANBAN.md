@@ -1012,3 +1012,5 @@ CRITÉRIO ATENDIDO:
 - Somente pacotes estáveis; build sem avisos; 175 testes verdes
 
 ACHADO NO CAMINHO: com o resto em JSON, apareceu uma linha em texto livre do Npgsql tentando carregar libgssapi_krb5 (ausente na imagem; 12 vezes no migrador). Negociação GSS desligada nas connection strings locais.
+
+CORREÇÃO PÓS-ENTREGA (05/10/2026): o CI de 6ff2eb4 reprovou na varredura de segredos. O teste de mascaramento trazia um JWT sintético escrito inteiro, que o gitleaks tomou por credencial. A ocorrência do commit 481b566, já publicado, foi ignorada pela impressão digital no .gitleaksignore, com motivo; o teste passou a montar o token em tempo de execução (e563f42; CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37314359330). Falha de processo: o gitleaks não foi rodado localmente antes do push deste card.
