@@ -301,7 +301,7 @@ O enunciado declara que não é necessário esgotar as possibilidades técnicas.
 | Resiliência | RNF-010, RNF-011, RNF-013, RNF-016 | RNF-014, RNF-015, RNF-017, RNF-018 |
 | Segurança | RNF-020, RNF-021, RNF-022, RNF-024 (varredura de segredos no CI, card 31), RNF-025, RNF-026 (auditoria no restore, transitivas inclusive, card 31.1) | RNF-023, RNF-027 |
 | Observabilidade | RNF-031, RNF-032 | RNF-030, RNF-033 |
-| Manutenibilidade | RNF-034, RNF-035, RNF-036 (86,4%, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` 6.0.2 restrito ao assembly `PacioliBank.Ledger`; o CI reprova abaixo de 85%, card 31.2), RNF-037, RNF-038, RNF-039 | n/a |
+| Manutenibilidade | RNF-034, RNF-035, RNF-036 (86,4%, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` (10.1.0 desde o card 34, mesma medida) restrito ao assembly `PacioliBank.Ledger`; o CI reprova abaixo de 85%, card 31.2), RNF-037, RNF-038, RNF-039 | n/a |
 
 Declarar essa separação é parte da entrega. Apresentar requisito especificado como se estivesse implementado seria, em contrato real, informação incorreta prestada ao cliente.
 

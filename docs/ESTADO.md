@@ -366,7 +366,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 52 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 53 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -415,6 +415,11 @@ Bloqueados, encerrados como decisão registrada por decisão do usuário:
 14. ~~**[30] Testes de carga e RNF de desempenho**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-15
    - ~~**[30.1] Teste do limite de replay do snapshot** (RNF-006)~~ concluído em 2026-10-04
 
+Do Backlog, por decisão do usuário:
+
+15. ~~**[34] Atualizar as dependências NuGet**~~ concluído em 2026-10-04, dentro do xunit v2
+   - **[34.1] Migrar os testes para xunit v3**, no Backlog com gatilho (fim do suporte ao v2 ou recurso exclusivo do v3)
+
 A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
@@ -442,16 +447,22 @@ Os testes de integração exigem Docker em execução.
 
 Congeladas porque estão verificadas com build limpo e suíte verde, não porque são as mais recentes. Atualização de dependências é item próprio da fila, com verificação própria.
 
-| Pacote | Versão |
-|---|---|
-| xunit | 2.9.2 |
-| xunit.runner.visualstudio | 2.8.2 |
-| Microsoft.NET.Test.Sdk | 17.12.0 |
-| coverlet.collector | 6.0.2 |
-| Testcontainers.PostgreSql | 4.15.0 |
-| Npgsql | 10.0.3 |
-| Dapper | 2.1.89 |
-| dbup-postgresql | 7.0.1 (traz dbup-core 6.1.1; card 27) |
+Revisada no card 34 (2026-10-04): `dotnet list package --outdated` mostrou defasadas só as ferramentas de teste, atualizadas dentro do xunit v2; os pacotes de produção já estavam na última versão. A tabela também passou a listar todos os pacotes da solução: quatro tinham entrado sem registro aqui.
+
+| Pacote | Versão | Onde |
+|---|---|---|
+| Npgsql | 10.0.3 | Persistence, Events, Migrations, testes |
+| Dapper | 2.1.89 | Persistence, Events, testes |
+| dbup-postgresql | 7.0.1 (traz dbup-core 6.1.1; card 27) | Migrations |
+| Microsoft.AspNetCore.OpenApi | 10.0.12 (igual ao runtime; card 19.3) | Api |
+| Microsoft.AspNetCore.Mvc.Testing | 10.0.12 | Contract.Tests |
+| NetArchTest.Rules | 1.3.2 (card 26) | Architecture.Tests |
+| Testcontainers.PostgreSql | 4.15.0 | Integration.Tests |
+| xunit | 2.9.3 (card 34; v3 no card 34.1) | testes |
+| xunit.runner.visualstudio | 4.0.0 (card 34) | testes |
+| Microsoft.NET.Test.Sdk | 18.10.1 (card 34) | testes |
+| coverlet.collector | 10.1.0 (card 34) | testes |
+| coverlet.msbuild | 10.1.0 (card 34; limite de cobertura, card 31.2) | Domain.Tests |
 
 ---
 
@@ -539,3 +550,4 @@ confirmação.
 | 2026-10-04 | Card 29 encerrado como decisão registrada, por decisão do usuário: as questões de negócio seguem sem interlocutor. Antes de encerrar, as condutas provisórias foram conferidas contra o código: a EF prometia política substituível e configuração que não existem, QA-007 dava como conduta um JWT não implementado e QA-003 estava decidida num documento e aberta em dois. Lacuna L-14 aberta e encerrada; EF 1.5 e BDD 1.2 |
 | 2026-10-04 | Card 30 encerrado como decisão registrada, por decisão do usuário: sem ambiente de carga nem volume real. Na conferência, a ENF dava RNF-003 e RNF-006 por realizadas sem ressalva, e o README dizia o snapshot "com testes": vale só na posição corrente, por construção, sem teste automatizado; a histórica soma todo o histórico. Lacuna L-15 aberta e encerrada; ENF 1.4; o teste virou o card 30.1 |
 | 2026-10-04 | Card 30.1 concluído: `SnapshotTests`, três testes de integração do snapshot (gravação na centésima escrita, posição corrente partindo dele com no máximo 99 somados, posição histórica sem snapshot), sempre conferidos contra a soma do ledger. Três mutações detectadas. A mutação 2 mostrou que snapshot errado contaminaria o `balance_after` dos lançamentos seguintes: registrado no ADR-0007. ENF 1.5. 153 verdes |
+| 2026-10-04 | Card 34 concluído: ferramentas de teste atualizadas dentro do xunit v2 (xunit 2.9.3, runner 4.0.0, Test.Sdk 18.10.1, coverlet 10.1.0); produção já estava na última versão. Mesmos 153 testes, build sem avisos, auditoria sem alerta, cobertura de linha do domínio igual (86,4%) e limite funcionando. xunit v3 separado no card 34.1, no Backlog com gatilho. §9 completada: quatro pacotes estavam sem registro |

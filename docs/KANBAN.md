@@ -2,19 +2,19 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-04 · **Cartões:** 52 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 53 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 7 | 32 a 38 |
+| Backlog/Ideias | 7 | 32, 33, 34.1, 35 a 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 45 | 01 a 31, 30.1, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 46 | 01 a 31, 30.1, 31.1, 31.2 e 34, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -44,15 +44,17 @@ RNF-030 a RNF-032. Rastreamento distribuído, log estruturado com correlação e
 
 MÉTRICA DE MAIOR VALOR DIAGNÓSTICO: a taxa de computedFrom=ledger nas consultas. É indicador ANTECEDENTE: seu crescimento precede degradação de latência em horas ou dias, permitindo agir antes que o cliente perceba.
 
-### 34. Atualizar as dependências NuGet
+### 34.1. Migrar os testes para xunit v3
 
-`prioridade: Baixa` · `codigo`
+`prioridade: Baixa` · `teste`
 
-Versões congeladas porque estão VERIFICADAS com build limpo e suíte verde, não porque são as mais recentes.
+SEPARADO DO CARD 34 (04/10/2026), como o próprio card 34 manda: xunit v3 muda o modelo de execução (o projeto de teste vira executável), troca o pacote (xunit para xunit.v3) e afeta fixture compartilhada, IAsyncLifetime e o coletor de cobertura.
 
-Defasagem conhecida: Microsoft.NET.Test.Sdk 17.12.0 contra 18.10.1, coverlet 6.0.2 contra 10.1.0, xunit 2.9.2 contra xunit.v3 4.0.1.
+POR QUE NÃO AGORA: a suíte em xunit 2.9.x funciona, está verificada e roda no CI. Migrar sem necessidade troca um risco conhecido por um desconhecido.
 
-ATENÇÃO: xunit v3 muda o modelo de execução (projeto de teste vira executável). Atualizar é item próprio, com verificação própria, nunca no meio de outra entrega.
+GATILHO DE ADOÇÃO: fim do suporte ao xunit v2, ou necessidade de recurso exclusivo do v3 (por exemplo, Microsoft Testing Platform no lugar do VSTest).
+
+CRITÉRIO, quando entrar: mesma contagem de testes, verde localmente e no CI; fixture compartilhada do PostgreSQL preservada; limite de cobertura do domínio medido de novo e funcionando.
 
 ### 35. Avaliar a migração para PostgreSQL 18
 
@@ -893,3 +895,38 @@ CRITÉRIO ATENDIDO:
 ACHADO: a mutação 2 mostrou que snapshot errado contaminaria o balance_after de todos os lançamentos seguintes, porque a escrita parte do snapshot para validar o saldo. 'Descartável' vale para apagar, não para errar. Registrado no ADR-0007 com as defesas existentes (mesma transação, papel sem UPDATE, este teste).
 
 INCIDENTE DE PROCESSO, corrigido antes do commit: meu script de mutação restaurava o arquivo com mv, que preserva a data antiga; o MSBuild não recompilou e a DLL ficou com a mutação 3, o que fez o teste parecer instável. Diagnosticado, recompilado do zero e mutações refeitas com o script corrigido.
+
+### 34. Atualizar as dependências NuGet
+
+`prioridade: Baixa` · `codigo`
+
+Versões congeladas porque estão VERIFICADAS com build limpo e suíte verde, não porque são as mais recentes.
+
+Defasagem conhecida: Microsoft.NET.Test.Sdk 17.12.0 contra 18.10.1, coverlet 6.0.2 contra 10.1.0, xunit 2.9.2 contra xunit.v3 4.0.1.
+
+ATENÇÃO: xunit v3 muda o modelo de execução (projeto de teste vira executável). Atualizar é item próprio, com verificação própria, nunca no meio de outra entrega.
+
+--- ATUALIZAÇÃO 04/10/2026, ao iniciar (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário. Com o CI no ar (card 31), cada atualização é verificada a cada push.
+
+INVENTÁRIO (dotnet list package --outdated, 04/10/2026): só ferramentas de teste estão defasadas. Npgsql, Dapper, dbup-postgresql, OpenAPI, Testcontainers e NetArchTest já estão na última versão.
+
+ESCOPO: xunit 2.9.2 para 2.9.3; xunit.runner.visualstudio 2.8.2 para 4.0.0; Microsoft.NET.Test.Sdk 17.12.0 para 18.10.1; coverlet.collector e coverlet.msbuild 6.0.2 para 10.1.0. A migração para xunit v3 fica no card 34.1, como o próprio card manda.
+
+CRITÉRIO:
+- Build sem avisos; suíte inteira verde, com a mesma contagem de testes (153), localmente e no CI
+- Limite de cobertura do domínio continua funcionando: passa em 85% e reprova acima do medido (medido de novo, porque a ferramenta muda)
+- Auditoria de dependências sem alerta
+- Versões congeladas atualizadas no ESTADO §9; pacote que não subir fica na versão atual, com o motivo registrado
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ENTREGUE: os quatro projetos de teste com xunit 2.9.3, xunit.runner.visualstudio 4.0.0, Microsoft.NET.Test.Sdk 18.10.1, coverlet.collector e coverlet.msbuild 10.1.0. Todos subiram; nenhum ficou para trás.
+
+CRITÉRIO ATENDIDO:
+- Restore e build sem avisos; 153 testes verdes (85 + 60 + 6 + 2), localmente, em Debug e em Release
+- Cobertura: coletor do passo geral gera os relatórios; limite do domínio medido de novo com o coverlet 10.1.0: linha 86,4%, igual à anterior (a de ramos mudou de 91,48% para 87,23%, cálculo novo da ferramenta, fora do limite); 85% passa e 90% reprova
+- Auditoria: nenhum pacote vulnerável nos 9 projetos
+- ESTADO §9 atualizada e completada: quatro pacotes estavam sem registro (OpenAPI, Mvc.Testing, NetArchTest, coverlet.msbuild)
+- xunit v3 no card 34.1, no Backlog com gatilho
