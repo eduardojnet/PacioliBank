@@ -381,6 +381,21 @@ public sealed class PostgresLedgerStore : ILedgerStore
             occurredAt = entry.OccurredAt.UtcDateTime,
         }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
 
+        // Fechamento diario (ADR-0007, card 32): o dia do fato e os dias
+        // seguintes passam a incluir o lancamento. Mesma transacao, mesmo
+        // bloqueio: lancamento retroativo nunca deixa fechamento desatualizado.
+        var daily = new
+        {
+            accountId = entry.AccountId,
+            occurredAt = entry.OccurredAt.UtcDateTime,
+            signedAmount = entry.SignedAmount.Amount,
+            sequence = entry.Sequence,
+        };
+        await connection.ExecuteAsync(new CommandDefinition(LedgerSql.UpsertDailyBalance, daily, transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+        await connection.ExecuteAsync(new CommandDefinition(LedgerSql.ShiftLaterDailyBalances, daily, transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+
         // Snapshot amortizado: uma em cada N escritas paga uma insercao, usando
         // a posicao que esta transacao ja calculou. Sem processo assincrono e
         // sem leitura adicional (ADR-0007).
@@ -526,7 +541,7 @@ public sealed class PostgresLedgerStore : ILedgerStore
             Money.Of(point.Balance, currency),
             asOf.Value,
             point.LastSequence,
-            BalanceSource.Ledger,
+            point.FromDailyBalance ? BalanceSource.DailyBalance : BalanceSource.Ledger,
             (int)point.EntriesReplayed);
     }
 
@@ -680,6 +695,8 @@ public sealed class PostgresLedgerStore : ILedgerStore
         public long EntriesReplayed { get; set; }
 
         public long LastSequence { get; set; }
+
+        public bool FromDailyBalance { get; set; }
     }
 
     private sealed class StatementRow

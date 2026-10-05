@@ -17,6 +17,7 @@ namespace PacioliBank.Integration.Tests;
 public class MigrationTests
 {
     private const string InitialSchema = "0001_esquema_inicial.sql";
+    private const string DailyBalances = "0002_saldo_diario.sql";
 
     private readonly LedgerFixture _fixture;
 
@@ -37,7 +38,7 @@ public class MigrationTests
 
         var tabelas = await TabelasDoLedgerAsync(banco);
         Assert.Equal(
-            ["accounts", "balance_snapshots", "idempotency_records", "ledger_entries", "outbox_messages"],
+            ["accounts", "balance_snapshots", "daily_balances", "idempotency_records", "ledger_entries", "outbox_messages"],
             tabelas);
     }
 
@@ -51,7 +52,9 @@ public class MigrationTests
 
         Assert.True(segunda.Successful, segunda.Error?.ToString());
         Assert.Empty(segunda.Applied);
-        Assert.Equal(1, await ContarAsync(banco, "SELECT count(*) FROM public.schema_versions"));
+        Assert.Equal(
+            Directory.GetFiles(SchemaMigrator.DefaultMigrationsDirectory, "*.sql").Length,
+            await ContarAsync(banco, "SELECT count(*) FROM public.schema_versions"));
     }
 
     [Fact]
@@ -148,6 +151,54 @@ public class MigrationTests
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, erro.SqlState);
     }
 
+    [Fact]
+    public async Task Migracao_do_saldo_diario_preenche_os_fechamentos_a_partir_do_ledger_existente()
+    {
+        // Banco com o esquema anterior e lancamentos gravados, inclusive
+        // retroativo e debito, como estaria um ambiente ja em uso.
+        var banco = await _fixture.CreateEmptyDatabaseAsync();
+        using var pasta = PastaDeMigracoes.CopiaDasOficiais(InitialSchema);
+        Assert.True(SchemaMigrator.ApplySchema(banco, pasta.Caminho).Successful);
+
+        var conta = Guid.NewGuid();
+        await ExecutarAsync(banco,
+            "INSERT INTO ledger.accounts (account_id, customer_id, currency, status, last_sequence) VALUES (@conta, @conta, 'BRL', 1, 4)",
+            new { conta });
+        var lancamentos = new (int Sequencia, short Sentido, decimal Valor, string Fato)[]
+        {
+            (1, 1, 100.00m, "2026-03-01T10:00:00Z"),
+            (2, -1, 30.00m, "2026-03-03T09:00:00Z"),
+            (3, 1, 20.00m, "2026-03-02T12:00:00Z"),
+            (4, 1, 5.00m, "2026-03-03T00:00:00Z"),
+        };
+        foreach (var l in lancamentos)
+        {
+            await ExecutarAsync(banco,
+                """
+                INSERT INTO ledger.ledger_entries
+                    (entry_id, account_id, sequence, direction, amount, currency, occurred_at, recorded_at,
+                     idempotency_key, correlation_id, balance_after)
+                VALUES (@id, @conta, @seq, @sentido, @valor, 'BRL', @fato::timestamptz, now(), @chave, @id, 0)
+                """,
+                new { id = Guid.NewGuid(), conta, seq = l.Sequencia, sentido = l.Sentido, valor = l.Valor, fato = l.Fato, chave = "m-" + l.Sequencia });
+        }
+
+        pasta.AcrescentarOficial(DailyBalances);
+        var resultado = SchemaMigrator.ApplySchema(banco, pasta.Caminho);
+
+        Assert.True(resultado.Successful, resultado.Error?.ToString());
+        Assert.Equal([DailyBalances], resultado.Applied);
+
+        await using var connection = new NpgsqlConnection(banco);
+        var fechamentos = (await connection.QueryAsync<(string Dia, decimal Saldo, long Sequencia)>(
+            "SELECT day::text, closing_balance, last_sequence FROM ledger.daily_balances WHERE account_id = @conta ORDER BY day",
+            new { conta })).ToList();
+
+        Assert.Equal(
+            [("2026-03-01", 100.00m, 1L), ("2026-03-02", 120.00m, 3L), ("2026-03-03", 95.00m, 4L)],
+            fechamentos);
+    }
+
     private static async Task<string[]> TabelasDoLedgerAsync(string conexao)
     {
         await using var connection = new NpgsqlConnection(conexao);
@@ -178,20 +229,26 @@ public class MigrationTests
 
         public string Caminho { get; }
 
-        public static PastaDeMigracoes CopiaDasOficiais()
+        public static PastaDeMigracoes CopiaDasOficiais(params string[] somente)
         {
             var caminho = Path.Combine(Path.GetTempPath(), "pacioli-migracoes-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(caminho);
 
             foreach (var script in Directory.GetFiles(SchemaMigrator.DefaultMigrationsDirectory, "*.sql"))
             {
-                File.Copy(script, Path.Combine(caminho, Path.GetFileName(script)));
+                if (somente.Length == 0 || somente.Contains(Path.GetFileName(script)))
+                {
+                    File.Copy(script, Path.Combine(caminho, Path.GetFileName(script)));
+                }
             }
 
             return new PastaDeMigracoes(caminho);
         }
 
         public void Acrescentar(string nome, string sql) => File.WriteAllText(Path.Combine(Caminho, nome), sql);
+
+        public void AcrescentarOficial(string nome) =>
+            File.Copy(Path.Combine(SchemaMigrator.DefaultMigrationsDirectory, nome), Path.Combine(Caminho, nome));
 
         public void Dispose() => Directory.Delete(Caminho, recursive: true);
     }

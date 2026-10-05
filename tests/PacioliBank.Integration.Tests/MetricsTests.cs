@@ -39,7 +39,9 @@ public class MetricsTests
         Assert.Equal(HttpStatusCode.UnprocessableEntity, await Escrever(cliente, conta, "debits", "999.00", "m-2")); // saldo
         Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "debits", "10.00", "m-3"));
         (await cliente.GetAsync(new Uri($"/api/v1/accounts/{conta}/balance", UriKind.Relative))).EnsureSuccessStatusCode();
-        (await cliente.GetAsync(new Uri($"/api/v1/accounts/{conta}/balance?asOf=2026-10-02T00:00:00Z", UriKind.Relative))).EnsureSuccessStatusCode();
+        var historica = await cliente.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(
+            new Uri($"/api/v1/accounts/{conta}/balance?asOf=2026-10-02T00:00:00Z", UriKind.Relative));
+        Assert.Equal("dailyBalance", historica!["computedFrom"]!.ToString());
 
         api.Services.GetRequiredService<MeterProvider>().ForceFlush();
         var pendentesNoBanco = await PendentesAsync();
@@ -56,12 +58,13 @@ public class MetricsTests
 
         // Origem do calculo: a taxa de computedFrom=ledger sai daqui
         Assert.Equal(1, Soma(metricas, "ledger.balance.queries", ("computed_from", "Ledger"), ("point_in_time", "False")));
-        Assert.Equal(1, Soma(metricas, "ledger.balance.queries", ("computed_from", "Ledger"), ("point_in_time", "True")));
+        Assert.Equal(1, Soma(metricas, "ledger.balance.queries", ("computed_from", "DailyBalance"), ("point_in_time", "True")));
 
-        // Lancamentos somados alem do snapshot: 2 em cada consulta
+        // Lancamentos somados alem do ponto de partida: 2 na corrente (sem
+        // snapshot ainda) e 0 na historica, que parte do fechamento de 01/10
         var (quantas, somados) = Histograma(metricas, "ledger.balance.entries_replayed");
         Assert.Equal(2, quantas);
-        Assert.Equal(4, somados);
+        Assert.Equal(2, somados);
 
         // Profundidade da fila de eventos, igual a contagem no banco
         Assert.Equal(pendentesNoBanco, Soma(metricas, "ledger.outbox.messages", ("state", "pending")));

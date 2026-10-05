@@ -8,8 +8,14 @@ public enum BalanceSource
     /// <summary>Calculada a partir de um snapshot mais os lancamentos posteriores.</summary>
     Snapshot = 1,
 
-    /// <summary>Calculada agregando o ledger. Esperado em consulta historica (ADR-0007).</summary>
+    /// <summary>Calculada agregando o ledger, sem ponto de partida derivado.</summary>
     Ledger = 2,
+
+    /// <summary>
+    /// Posicao em instante passado: fechamento do ultimo dia anterior mais os
+    /// lancamentos do proprio dia ate o instante (ADR-0007, revisao do card 32).
+    /// </summary>
+    DailyBalance = 3,
 }
 
 /// <summary>

@@ -58,19 +58,81 @@ internal static class LedgerSql
 
     /// <summary>
     /// Posicao em instante passado, pela data do fato (RN-009, RN-011).
-    /// Limite inclusivo. Nao usa snapshot: o snapshot e ancorado em sequencia,
-    /// que e ordem de registro, enquanto esta consulta usa ordem do fato, e com
-    /// lancamento retroativo as duas divergem (ADR-0007, limitacao declarada).
-    /// Atendida pelo indice ix_entries_account_occurred, que cobre as colunas
-    /// do calculo.
+    /// Limite inclusivo. Fechamento do ultimo dia anterior ao dia do instante,
+    /// mais os lancamentos do proprio dia ate o instante (ADR-0007, revisao do
+    /// card 32). O snapshot nao serve aqui: e ancorado em sequencia, que e
+    /// ordem de registro, e com lancamento retroativo ela diverge da ordem do
+    /// fato. O fechamento e por data do fato, e a escrita o corrige.
+    /// <para>
+    /// Um unico comando: fechamento e lancamentos do dia sao lidos no mesmo
+    /// instante do banco. A parte do dia e atendida por
+    /// ix_entries_account_occurred.
+    /// </para>
     /// </summary>
     internal const string SelectBalanceAsOf = """
-        SELECT COALESCE(SUM(direction * amount), 0) AS Balance,
-               COUNT(*)                             AS EntriesReplayed,
-               COALESCE(MAX(sequence), 0)           AS LastSequence
-          FROM ledger.ledger_entries
+        WITH bounds AS (
+            SELECT (@asOf::timestamptz AT TIME ZONE 'UTC')::date AS day
+        ),
+        closing AS (
+            SELECT d.closing_balance, d.last_sequence
+              FROM ledger.daily_balances d, bounds b
+             WHERE d.account_id = @accountId
+               AND d.day < b.day
+             ORDER BY d.day DESC
+             LIMIT 1
+        ),
+        intraday AS (
+            SELECT COALESCE(SUM(e.direction * e.amount), 0) AS amount,
+                   COUNT(*)                                 AS entries,
+                   COALESCE(MAX(e.sequence), 0)             AS last_sequence
+              FROM ledger.ledger_entries e, bounds b
+             WHERE e.account_id = @accountId
+               AND e.occurred_at >= b.day::timestamp AT TIME ZONE 'UTC'
+               AND e.occurred_at <= @asOf
+        )
+        SELECT COALESCE((SELECT closing_balance FROM closing), 0) + i.amount        AS Balance,
+               i.entries                                                             AS EntriesReplayed,
+               GREATEST(COALESCE((SELECT last_sequence FROM closing), 0), i.last_sequence) AS LastSequence,
+               EXISTS (SELECT 1 FROM closing)                                        AS FromDailyBalance
+          FROM intraday i
+        """;
+
+    /// <summary>
+    /// Fechamento do dia do fato do lancamento recem-gravado (ADR-0007, card 32).
+    /// Dia sem linha nasce do fechamento do dia anterior mais o lancamento; dia
+    /// com linha soma o lancamento. O lancamento novo tem a maior sequencia da
+    /// conta, entao e o last_sequence de todo dia a partir do seu.
+    /// </summary>
+    internal const string UpsertDailyBalance = """
+        WITH bounds AS (
+            SELECT (@occurredAt::timestamptz AT TIME ZONE 'UTC')::date AS day
+        )
+        INSERT INTO ledger.daily_balances (account_id, day, closing_balance, last_sequence)
+        SELECT @accountId,
+               b.day,
+               COALESCE((SELECT d.closing_balance
+                           FROM ledger.daily_balances d
+                          WHERE d.account_id = @accountId AND d.day < b.day
+                          ORDER BY d.day DESC
+                          LIMIT 1), 0) + @signedAmount,
+               @sequence
+          FROM bounds b
+        ON CONFLICT (account_id, day) DO UPDATE
+           SET closing_balance = ledger.daily_balances.closing_balance + @signedAmount,
+               last_sequence   = @sequence
+        """;
+
+    /// <summary>
+    /// Lancamento retroativo: os fechamentos dos dias seguintes ao dia do fato
+    /// passam a incluir o valor. Na mesma transacao e sob o bloqueio da conta,
+    /// entao nenhuma consulta ve fechamento desatualizado.
+    /// </summary>
+    internal const string ShiftLaterDailyBalances = """
+        UPDATE ledger.daily_balances
+           SET closing_balance = closing_balance + @signedAmount,
+               last_sequence   = @sequence
          WHERE account_id = @accountId
-           AND occurred_at <= @asOf
+           AND day > (@occurredAt::timestamptz AT TIME ZONE 'UTC')::date
         """;
 
     internal const string InsertEntry = """

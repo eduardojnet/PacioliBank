@@ -126,20 +126,20 @@ public class SnapshotTests
     }
 
     [Fact]
-    public async Task Posicao_historica_nao_usa_snapshot_e_soma_tudo_ate_o_instante()
+    public async Task Posicao_historica_nao_usa_snapshot_e_parte_do_fechamento_diario()
     {
-        // Comportamento registrado, nao desejado: o snapshot e ancorado em
-        // sequencia (ordem de registro) e a consulta historica, na data do
-        // fato. Com lancamento retroativo, as duas ordens divergem. Daily
-        // balances (card 32) resolvem, com gatilho no p99 da RNF-002.
+        // O snapshot e ancorado em sequencia (ordem de registro) e a consulta
+        // historica, na data do fato; com lancamento retroativo, as duas
+        // ordens divergem. Por isso a historica parte do fechamento do dia
+        // anterior (card 32), e nao do snapshot: soma so o proprio dia.
         var conta = await _fixture.CreateAccountAsync();
         await LancarAsync(conta, 1, SnapshotEvery + 20);
 
         var instante = Inicio.AddDays(SnapshotEvery + 10);
         var historica = await _store.GetBalanceAsync(conta, instante, CancellationToken.None);
 
-        Assert.Equal(BalanceSource.Ledger, historica.ComputedFrom);
-        Assert.Equal(SnapshotEvery + 10, historica.EntriesReplayed);
+        Assert.Equal(BalanceSource.DailyBalance, historica.ComputedFrom);
+        Assert.Equal(1, historica.EntriesReplayed);
         Assert.Equal(await SomaDoLedgerAsync(conta, instante), historica.Balance.Amount);
     }
 }

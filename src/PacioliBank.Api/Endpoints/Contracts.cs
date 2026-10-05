@@ -54,7 +54,12 @@ public sealed record BalanceResponse(
             result.Balance.Currency.Code,
             ContractFormat.Instant(result.AsOf),
             result.ComputedAtSequence,
-            result.ComputedFrom == BalanceSource.Snapshot ? "snapshot" : "ledger",
+            result.ComputedFrom switch
+            {
+                BalanceSource.Snapshot => "snapshot",
+                BalanceSource.DailyBalance => "dailyBalance",
+                _ => "ledger",
+            },
             result.EntriesReplayed);
     }
 }
