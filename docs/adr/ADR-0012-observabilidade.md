@@ -1,6 +1,6 @@
 # ADR-0012: Log estruturado mascarado no formatador, correlação fora do adaptador HTTP e telemetria exportada por OTLP
 
-- **Status:** Aceito; log implementado (card 33), rastreamento e métricas especificados (cards 33.1 e 33.2)
+- **Status:** Aceito; log (card 33) e rastreamento (card 33.1) implementados, métricas especificadas (card 33.2). Revisado em 2026-10-05
 - **Data:** 2026-10-04
 - **Decisor:** Eduardo J. G. do Carmo
 - **Requisitos dirigentes:** RNF-021, RNF-030, RNF-031, RNF-032, [ADR-0002](./ADR-0002-plataforma-e-armazenamento.md), [ADR-0009](./ADR-0009-seguranca-e-privilegio-minimo.md) §5
@@ -43,7 +43,7 @@ O formatador produz a linha, e só então mascara **todo campo de texto**, inclu
 
 - **Instrumentação com as APIs do próprio .NET** (`ActivitySource`, `Meter`), que não são pacote: o núcleo emite spans e medições sem referenciar OpenTelemetry
 - **SDK do OpenTelemetry só na raiz de composição** da API, com exportação **OTLP** configurada pelas variáveis padrão (`OTEL_EXPORTER_OTLP_ENDPOINT`). Sem destino configurado, nada é exportado e nada quebra
-- **Inspeção local** por um coletor ou painel OTLP no `docker compose`, escolhido e verificado no card 33.1 [NVI]
+- **Inspeção local** por um coletor ou painel OTLP no `docker compose`, escolhido e verificado no card 33.1 (ver a revisão no fim)
 
 ### 5. Ajuste no ambiente local
 
@@ -95,3 +95,31 @@ As connection strings locais desligam a negociação GSS do Npgsql (`GSS Encrypt
 2. Backend central de observabilidade que receba log, traço e métrica por OTLP
 3. Exportador Prometheus estável
 4. Custo de formatação aparecendo em medição de carga
+
+## Revisão de 2026-10-05 (card 33.1): rastreamento implementado
+
+### O que mudou em relação ao texto acima
+
+**O span do caso de uso sai de um decorador, e não do núcleo.** O §4 dizia que o núcleo emitiria spans com `ActivitySource`. Na execução, isso teria um custo medido em outro controle: código de instrumentação dentro de `LedgerService` não é observado pelos testes de domínio, e os mutantes dele sobreviveriam, puxando a pontuação de mutação para perto do limite de 85% ([ADR-0010](./ADR-0010-estrategia-de-testes.md), revisão do card 36). O decorador `ObservedLedgerService`, na API, envolve `ILedgerService`, vê comando, resultado e exceção, e serve também às métricas do card 33.2. O núcleo continua sem nenhuma linha de telemetria.
+
+### Decisões
+
+- **Três níveis no mesmo traço:** requisição HTTP (instrumentação do ASP.NET Core), caso de uso (`ledger.post`, `ledger.reverse`, `ledger.balance`, `ledger.statement`) e comandos do PostgreSQL (`Npgsql.OpenTelemetry`)
+- **Nenhum identificador nos spans.** O caminho da requisição (`url.path`) é mascarado pelo mesmo critério do log; o nome do span usa a rota com o parâmetro (`{accountId:guid}`). Rejeição registrada pelo tipo da exceção (`ledger.rejection`), nunca pela mensagem
+- **Só comando dentro de um traço é rastreado.** O despachante de outbox consulta o banco a cada segundo, fora de qualquer requisição; sem o filtro do Npgsql, cada consulta viraria um traço de um span só. Abertura física de conexão também não é rastreada
+- **Painel Aspire 13.6.0** no `docker compose` (`pacioli-observability`, `http://localhost:18888`), recebendo OTLP/gRPC. Autenticação desligada, só no ambiente local. A API exporta para ele pela variável `OTEL_EXPORTER_OTLP_ENDPOINT`; sem a variável, nada é exportado
+
+### Alternativas rejeitadas nesta revisão
+
+**Instrumentação dentro de `LedgerService`, como o §4 previa.** Rejeitada pelo custo medido no teste de mutação, descrito acima.
+
+**Jaeger para os traços, e Prometheus com Grafana para as métricas.** Três contêineres, contra um que recebe as duas coisas por OTLP. O Prometheus ainda exigiria o exportador em beta. *Voltaria a ser considerado* em ambiente que já tenha essa pilha.
+
+**Rastrear tudo e filtrar no coletor.** Rejeitada: o custo de criar e exportar os spans do despachante continuaria no processo, só para serem descartados depois.
+
+### Validação feita
+
+- `TracingTests` (2), API e PostgreSQL reais, exportador em memória: uma escrita produz o span da requisição, o do caso de uso como filho dele e os do PostgreSQL como filhos do caso de uso, no mesmo traço; nenhum span do PostgreSQL sem pai; nenhum identificador de conta íntegro em nome ou tag de span; a rejeição marca o span com status de erro e o tipo da exceção
+- Poder de detecção, quatro mutações, todas reprovadas: sem o decorador; sem a instrumentação do PostgreSQL; caminho sem mascarar; sem o filtro de comando
+- No `docker compose`, o painel mostrou só traços com raiz em requisição: a escrita com 10 spans, a consulta de posição com 4. Antes do filtro, mostrava dezenas de traços soltos do despachante
+

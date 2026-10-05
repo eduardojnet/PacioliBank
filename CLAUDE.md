@@ -10,8 +10,8 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 175 testes; os de integração exigem Docker
-docker compose up --build     # migrador roda e termina; API em http://localhost:8080
+dotnet test                   # 177 testes; os de integração exigem Docker
+docker compose up --build     # migrador roda e termina; API em :8080, painel de observabilidade em :18888
 docker compose down -v        # só para recomeçar do zero, de propósito
 dotnet tool restore && (cd tests/PacioliBank.Domain.Tests && dotnet stryker)   # mutação, ~20 s
 ```
@@ -73,7 +73,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutacao (Stryker) do dominio >= 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependencia (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantaneo do OpenAPI (openapi.v1.approved.json)
-  PacioliBank.Integration.Tests/   69 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes, snapshot e log
+  PacioliBank.Integration.Tests/   71 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes, snapshot, log e traco
 db/migrations/                     esquema, papeis e privilegios, em migracoes numeradas
 db/seed/                           contas de exemplo, so no ambiente local
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
@@ -106,8 +106,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com seus subníveis, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.5, ENF 1.6, BDD 1.2), e painel de evidência na raiz da API. Depois dela, concluídos: 26 (NetArchTest), 27 (migrações DbUp em passo separado), 28 (analisadores em `Recommended`), 29 e 30 (encerrados como decisão registrada), 30.1 (teste do snapshot), 31 (CI no GitHub Actions), 31.1 (auditoria de dependências), 31.2 (cobertura do domínio com limite de 85%), 34 (ferramentas de teste atualizadas; xunit v3 no 34.1, Backlog), 36 (teste de mutação com Stryker, limite de 85%) e 33 (log JSON com correlação e mascaramento, ADR-0012). Em A Fazer: 33.1 (rastreamento) e 33.2 (métricas). Depois, proposta: 35 (PostgreSQL 18). Ficam no Backlog até o gatilho: 32, 34.1, 37 e 38. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com seus subníveis, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.5, ENF 1.7, BDD 1.2), e painel de evidência na raiz da API. Depois dela, concluídos: 26 (NetArchTest), 27 (migrações DbUp em passo separado), 28 (analisadores em `Recommended`), 29 e 30 (encerrados como decisão registrada), 30.1 (teste do snapshot), 31 (CI no GitHub Actions), 31.1 (auditoria de dependências), 31.2 (cobertura do domínio com limite de 85%), 34 (ferramentas de teste atualizadas; xunit v3 no 34.1, Backlog), 36 (teste de mutação com Stryker, limite de 85%) 33 (log JSON com correlação e mascaramento, ADR-0012) e 33.1 (rastreamento ponta a ponta, painel em :18888). Em A Fazer: 33.2 (métricas). Depois, proposta: 35 (PostgreSQL 18). Ficam no Backlog até o gatilho: 32, 34.1, 37 e 38. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna aberta: a L-13 (RNF-036 declarada sem medição) foi encerrada no card 31.2, a L-14 (ponto de extensão declarado e inexistente na EF §10) no card 29, a L-15 (RNF-003 e RNF-006 dados como realizados sem ressalva) no card 30, e a L-16 (observabilidade dada como realizada sem existir) no card 33.
 
-Antes de começar, rode `dotnet test`. Esperado: 175 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 177 passando, sem avisos.

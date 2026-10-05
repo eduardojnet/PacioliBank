@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 5 | 32, 34.1, 35, 37, 38 |
-| A Fazer | 2 | 33.1, 33.2 |
+| A Fazer | 1 | 33.2 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 48 | 01 a 31, 30.1, 31.1, 31.2, 33, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 49 | 01 a 31, 30.1, 31.1, 31.2, 33, 33.1, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -79,19 +79,6 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 ---
 
 ## A Fazer
-
-### 33.1. Rastreamento ponta a ponta com OpenTelemetry (RNF-030)
-
-`prioridade: Baixa` · `codigo` · `observabilidade`
-
-SEPARADO DO CARD 33 (04/10/2026).
-
-CRITÉRIO:
-- OpenTelemetry (pacotes estáveis): span da requisição HTTP, span do caso de uso e spans do PostgreSQL no mesmo traço
-- Exportação OTLP configurável por variável de ambiente; sem destino configurado, nada é exportado e nada quebra
-- Teste automatizado com exportador em memória: uma escrita produz os três níveis de span, ligados pelo mesmo trace id; poder de detecção medido
-- Inspeção local conforme decidido no ADR-0012
-- ENF §11: RNF-030 passa a realizada
 
 ### 33.2. Métricas de negócio (RNF-032)
 
@@ -1014,3 +1001,43 @@ CRITÉRIO ATENDIDO:
 ACHADO NO CAMINHO: com o resto em JSON, apareceu uma linha em texto livre do Npgsql tentando carregar libgssapi_krb5 (ausente na imagem; 12 vezes no migrador). Negociação GSS desligada nas connection strings locais.
 
 CORREÇÃO PÓS-ENTREGA (05/10/2026): o CI de 6ff2eb4 reprovou na varredura de segredos. O teste de mascaramento trazia um JWT sintético escrito inteiro, que o gitleaks tomou por credencial. A ocorrência do commit 481b566, já publicado, foi ignorada pela impressão digital no .gitleaksignore, com motivo; o teste passou a montar o token em tempo de execução (e563f42; CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37314359330). Falha de processo: o gitleaks não foi rodado localmente antes do push deste card.
+
+### 33.1. Rastreamento ponta a ponta com OpenTelemetry (RNF-030)
+
+`prioridade: Baixa` · `codigo` · `observabilidade`
+
+SEPARADO DO CARD 33 (04/10/2026).
+
+CRITÉRIO:
+- OpenTelemetry (pacotes estáveis): span da requisição HTTP, span do caso de uso e spans do PostgreSQL no mesmo traço
+- Exportação OTLP configurável por variável de ambiente; sem destino configurado, nada é exportado e nada quebra
+- Teste automatizado com exportador em memória: uma escrita produz os três níveis de span, ligados pelo mesmo trace id; poder de detecção medido
+- Inspeção local conforme decidido no ADR-0012
+- ENF §11: RNF-030 passa a realizada
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário (33.1 e depois 33.2).
+
+REVISÃO DE DESENHO (vai para o ADR-0012): o span do caso de uso sai de um decorador de ILedgerService na API, e não de código dentro do núcleo. Instrumentação no LedgerService não é observada pelos testes de domínio, e seus mutantes puxariam a pontuação de mutação para perto do limite de 85% (card 36). O decorador vê comando, resultado e exceção, e serve também às métricas do 33.2.
+
+CRITÉRIO ACRESCENTADO: nenhum identificador de conta íntegro nos spans exportados (o caminho da requisição é mascarado com o mesmo critério do log, ADR-0009 §5).
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE:
+- OpenTelemetry 1.19.x estável na raiz de composição: instrumentação do ASP.NET Core, Npgsql.OpenTelemetry 10.0.3 e a fonte PacioliBank.Ledger; exportação OTLP só com OTEL_EXPORTER_OTLP_ENDPOINT
+- Decorador ObservedLedgerService: span ledger.post, ledger.reverse, ledger.balance, ledger.statement; rejeição pelo tipo da exceção, nunca pela mensagem
+- url.path mascarado como no log; nome do span usa a rota com o parâmetro
+- Filtro do Npgsql: só comando dentro de traço; sem rastrear abertura física de conexão
+- Painel Aspire 13.6.0 no docker compose (pacioli-observability, http://localhost:18888), só local
+- ADR-0012 revisado com 3 alternativas rejeitadas; ENF 1.7
+
+CRITÉRIO ATENDIDO:
+- TracingTests (2), API e PostgreSQL reais, exportador em memória: requisição, caso de uso (filho) e PostgreSQL (filhos do caso de uso) no mesmo traço; nenhum span do PostgreSQL sem pai; nenhum identificador de conta íntegro; rejeição com status de erro e tipo da exceção. Reprovaram antes da implementação
+- Poder de detecção, quatro mutações reprovadas: sem o decorador; sem a instrumentação do PostgreSQL; caminho sem mascarar; sem o filtro de comando
+- No painel: só traços com raiz em requisição (escrita com 10 spans, posição com 4)
+- Insomnia 43/43; gitleaks limpo nos modos histórico e diretório antes do push; 177 testes verdes; build sem avisos
+- CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37316632032
+
+ACHADO: na primeira inspeção do painel, dezenas de traços de um span só, das consultas do despachante de outbox a cada segundo. Filtro aplicado e coberto por teste.
