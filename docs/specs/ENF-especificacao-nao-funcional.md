@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.2
+**Versão:** 1.3
 **Data:** 2026-10-04
 **Status:** Proposto
 
@@ -301,7 +301,7 @@ O enunciado declara que não é necessário esgotar as possibilidades técnicas.
 | Resiliência | RNF-010, RNF-011, RNF-013, RNF-016 | RNF-014, RNF-015, RNF-017, RNF-018 |
 | Segurança | RNF-020, RNF-021, RNF-022, RNF-024 (varredura de segredos no CI, card 31), RNF-025, RNF-026 (auditoria no restore, transitivas inclusive, card 31.1) | RNF-023, RNF-027 |
 | Observabilidade | RNF-031, RNF-032 | RNF-030, RNF-033 |
-| Manutenibilidade | RNF-034, RNF-035, RNF-037, RNF-038, RNF-039 | RNF-036: cobertura coletada no CI, mas abaixo da meta e sem limite que bloqueie (lacuna L-13, card 31.2) |
+| Manutenibilidade | RNF-034, RNF-035, RNF-036 (86,4%, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` 6.0.2 restrito ao assembly `PacioliBank.Ledger`; o CI reprova abaixo de 85%, card 31.2), RNF-037, RNF-038, RNF-039 | n/a |
 
 Declarar essa separação é parte da entrega. Apresentar requisito especificado como se estivesse implementado seria, em contrato real, informação incorreta prestada ao cliente.
 
@@ -348,3 +348,5 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | R-05: `eventId` substituído por `message_id`, o identificador efetivo (ADR-0008). R-06: descrevia acoplamento por bloqueio consultivo, opção **rejeitada** no ADR-0005; corrigido para o mecanismo adotado, bloqueio de linha, mais o `SKIP LOCKED` do despachante (card 21.1) |
 | 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-036 movida de "realizado" para "apenas especificado". Nunca tinha sido medida; medida no card 31, a cobertura de linha do projeto de domínio é 56,8% com os testes de domínio e 74,9% somando os de integração, abaixo dos 85% (lacuna L-13). RNF-024 passa a verificada no CI; RNF-026 passa a realizada (card 31.1): alerta alto ou crítico em dependência, direta ou transitiva, reprova o restore |
+| 1.3 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-036 volta a "realizado no código", agora medida: 86,4% de cobertura de linha no projeto de domínio, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` 6.0.2 restrito ao assembly `PacioliBank.Ledger`, com limite de 85% no CI (card 31.2, lacuna L-13 encerrada). Método registrado no ADR-0010 |
+

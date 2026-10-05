@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 7 | 32 a 38 |
-| A Fazer | 1 | 31.2 |
+| A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 41 | 01 a 28, 31 e 31.1, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 42 | 01 a 28, 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -94,24 +94,13 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 31.2. Tratar a cobertura do domínio abaixo da RNF-036 (L-13)
-
-`prioridade: Média` · `codigo` · `doc`
-
-DESCOBERTO NO CARD 31 (04/10/2026). LACUNA L-13. A ENF §11 declara a RNF-036 (cobertura de linha >= 85% no projeto de domínio) como 'realizada no código', e o ADR-0010 a põe no critério de bloqueio. Nunca tinha sido medida. Medida em 04/10/2026 no projeto PacioliBank.Ledger: 56,8% só com os testes de domínio, 49,9% só com os de integração, 74,9% somando os dois.
-
-DECISÃO DO USUÁRIO, antes de executar:
-(a) escrever testes até atingir 85% e ligar o limite no CI; ou
-(b) revisar a meta no ADR-0010 e na ENF, com alternativa rejeitada, e ligar o limite revisado; ou
-(c) manter a cobertura informativa e declarar a RNF-036 como especificada, não realizada.
-
-CRITÉRIO (qualquer opção): ENF §11 deixa de afirmar o que não é verdade; o número medido fica registrado com o método; se houver limite, o CI reprova abaixo dele (medido).
+_Vazia. Próximos por decisão do usuário._
 
 ---
 
 ## Em Andamento
 
-_Vazia. Os cards 31 e 31.1 foram concluídos; o próximo é o 31.2._
+_Vazia. Cards 31, 31.1 e 31.2 concluídos._
 
 ---
 
@@ -816,3 +805,37 @@ CRITÉRIO ATENDIDO:
 - ENF §11, ADR-0010, README, ESTADO e CLAUDE.md atualizados: RNF-026 realizada
 
 OBSERVADO: o GitHub avisa que o rótulo ubuntu-latest migra para o Ubuntu 26 a partir de 19/10/2026. Não fixei a versão do runner neste card; fica registrado para decisão.
+
+### 31.2. Tratar a cobertura do domínio abaixo da RNF-036 (L-13)
+
+`prioridade: Média` · `codigo` · `doc`
+
+DESCOBERTO NO CARD 31 (04/10/2026). LACUNA L-13. A ENF §11 declara a RNF-036 (cobertura de linha >= 85% no projeto de domínio) como 'realizada no código', e o ADR-0010 a põe no critério de bloqueio. Nunca tinha sido medida. Medida em 04/10/2026 no projeto PacioliBank.Ledger: 56,8% só com os testes de domínio, 49,9% só com os de integração, 74,9% somando os dois.
+
+DECISÃO DO USUÁRIO, antes de executar:
+(a) escrever testes até atingir 85% e ligar o limite no CI; ou
+(b) revisar a meta no ADR-0010 e na ENF, com alternativa rejeitada, e ligar o limite revisado; ou
+(c) manter a cobertura informativa e declarar a RNF-036 como especificada, não realizada.
+
+CRITÉRIO (qualquer opção): ENF §11 deixa de afirmar o que não é verdade; o número medido fica registrado com o método; se houver limite, o CI reprova abaixo dele (medido).
+
+--- ATUALIZAÇÃO 04/10/2026, ao iniciar (append-only) ---
+
+DECIDIDO PELO USUÁRIO: opção (a). Escrever testes até 85% de cobertura de linha no projeto PacioliBank.Ledger e fazer o CI reprovar abaixo disso.
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+DIAGNÓSTICO: das 169 linhas sem cobertura, 137 estavam em LedgerDomainException.cs: construtores 'padrão' (sem argumento, só mensagem, mensagem com exceção interna) que ninguém chamava. A CA1032, que os exigiria, não está ativa no modo Recommended (verificado removendo um).
+
+ENTREGUE:
+- 40 construtores de exceção sem uso removidos (21 mantidos, os que o código chama). Além de código morto, permitiam criar rejeição sem os dados que a API devolve. Propriedades sempre preenchidas passaram a não anuláveis
+- 19 testes de domínio sobre comportamento observável: ContractTests.cs (corpo de escrita e evento campo a campo, instante em UTC com Z, impressão do comando, reidratação do lançamento), defesas da conta, Money e Currency, estorno pela porta de entrada
+- CI: passo 'Cobertura do domínio, limite de 85%' (coverlet.msbuild 6.0.2, Release, só o assembly PacioliBank.Ledger, só os testes de domínio)
+- ADR-0010 revisado com o método e 3 alternativas rejeitadas (união com a integração; medir em Debug; testar ou excluir os construtores mortos); ENF 1.3
+
+CRITÉRIO ATENDIDO:
+- Medida: 56,8% para 86,4% (Release; 87,9% em Debug). Somando a integração, 95,5%, só informativo
+- O CI reprova abaixo de 85%: ramo ci/prova-cobertura sem ContractTests.cs (72,8%) ficou vermelho só no passo de cobertura (https://github.com/eduardojnet/PacioliBank/actions/runs/37246876898). Ramo apagado
+- Verde em main com o limite ligado: https://github.com/eduardojnet/PacioliBank/actions/runs/37246866504
+- ENF §11 diz a verdade: RNF-036 realizada, com número e método. L-13 encerrada
+- Build sem avisos; 150 testes verdes (85 + 57 + 6 + 2)

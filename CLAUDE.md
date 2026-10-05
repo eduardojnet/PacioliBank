@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 131 testes; os de integração exigem Docker
+dotnet test                   # 150 testes; os de integração exigem Docker
 docker compose up --build     # migrador roda e termina; API em http://localhost:8080
 docker compose down -v        # só para recomeçar do zero, de propósito
 ```
@@ -69,7 +69,7 @@ src/
   PacioliBank.Api/                 adaptador HTTP; hospeda o despachante; wwwroot = painel de evidencia
   PacioliBank.Migrations/          migrador DbUp: passo separado, papel de migracao, termina
 tests/
-  PacioliBank.Domain.Tests/        66 testes, sem I/O
+  PacioliBank.Domain.Tests/        85 testes, sem I/O; cobertura do dominio >= 85% exigida no CI
   PacioliBank.Architecture.Tests/  6 regras de dependencia (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantaneo do OpenAPI (openapi.v1.approved.json)
   PacioliBank.Integration.Tests/   57 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox e migracoes
@@ -105,8 +105,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.2, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002), 28 (analisadores em `Recommended`, L-06) e 31 (CI no GitHub Actions) concluídos. Card 31.1 (auditoria de dependências, transitivas inclusive, no restore) concluído. Em A Fazer: 31.2 (cobertura do domínio até 85%, com limite no CI, opção (a) decidida pelo usuário; lacuna L-13). A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.2, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002), 28 (analisadores em `Recommended`, L-06) e 31 (CI no GitHub Actions) concluídos. Cards 31.1 (auditoria de dependências, transitivas inclusive, no restore) e 31.2 (cobertura do domínio de 56,8% para 86,4%, limite de 85% no CI, L-13) concluídos. A Fazer está vazia; próximos por decisão do usuário (proposta: 34, 36, 35, 33; encerrar 29 e 30 como decisão, se o usuário aprovar; 32, 37 e 38 ficam no Backlog até o gatilho). A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
-Nenhuma lacuna ALTA aberta. Aberta: L-13 (MÉDIA), a ENF declarava a RNF-036 realizada sem medição; medida, a cobertura do domínio é 74,9%.
+Nenhuma lacuna aberta: a L-13 (RNF-036 declarada sem medição) foi encerrada no card 31.2.
 
-Antes de começar, rode `dotnet test`. Esperado: 131 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 150 passando, sem avisos.

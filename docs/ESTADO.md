@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 131 passando (66 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-03)
+**Testes:** 150 passando (85 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 86,4%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -149,7 +149,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 66 | Invariantes puras e validações da porta de entrada, sem I/O |
+| `PacioliBank.Domain.Tests` | 85 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 86,4% |
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
@@ -163,7 +163,7 @@ A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em 
 
 Auditoria de dependências (card 31.1): o restore audita as dependências, transitivas inclusive, e alerta alto ou crítico vira erro (`NuGetAudit` explícito no `Directory.Build.props`, modo `all`, nível `high`); vale localmente, no CI e na imagem. O CI lista as demais severidades num passo informativo. Em 2026-10-04, nenhum pacote vulnerável em nenhuma severidade.
 
-Do critério de bloqueio do ADR-0010, falta no CI só a cobertura mínima (L-13, card 31.2).
+Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release (`coverlet.msbuild`), e reprova abaixo de 85%. Hoje: 86,4%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010.
 
 ### Especificações e diagramas
 
@@ -188,7 +188,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
-| Cobertura mínima do domínio (RNF-036) | Não atendida: 74,9% medidos, sem limite no CI (L-13, card 31.2) |
 
 ---
 
@@ -306,7 +305,7 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
-### L-13: RNF-036 declarada realizada sem nunca ter sido medida (MÉDIA, aberta em 2026-10-04)
+### L-13: RNF-036 declarada realizada sem nunca ter sido medida (ENCERRADA em 2026-10-04, card 31.2)
 
 A ENF §11 listava a RNF-036 (cobertura de linha ≥ 85% no projeto de domínio) como "realizada no código", e o ADR-0010 a põe no critério de bloqueio. Ninguém tinha medido. Medida no card 31, no projeto `PacioliBank.Ledger`, com o coverlet: **56,8%** só com os testes de domínio, **49,9%** só com os de integração, **74,9%** somando os dois (união das linhas cobertas).
 
@@ -315,6 +314,13 @@ A ENF §11 listava a RNF-036 (cobertura de linha ≥ 85% no projeto de domínio)
 **Pendente, card 31.2, por decisão do usuário:** (a) escrever testes até 85% e ligar o limite no CI; (b) revisar a meta no ADR-0010 e na ENF, com alternativa rejeitada; ou (c) manter a cobertura informativa e a RNF-036 como especificada.
 
 **Severidade MÉDIA:** não há defeito de comportamento; há uma afirmação falsa sobre verificação, do mesmo tipo da L-09.
+
+**Resolução (opção a, decidida pelo usuário):** cobertura de linha do `PacioliBank.Ledger` medida só pelos testes de domínio, em Release, de **56,8% para 86,4%**, com limite de 85% no CI. Dois movimentos:
+
+- **40 construtores de exceção sem uso removidos.** Construtores "padrão" escritos por hábito (a CA1032, que os exigiria, não está ativa), que ninguém chamava e que permitiam criar, por exemplo, saldo insuficiente sem os valores que a API devolve. Testá-los subiria o número sem provar nada; excluí-los da medida esconderia código
+- **19 testes de domínio**, sobre comportamento observável: corpo de escrita e payload de evento campo a campo, instante em UTC com `Z`, impressão do comando (estável na correlação, sensível a valor, sentido, conta; estorno nunca coincide com lançamento), reidratação do lançamento, defesas da conta (valor sem moeda, instante ausente, identificador vazio), estorno pela porta de entrada
+
+Medida em Release (86,4%) e não em Debug (87,9%): o CI compila em Release. Poder de detecção: sem os testes de contrato, 72,8%, e o passo reprova (localmente e num ramo de prova no CI). Método e alternativas rejeitadas na revisão do ADR-0010. ENF na versão 1.3.
 
 ### L-06: `AnalysisMode` ainda em `Default` (ENCERRADA em 2026-10-03, card 28)
 
@@ -374,7 +380,9 @@ Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 
 12. ~~**[31] CI no GitHub Actions** (ADR-0010)~~ concluído em 2026-10-04
    - ~~**[31.1] Auditoria de dependências vulneráveis no CI** (RNF-026)~~ concluído em 2026-10-04
-   - **[31.2] Cobertura do domínio abaixo da RNF-036** (L-13), descoberto no 31; espera decisão do usuário
+   - ~~**[31.2] Cobertura do domínio abaixo da RNF-036** (L-13)~~ concluído em 2026-10-04, opção (a)
+
+A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
 
@@ -382,7 +390,7 @@ Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 131 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 150 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -494,3 +502,4 @@ confirmação.
 | 2026-10-04 | Card 31 (CI no GitHub Actions) movido do Backlog para A Fazer por decisão do usuário, com critério de conclusão escrito ao entrar (cinco camadas de teste, cobertura informativa, varredura de segredos, poder de detecção medido) |
 | 2026-10-04 | Card 31 concluído: CI no GitHub Actions com três jobs (build e testes, coleção do Insomnia, `gitleaks`), ações fixadas por SHA, verde em `main` em cerca de um minuto; vermelho num ramo com aviso plantado (prova apagada depois). Descobertos e viraram cards: 31.1 (auditoria de dependências) e 31.2, com a lacuna L-13: a ENF dava a RNF-036 por realizada, e a cobertura medida do domínio é 74,9%. ENF corrigida para 1.2 |
 | 2026-10-04 | Card 31.1 concluído: auditoria de dependências no restore, explícita (`NuGetAudit`, modo `all`, nível `high`). Medido localmente: nível `high` reprova o alerta alto e `critical` deixa passar; modo `all` pega a vulnerabilidade transitiva e `direct` deixa passar. No CI, um ramo com dependência transitiva vulnerável ficou vermelho (apagado depois). Nenhum pacote vulnerável hoje. RNF-026 realizada |
+| 2026-10-04 | Card 31.2 concluído, opção (a): cobertura de linha do domínio, medida pelos testes de domínio em Release, de 56,8% para 86,4%, com limite de 85% no CI. 40 construtores de exceção sem uso removidos e 19 testes de domínio escritos. Sem os testes de contrato, 72,8%: o passo reprova (medido no CI). L-13 encerrada; nenhuma lacuna aberta. ADR-0010 revisado com o método e 3 alternativas rejeitadas; ENF 1.3. 150 verdes |
