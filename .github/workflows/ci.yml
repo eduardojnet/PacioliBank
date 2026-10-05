@@ -47,6 +47,7 @@ jobs:
       # Dominio, arquitetura, contrato e integracao. A integracao sobe
       # PostgreSQL real pelo Testcontainers, com o Docker do proprio runner.
       - name: Testes de dominio, arquitetura, contrato e integracao
+        id: testes
         run: >-
           dotnet test --no-build -c Release
           --collect:"XPlat Code Coverage"
@@ -55,8 +56,10 @@ jobs:
 
       # Cobertura informativa, sem limite minimo: forca das assercoes e
       # assunto do teste de mutacao (card 36), nao de percentual de linhas.
+      # Publica sempre que os testes rodaram, inclusive com falha; se o build
+      # reprovou, nao ha o que publicar e o passo nao acrescenta outra falha.
       - name: Publicar resultados e cobertura
-        if: always()
+        if: always() && steps.testes.outcome != 'skipped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: resultados-e-cobertura
