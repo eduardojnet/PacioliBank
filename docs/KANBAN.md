@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-05 · **Cartões:** 54 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
+**Data:** 2026-10-05 · **Cartões:** 55 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -11,10 +11,10 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 0 | |
 | A Fazer | 0 | |
-| Em Andamento | 0 | Limite de 1 em curso, por decisão. |
+| Em Andamento | 1 | 38, entregue e aguardando a reexecução do CI (falha de runner do GitHub). Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 54 | 01 a 34, 36, 37 e 38, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
+| Concluído | 54 | 01 a 34, 36, 37 e 39, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
 
 ---
 
@@ -38,7 +38,7 @@ _Vazia. Próximos por decisão do usuário._
 
 ## Em Andamento
 
-_Vazia. Cards 31, 31.1 e 31.2 concluídos._
+**38. Incluir transferência entre contas no escopo:** código, testes e documentos entregues (seção do card abaixo, em Concluído, já com a ENTREGA). Dois jobs do CI não conseguiram runner do GitHub e foram cancelados; o card fecha quando o CI reexecutado ficar verde.
 
 ---
 
@@ -1155,3 +1155,15 @@ CRITÉRIO ATENDIDO:
 - 230 testes verdes; build sem avisos; gitleaks limpo
 
 DECLARADO: estorno de transferência, tarifa, limites e moedas diferentes pendentes da QA-009; evento sem o identificador da transferência; custo de uq_entries_leg e da contenção com dois bloqueios não medido sob carga [NVI].
+
+### 39. Corrigir o cabeçalho do ESTADO.md: contagem de projetos e data do build
+
+`prioridade: Baixa` · `documentacao`
+
+ÂNCORA: regras 4 e 9. Apontado pelo usuário em 05/10/2026.
+
+SITUAÇÃO: a linha Build dizia "os 6 projetos da solução" (são 9: 5 de produção, 4 de teste) e "verificado em 2026-10-03", com 34 commits depois.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE: build reverificado do zero (`dotnet build --no-incremental`): 9 projetos, 0 avisos, 0 erros. Linha corrigida e datada, com o commit verificado. Linhas de testes e de verificação manual conferidas: já datadas de hoje, por execução de hoje. ESTADO §11 registra a correção.
