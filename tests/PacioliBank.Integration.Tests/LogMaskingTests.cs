@@ -60,13 +60,26 @@ public class LogMaskingTests
     [InlineData("123.456.789-09", "[CPF]")]
     [InlineData("12345678909", "[CPF]")]
     [InlineData("Bearer abc.DEF-123_xyz", "Bearer [TOKEN]")]
-    [InlineData("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.c2lnbmF0dXJh", "[TOKEN]")]
     public void Cpf_e_token_sao_substituidos_por_marcador(string sensivel, string marcador)
     {
         var linha = Formatar("Recebido {Valor}", null, ("Valor", $"antes {sensivel} depois"));
 
         Assert.DoesNotContain(sensivel, linha, StringComparison.Ordinal);
         Assert.Contains(marcador, linha, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Jwt_e_substituido_por_marcador()
+    {
+        // Token sintetico, montado em tempo de execucao: escrito inteiro no
+        // fonte, a varredura de segredos do CI o toma por credencial real.
+        // Cabecalho {"alg":"HS256"}, corpo {"sub":"1234"}, assinatura ficticia.
+        var jwt = string.Join('.', "eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0In0", "c2lnbmF0dXJh");
+
+        var linha = Formatar("Recebido {Valor}", null, ("Valor", $"antes {jwt} depois"));
+
+        Assert.DoesNotContain(jwt, linha, StringComparison.Ordinal);
+        Assert.Contains("[TOKEN]", linha, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -8,3 +8,9 @@
 # cabecalho. A mesma linha aparece em dois commits.
 510afd69ed5b3b2d46dbae425beb88672deafb80:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
 431dfed7058576491274c67546944459bf4727e2:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
+
+# Card 33, teste de mascaramento do log: JWT sintetico escrito inteiro no
+# fonte (cabecalho {"alg":"HS256"}, corpo {"sub":"1234"}, assinatura
+# ficticia). Nao da acesso a nada. O commit ja estava publicado; desde o
+# commit seguinte, o teste monta o token em tempo de execucao.
+481b566c5b8baae681087c1487b24dce1a9dbe87:tests/PacioliBank.Integration.Tests/LogMaskingTests.cs:jwt:63
