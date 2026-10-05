@@ -339,6 +339,16 @@ public sealed class PostgresLedgerStore : ILedgerStore
         string responseBody,
         CancellationToken cancellationToken)
     {
+        await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertEntryKey, new
+        {
+            entryId = entry.EntryId,
+            accountId = entry.AccountId,
+            sequence = entry.Sequence,
+            idempotencyKey = entry.IdempotencyKey,
+            reversalOf = entry.ReversalOf,
+            recordedAt = recordedAt.UtcDateTime,
+        }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
+
         await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertEntry, new
         {
             entryId = entry.EntryId,

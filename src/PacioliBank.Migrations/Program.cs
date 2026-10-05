@@ -1,3 +1,4 @@
+using Npgsql;
 using PacioliBank.Migrations;
 
 // Passo de migracao do docker compose: aplica o que falta e termina. O codigo
@@ -16,6 +17,21 @@ if (string.IsNullOrWhiteSpace(connectionString))
 var schema = SchemaMigrator.ApplySchema(connectionString, logToConsole: true);
 if (!schema.Successful)
 {
+    return 1;
+}
+
+// Particoes mensais do ledger a frente do tempo (ADR-0013). Falha aqui
+// impede a API de subir: melhor do que descobrir a particao faltando depois.
+try
+{
+    foreach (var partition in SchemaMigrator.EnsurePartitions(connectionString))
+    {
+        Console.WriteLine($"Particao criada: ledger.{partition}");
+    }
+}
+catch (PostgresException ex)
+{
+    Console.Error.WriteLine($"Falha ao criar particoes do ledger: {ex.MessageText}");
     return 1;
 }
 

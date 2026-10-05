@@ -18,6 +18,7 @@ public class MigrationTests
 {
     private const string InitialSchema = "0001_esquema_inicial.sql";
     private const string DailyBalances = "0002_saldo_diario.sql";
+    private const string Partitioning = "0003_particionamento_do_ledger.sql";
 
     private readonly LedgerFixture _fixture;
 
@@ -38,7 +39,7 @@ public class MigrationTests
 
         var tabelas = await TabelasDoLedgerAsync(banco);
         Assert.Equal(
-            ["accounts", "balance_snapshots", "daily_balances", "idempotency_records", "ledger_entries", "outbox_messages"],
+            ["accounts", "balance_snapshots", "daily_balances", "entry_keys", "idempotency_records", "ledger_entries", "outbox_messages"],
             tabelas);
     }
 
@@ -199,11 +200,81 @@ public class MigrationTests
             fechamentos);
     }
 
+    [Fact]
+    public async Task Migracao_do_particionamento_preserva_os_dados_e_as_referencias()
+    {
+        // Banco com 0001 e 0002 e dados de tres meses de registro, com estorno,
+        // mensagem na outbox e registro de idempotencia apontando para o ledger.
+        var banco = await _fixture.CreateEmptyDatabaseAsync();
+        using var pasta = PastaDeMigracoes.CopiaDasOficiais(InitialSchema, DailyBalances);
+        Assert.True(SchemaMigrator.ApplySchema(banco, pasta.Caminho).Successful);
+
+        var conta = Guid.NewGuid();
+        var credito = Guid.NewGuid();
+        await ExecutarAsync(banco,
+            "INSERT INTO ledger.accounts (account_id, customer_id, currency, status, last_sequence) VALUES (@conta, @conta, 'BRL', 1, 3)",
+            new { conta });
+        var lancamentos = new (Guid Id, int Sequencia, short Sentido, decimal Valor, string Registro, Guid? EstornoDe)[]
+        {
+            (credito, 1, 1, 100.00m, "2026-01-10T10:00:00Z", null),
+            (Guid.NewGuid(), 2, -1, 30.00m, "2026-02-10T10:00:00Z", null),
+            (Guid.NewGuid(), 3, -1, 100.00m, "2026-03-10T10:00:00Z", credito),
+        };
+        foreach (var l in lancamentos)
+        {
+            await ExecutarAsync(banco,
+                """
+                INSERT INTO ledger.ledger_entries
+                    (entry_id, account_id, sequence, direction, amount, currency, occurred_at, recorded_at,
+                     idempotency_key, correlation_id, reversal_of, balance_after)
+                VALUES (@id, @conta, @seq, @sentido, @valor, 'BRL', @registro::timestamptz, @registro::timestamptz,
+                        @chave, @id, @estornoDe, 0)
+                """,
+                new { id = l.Id, conta, seq = l.Sequencia, sentido = l.Sentido, valor = l.Valor, registro = l.Registro, chave = "m-" + l.Sequencia, estornoDe = l.EstornoDe });
+        }
+
+        await ExecutarAsync(banco,
+            """
+            INSERT INTO ledger.outbox_messages (message_id, account_id, sequence, event_type, payload, occurred_at)
+            VALUES (@id, @conta, 2, 'teste', '{}', now());
+            INSERT INTO ledger.idempotency_records (account_id, idempotency_key, request_hash, response_status, response_body, entry_id)
+            VALUES (@conta, 'm-1', '\\x00', 201, '{}', @credito);
+            """,
+            new { id = Guid.NewGuid(), conta, credito });
+
+        pasta.AcrescentarOficial(Partitioning);
+        var resultado = SchemaMigrator.ApplySchema(banco, pasta.Caminho);
+        Assert.True(resultado.Successful, resultado.Error?.ToString());
+
+        await using var connection = new NpgsqlConnection(banco);
+        var particoes = (await connection.QueryAsync<string>(
+            "SELECT tableoid::regclass::text FROM ledger.ledger_entries WHERE account_id = @conta ORDER BY sequence", new { conta })).ToList();
+        Assert.Equal(["ledger.ledger_entries_2026_01", "ledger.ledger_entries_2026_02", "ledger.ledger_entries_2026_03"], particoes);
+        Assert.Equal(-30.00m, await connection.ExecuteScalarAsync<decimal>(
+            "SELECT SUM(direction * amount) FROM ledger.ledger_entries WHERE account_id = @conta", new { conta }));
+        Assert.Equal(3, await ContarAsync(banco, "SELECT count(*) FROM ledger.entry_keys WHERE account_id = @conta", new { conta }));
+        Assert.Equal(credito, await connection.ExecuteScalarAsync<Guid>(
+            "SELECT reversal_of FROM ledger.entry_keys WHERE account_id = @conta AND sequence = 3", new { conta }));
+
+        // Outbox e idempotencia apontam para as chaves; a tabela antiga sumiu.
+        var alvos = (await connection.QueryAsync<string>(
+            """
+            SELECT conname || '->' || confrelid::regclass::text
+              FROM pg_constraint
+             WHERE conname IN ('fk_outbox_entry', 'fk_idempotency_entry')
+             ORDER BY conname
+            """)).ToList();
+        Assert.Equal(["fk_idempotency_entry->ledger.entry_keys", "fk_outbox_entry->ledger.entry_keys"], alvos);
+        Assert.Equal(0, await ContarAsync(banco, "SELECT count(*) FROM pg_class WHERE relname = 'ledger_entries_antigo'"));
+    }
+
     private static async Task<string[]> TabelasDoLedgerAsync(string conexao)
     {
         await using var connection = new NpgsqlConnection(conexao);
         var tabelas = await connection.QueryAsync<string>(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'ledger' ORDER BY table_name");
+            // Tabelas, sem as particoes do ledger (ADR-0013), que sao detalhe fisico.
+            "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+            "WHERE n.nspname = 'ledger' AND c.relkind IN ('r', 'p') AND NOT c.relispartition ORDER BY c.relname");
         return tabelas.ToArray();
     }
 

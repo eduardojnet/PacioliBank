@@ -99,12 +99,20 @@ public sealed class LedgerFixture : IAsyncLifetime
             // de teste nasca consistente com as invariantes do sistema.
             await connection.ExecuteAsync(
                 """
+                INSERT INTO ledger.entry_keys
+                    (entry_id, account_id, sequence, idempotency_key, reversal_of, recorded_at)
+                VALUES
+                    (@entryId, @accountId, 1, @key, NULL, now());
+
                 INSERT INTO ledger.ledger_entries
                     (entry_id, account_id, sequence, direction, amount, currency,
                      occurred_at, recorded_at, idempotency_key, correlation_id, balance_after)
                 VALUES
                     (@entryId, @accountId, 1, 1, @amount, 'BRL',
                      now(), now(), @key, @correlationId, @amount);
+
+                INSERT INTO ledger.daily_balances (account_id, day, closing_balance, last_sequence)
+                VALUES (@accountId, (now() AT TIME ZONE 'UTC')::date, @amount, 1);
 
                 UPDATE ledger.accounts SET last_sequence = 1 WHERE account_id = @accountId;
                 """,

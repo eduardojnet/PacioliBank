@@ -1,5 +1,6 @@
 using DbUp;
 using DbUp.Builder;
+using Npgsql;
 
 namespace PacioliBank.Migrations;
 
@@ -40,6 +41,39 @@ public static class SchemaMigrator
     /// <summary>Aplica a massa do ambiente local. Nunca usada fora dele.</summary>
     public static MigrationResult ApplyLocalSeed(string connectionString, string? directory = null, bool logToConsole = false) =>
         Apply(connectionString, directory ?? DefaultSeedDirectory, SeedJournal, logToConsole);
+
+    /// <summary>
+    /// Abre as particoes mensais do ledger do mes corrente ate
+    /// <paramref name="monthsAhead"/> meses a frente, se ainda nao existem
+    /// (ADR-0013). Roda a cada execucao do migrador: implantacao regular
+    /// mantem as particoes a frente do tempo. Sem implantacao por mais que
+    /// isso, o lancamento cai na particao padrao, sem falha.
+    /// </summary>
+    /// <returns>As particoes criadas nesta execucao; vazio se ja existiam.</returns>
+    public static IReadOnlyList<string> EnsurePartitions(string connectionString, int monthsAhead = 12)
+    {
+        var created = new List<string>();
+        var today = DateTime.UtcNow;
+        var first = new DateOnly(today.Year, today.Month, 1);
+
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+
+        for (var offset = 0; offset <= monthsAhead; offset++)
+        {
+            var month = first.AddMonths(offset);
+
+            using var command = new NpgsqlCommand("SELECT ledger.ensure_month_partition(@month)", connection);
+            command.Parameters.AddWithValue("month", month);
+
+            if (command.ExecuteScalar() is true)
+            {
+                created.Add("ledger_entries_" + month.ToString("yyyy_MM", System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
+
+        return created;
+    }
 
     private static MigrationResult Apply(string connectionString, string directory, string journal, bool logToConsole)
     {

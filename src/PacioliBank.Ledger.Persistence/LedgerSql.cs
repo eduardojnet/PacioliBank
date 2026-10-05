@@ -135,6 +135,19 @@ internal static class LedgerSql
            AND day > (@occurredAt::timestamptz AT TIME ZONE 'UTC')::date
         """;
 
+    /// <summary>
+    /// Chaves do lancamento, gravadas antes da linha do ledger, que aponta para
+    /// elas. As restricoes unicas de sequencia, idempotencia e estorno vivem
+    /// aqui, numa tabela nao particionada, e valem para todo o historico
+    /// (ADR-0013). Os nomes sao os de antes: o codigo reconhece o conflito por eles.
+    /// </summary>
+    internal const string InsertEntryKey = """
+        INSERT INTO ledger.entry_keys
+            (entry_id, account_id, sequence, idempotency_key, reversal_of, recorded_at)
+        VALUES
+            (@entryId, @accountId, @sequence, @idempotencyKey, @reversalOf, @recordedAt)
+        """;
+
     internal const string InsertEntry = """
         INSERT INTO ledger.ledger_entries
             (entry_id, account_id, sequence, direction, amount, currency,
@@ -194,8 +207,8 @@ internal static class LedgerSql
     /// AlreadyReversed so ordena a rejeicao; quem impede o segundo estorno e
     /// uq_entries_reversal. Lido sob o bloqueio da conta, e o estorno de um
     /// lancamento so pode ser gravado por quem detem esse mesmo bloqueio, entao
-    /// o valor nao muda entre esta leitura e a gravacao. O indice da constraint
-    /// atende o EXISTS.
+    /// o valor nao muda entre esta leitura e a gravacao. O EXISTS le entry_keys,
+    /// onde esta o indice unico de uq_entries_reversal (ADR-0013).
     /// </summary>
     internal const string SelectEntry = """
         SELECT e.entry_id        AS EntryId,
@@ -210,7 +223,7 @@ internal static class LedgerSql
                e.reversal_of     AS ReversalOf,
                e.balance_after   AS BalanceAfter,
                EXISTS (SELECT 1
-                         FROM ledger.ledger_entries r
+                         FROM ledger.entry_keys r
                         WHERE r.reversal_of = e.entry_id) AS AlreadyReversed
           FROM ledger.ledger_entries e
          WHERE e.entry_id = @entryId
@@ -226,7 +239,7 @@ internal static class LedgerSql
     /// <summary>
     /// Pagina do extrato. O cursor e a sequencia: estavel e sem lacunas
     /// (RN-006), entao nao repete nem omite linha entre paginas. Atendida pelo
-    /// indice de <c>uq_entries_sequence</c>, em ordem, sem ordenacao adicional.
+    /// indice ix_entries_account_sequence de cada particao (ADR-0013).
     /// Os casts explicitos permitem filtro opcional sem que o PostgreSQL precise
     /// inferir o tipo de um parametro nulo.
     /// </summary>
