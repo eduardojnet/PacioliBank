@@ -18,11 +18,11 @@ flowchart TB
 
         subgraph app["PacioliBank.Ledger (zero pacotes)"]
             svc["LedgerService<br/>[Porta de entrada: ILedgerService]<br/>Converte o valor, calcula a impressão,<br/>valida instante e página"]:::impl
-            dom["Account, Money, LedgerEntry<br/>[Agregado e Value Objects]<br/>Invariantes RN-001 a RN-008"]:::impl
+            dom["Account, Money, LedgerEntry, Transfer<br/>[Agregado, Value Objects e serviço de domínio]<br/>Invariantes RN-001 a RN-008, RN-013"]:::impl
         end
 
         subgraph persist["PacioliBank.Ledger.Persistence"]
-            store["PostgresLedgerStore<br/>[Porta de saída: ILedgerStore]<br/>Bloqueio por conta, idempotência,<br/>snapshot, outbox, nova tentativa"]:::impl
+            store["PostgresLedgerStore<br/>[Porta de saída: ILedgerStore]<br/>Bloqueio por conta (duas, em ordem, na<br/>transferência), idempotência,<br/>snapshot, outbox, nova tentativa"]:::impl
             sql["LedgerSql<br/>[SQL explícito]<br/>Posição = snapshot + delta,<br/>extrato por cursor"]:::impl
         end
 
@@ -60,7 +60,7 @@ flowchart TB
 | LedgerEndpoints | Implementado | `src/PacioliBank.Api/Endpoints/LedgerEndpoints.cs` |
 | LedgerProblems | Implementado | `src/PacioliBank.Api/Endpoints/LedgerProblems.cs` |
 | LedgerService | Implementado | `src/PacioliBank.Ledger/Application/LedgerService.cs` |
-| Account, Money, LedgerEntry | Implementado | `src/PacioliBank.Ledger/Domain/` |
+| Account, Money, LedgerEntry, Transfer | Implementado | `src/PacioliBank.Ledger/Domain/`. `Transfer` é o serviço de domínio da transferência entre contas (card 38, ADR-0014) |
 | PostgresLedgerStore | Implementado | `src/PacioliBank.Ledger.Persistence/PostgresLedgerStore.cs` |
 | LedgerSql | Implementado | `src/PacioliBank.Ledger.Persistence/LedgerSql.cs` |
 | OutboxDispatcher | Implementado | `src/PacioliBank.Events/OutboxDispatcher.cs` |

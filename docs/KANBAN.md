@@ -9,12 +9,12 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 1 | 38 |
+| Backlog/Ideias | 0 | |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 53 | 01 a 34, 36 e 37, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
+| Concluído | 54 | 01 a 34, 36, 37 e 38, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
 
 ---
 
@@ -26,15 +26,7 @@ _Vazia, e esse é o estado correto. Todo item do projeto foi triado para uma col
 
 ## Backlog/Ideias
 
-### 38. Incluir transferência entre contas no escopo
-
-`prioridade: Nenhuma` · `arquitetura`
-
-Deliberadamente FORA do escopo atual (EF 3.2). Exige transação abrangendo dois agregados.
-
-POSIÇÃO REGISTRADA (ENF 5.2): quando entrar, a recomendação é saga com lançamento em duas pernas e conta transitória de liquidação, que é o modelo contábil padrão e o único que permanece correto sob particionamento.
-
-EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinística de bloqueios para evitar deadlock).
+_Vazia. Próximos por decisão do usuário._
 
 ---
 
@@ -1125,4 +1117,41 @@ CRITÉRIO ATENDIDO:
 - Mutação 89,17%, igual em duas execuções; com limite 95%, o Stryker falha
 - Achado: três testes de observabilidade liam o exportador em memória com a API viva, intermitentes sob o v3; a API passa a ser encerrada antes da leitura
 - gitleaks limpo
+- CI verde, as quatro tarefas: https://github.com/eduardojnet/PacioliBank/actions/runs/37333781753
 
+### 38. Incluir transferência entre contas no escopo
+
+`prioridade: Nenhuma` · `arquitetura`
+
+Deliberadamente FORA do escopo atual (EF 3.2). Exige transação abrangendo dois agregados.
+
+POSIÇÃO REGISTRADA (ENF 5.2): quando entrar, a recomendação é saga com lançamento em duas pernas e conta transitória de liquidação, que é o modelo contábil padrão e o único que permanece correto sob particionamento.
+
+EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinística de bloqueios para evitar deadlock).
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+ENTRADA NO ESCOPO POR DECISÃO DO USUÁRIO. DECISÃO DO USUÁRIO: transação local, e não a saga da ENF 5.2; contas bloqueadas em ordem crescente de identificador. Condutas provisórias de negócio aceitas: mesma moeda, origem diferente do destino, sem tarifa, saldo da origem pela RN-001, idempotência pela chave da origem, sem estorno de transferência.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE:
+- Serviço de domínio Transfer (as duas pernas por Account.Post em cada agregado); SameAccountTransferException
+- Porta: TransferCommand, TransferResult, TransferResponse (do destino, só o identificador do lançamento), impressão com prefixo transfer
+- PostgresLedgerStore: duas contas bloqueadas em ordem crescente de identificador, repetição reconhecida sob os bloqueios, as duas pernas e a transferência na mesma transação
+- Migração 0004: transfers com fk_transfers_debit e fk_transfers_credit (conta, sentido, valor, moeda, registro), uq_transfers_debit/credit, ck_transfers_distinct_accounts; uq_entries_leg no ledger; aplicação só SELECT e INSERT
+- POST /api/v1/transfers; código SAME_ACCOUNT_TRANSFER; métricas e span da operação transfer
+- ADR-0014 com 8 alternativas rejeitadas; revisões do ADR-0001, ADR-0005, ADR-0006, ADR-0009; EF 1.7 (RF-012, RN-013, QA-009), ENF 1.12, BDD 1.3 (F11), ERD e C3; Insomnia com 3 requisições
+
+CRITÉRIO ATENDIDO:
+- 38 testes novos (18 de domínio, 20 de integração), todos reprovando antes da implementação
+- Tudo ou nada: saldo insuficiente, destino inexistente e mesma conta sem gravar; falha provocada no banco na perna de crédito desfaz a de débito
+- Cruzadas simultâneas terminam todas com a soma preservada; ordem dos bloqueios verificada de forma determinística
+- Reenvio devolve o corpo original mesmo com a origem sem saldo; simultâneos com a mesma chave geram uma transferência
+- Pernas amarradas pelo banco: valores diferentes, sentido trocado, outra conta, perna reaproveitada e mesma conta recusados, com controle positivo
+- Poder de detecção: oito mutações, cada uma reprovada (ordem do sentido; débito em transação separada; repetição fora do bloqueio; as duas chaves estrangeiras só pelo identificador; perna reaproveitável; mesma conta; aplicação com UPDATE e DELETE)
+- Mutação do domínio 87,06% (sobreviventes novas das categorias já aceitas); cobertura 95,41%
+- Insomnia 52/52 duas vezes; 0004 aplicada ao volume local em uso; curl: 201, reenvio 200, 400 e 422
+- 230 testes verdes; build sem avisos; gitleaks limpo
+
+DECLARADO: estorno de transferência, tarifa, limites e moedas diferentes pendentes da QA-009; evento sem o identificador da transferência; custo de uq_entries_leg e da contenção com dois bloqueios não medido sob carga [NVI].

@@ -131,3 +131,5 @@ Qualquer um dos eventos abaixo obriga a reabrir esta decisão:
 1. Mais de um time com cadência de release independente sobre o mesmo código
 2. Necessidade sustentada de escalar um módulo em perfil incompatível com os demais
 3. Entrada de transferência entre contas em escopo, que altera a fronteira transacional ([ENF](../specs/ENF-especificacao-nao-funcional.md) §5.2)
+
+> **Revisão de 2026-10-05 (card 38): gatilho 3 ocorrido, decisão mantida.** A transferência entre contas entrou no escopo ([ADR-0014](./ADR-0014-transferencia-entre-contas.md)). A fronteira transacional passa a admitir duas contas numa transação, sempre dentro do mesmo módulo e do mesmo banco: o núcleo do ledger ganhou um serviço de domínio, a porta ganhou um caso de uso, e nenhuma dependência nova cruzou módulos (as 6 regras de arquitetura continuam verdes). Nada aqui pede outro estilo. O gatilho que reabriria esta decisão por causa da transferência passa a ser o do ADR-0014: contas em bancos ou partições distintas por conta.

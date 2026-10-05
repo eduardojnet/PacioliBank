@@ -2,10 +2,10 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-05 (trigésima revisão)
+**Última atualização:** 2026-10-05 (trigésima primeira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 192 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 86 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-05). Cobertura de linha do domínio: 94,45% (coverlet.MTP, card 34.1), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,17% de mutantes mortos; o CI reprova abaixo de 85%
-**Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
+**Testes:** 230 passando (116 de domínio, 6 de arquitetura, 2 de contrato, 106 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-05). Cobertura de linha do domínio: 95,41% (coverlet.MTP), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 87,06% de mutantes mortos; o CI reprova abaixo de 85%
+**Verificação manual:** `docker compose up --build` servindo os 6 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19); a transferência, com reenvio e duas recusas, em 2026-10-05 (card 38).
 
 ---
 
@@ -76,7 +76,7 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 
 ### Questões de negócio ainda abertas
 
-QA-001 (limite ou cheque especial), QA-002 (política de lançamento retroativo), QA-004 (retenção do ledger), QA-005 (multimoeda), QA-006 (volume real), QA-007 (modelo de identidade), QA-008 (tamanho de página). Detalhes, conduta provisória e o ponto do código que cada resposta mudaria na [EF §10](./specs/EF-especificacao-funcional.md).
+QA-001 (limite ou cheque especial), QA-002 (política de lançamento retroativo), QA-004 (retenção do ledger), QA-005 (multimoeda), QA-006 (volume real), QA-007 (modelo de identidade), QA-008 (tamanho de página), QA-009 (regras da transferência, card 38). Detalhes, conduta provisória e o ponto do código que cada resposta mudaria na [EF §10](./specs/EF-especificacao-funcional.md).
 
 Continuam sem resposta porque o desafio não tem interlocutor de negócio. O card 29, que pedia respondê-las, foi **encerrado como decisão registrada** em 2026-10-04: o que o desafio pode entregar é a lacuna declarada, com conduta provisória e risco, e não a resposta.
 
@@ -95,15 +95,17 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 | `Domain/Account.cs` | Agregado raiz; valida invariantes e produz lançamentos |
 | `Domain/LedgerEntry.cs` | Fato imutável, construtor interno; `Rehydrate` reconstrói o já gravado, para o estorno |
 | `Domain/PostingRequest.cs`, `ReversalRequest.cs` | Comandos de lançamento e de estorno |
+| `Domain/Transfer.cs` | Card 38, ADR-0014: serviço de domínio da transferência; decide as duas pernas por `Account.Post` em cada agregado; `TransferRequest`, `TransferLegs` |
 | `Domain/AccountStatus.cs`, `EntryDirection.cs` | Enums alinhados às colunas do banco |
-| `Domain/LedgerDomainException.cs` | Exceção raiz mais 16 derivadas, uma por regra violável |
-| `Application/ILedgerStore.cs` | Porta de saída, estreita e orientada a caso de uso: lançamento, estorno, posição, extrato |
+| `Domain/LedgerDomainException.cs` | Exceção raiz mais 17 derivadas, uma por regra violável |
+| `Application/ILedgerStore.cs` | Porta de saída, estreita e orientada a caso de uso: lançamento, estorno, transferência, posição, extrato |
 | `Application/ILedgerService.cs`, `LedgerService.cs` | **Porta de entrada** (L-03): conversão do valor, impressão do comando, validação de instante e de página, antes de qualquer I/O |
-| `Application/Commands.cs` | `PostingCommand`, `ReversalCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` |
+| `Application/Commands.cs` | `PostingCommand`, `ReversalCommand`, `TransferCommand`, `StatementQuery`, `StatementEntry`, `StatementPage` |
+| `Application/TransferResult.cs`, `TransferResponse.cs` | Card 38: resultado e corpo da transferência (EF §8.4.1), gravado em `response_body`; do destino, só o identificador do lançamento |
 | `Application/PostEntryResult.cs`, `BalanceResult.cs` | Contratos de saída |
 | `Application/PostingResponse.cs` | Corpo da resposta de escrita (EF §8.4), gravado em `response_body` e devolvido como texto na primeira resposta e na repetição |
 | `Application/LedgerEntryEvent.cs`, `WireFormat.cs` | Payload dos eventos (EF §9), separado do resultado da API; formato de instante compartilhado com a API |
-| `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variante própria para estorno |
+| `Application/RequestFingerprint.cs` | Impressão canônica SHA-256 do comando, com variantes próprias para estorno e transferência |
 
 **Decisão de modelagem a defender:** o agregado não carrega os lançamentos da conta. É reidratado dentro da transação, sob bloqueio, com a posição corrente já calculada. Carregar o histórico para validar um débito reintroduziria a degradação do sistema legado.
 
@@ -111,7 +113,7 @@ Zero dependências externas. A ausência de `PackageReference` é a garantia est
 
 | Arquivo | Conteúdo |
 |---|---|
-| `PostgresLedgerStore.cs` | Transação, bloqueio, idempotência, outbox, snapshot, nova tentativa; lançamento e estorno sob o mesmo bloqueio |
+| `PostgresLedgerStore.cs` | Transação, bloqueio, idempotência, outbox, snapshot, nova tentativa; lançamento e estorno sob o mesmo bloqueio; transferência com as duas contas bloqueadas em ordem crescente de identificador e as duas pernas na mesma transação (card 38) |
 | `LedgerSql.cs` | Todo o SQL reunido, comentado por decisão |
 
 **A ordem dos passos dentro da transação é a arquitetura**, não detalhe de implementação: bloqueia a linha da conta, depois lê a posição, o agregado decide, e lançamento, sequência, idempotência e outbox são gravados juntos.
@@ -132,7 +134,7 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 | Arquivo | Conteúdo |
 |---|---|
 | `Program.cs` | Raiz de composição: único lugar que conhece todas as camadas; `/health/ready` consulta o PostgreSQL |
-| `Endpoints/LedgerEndpoints.cs` | Os 5 endpoints da EF §8.3, como adaptador fino sobre `ILedgerService` |
+| `Endpoints/LedgerEndpoints.cs` | Os 6 endpoints da EF §8.3, como adaptador fino sobre `ILedgerService`; `POST /api/v1/transfers` desde o card 38 |
 | `Endpoints/LedgerProblems.cs` | Único mapa de exceção para `application/problem+json` com `code` da EF §8.6 |
 | `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como string, instantes ISO 8601 UTC |
 | `wwwroot/` | Painel de evidência (ADR-0011): quatro demonstrações na raiz, só com a API pública; sem teste automatizado próprio, verificado em Chrome headless |
@@ -147,7 +149,7 @@ Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo 
 
 O esquema é aplicado por migrações numeradas (DbUp, `dbup-postgresql` 7.0.1), num passo separado do `docker compose` (`pacioli-migrations`): roda com `pacioli_migrator`, aplica só o que falta, registra em `public.schema_versions` e termina. A API depende de `service_completed_successfully` e continua com `pacioli_runtime`. Transação por script: migração com erro não deixa alteração parcial nem registro. A massa local (`db/seed/`) tem diário próprio e só roda com `PACIOLI_SEED_LOCAL=true`. Os testes de integração montam o banco pelo mesmo `SchemaMigrator`. Decisão e alternativas rejeitadas na revisão do ADR-0002.
 
-Esquema `ledger` com 7 tabelas e 3 papéis. **O ledger é particionado por mês de registro** (migração 0003, card 37, ADR-0013): as restrições de identidade, sequência, idempotência e estorno único vivem em `entry_keys`, tabela não particionada gravada na mesma transação, e cada linha do ledger é amarrada à sua chave por chave estrangeira composta; o migrador abre as partições dos próximos 12 meses a cada execução. A sexta, `daily_balances` (migração 0002, card 32), guarda o fechamento diário por conta: a posição em instante passado parte do fechamento do dia anterior e soma só os lançamentos do próprio dia; a escrita mantém os fechamentos, inclusive os dias seguintes a um retroativo, na mesma transação. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
+Esquema `ledger` com 8 tabelas e 3 papéis. **Transferências** (migração 0004, card 38, ADR-0014): `transfers` amarra as duas pernas por chaves estrangeiras compostas que conferem conta, sentido, valor, moeda e instante de registro; perna reaproveitada e origem igual ao destino são recusadas pelo banco. **O ledger é particionado por mês de registro** (migração 0003, card 37, ADR-0013): as restrições de identidade, sequência, idempotência e estorno único vivem em `entry_keys`, tabela não particionada gravada na mesma transação, e cada linha do ledger é amarrada à sua chave por chave estrangeira composta; o migrador abre as partições dos próximos 12 meses a cada execução. A sexta, `daily_balances` (migração 0002, card 32), guarda o fechamento diário por conta: a posição em instante passado parte do fechamento do dia anterior e soma só os lançamentos do próprio dia; a escrita mantém os fechamentos, inclusive os dias seguintes a um retroativo, na mesma transação. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
 
 O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar um lançamento gravado é impossível para a aplicação, qualquer que seja o código.
 
@@ -155,11 +157,11 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 98 | Invariantes puras, validações da porta de entrada e contratos de fio (corpo de escrita, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 94,45% (coverlet.MTP); teste de mutação 89,17% (cards 36 e 34.1) |
-| Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
+| `PacioliBank.Domain.Tests` | 116 | Invariantes puras, transferência, validações da porta de entrada e contratos de fio (corpo de escrita e de transferência, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 95,41% (coverlet.MTP); teste de mutação 87,06% (cards 36, 34.1 e 38) |
+| Coleção do Insomnia (`insomnia/`) | 52 testes em 18 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 86 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1), métricas (1, card 33.2) e fechamento diário (5, card 32: posição histórica contra o ledger em 63 instantes, fechamentos, origem, privilégio e preenchimento pela migração); particionamento (9, card 37: duplicidade em outro período recusada pelo banco, partição do mês, migração com dados) |
+| `PacioliBank.Integration.Tests` | 106 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), transferência (F11: atomicidade com falha provocada, ordem dos bloqueios verificada de forma determinística, pernas amarradas pelo banco), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1), métricas (1, card 33.2) e fechamento diário (5, card 32: posição histórica contra o ledger em 63 instantes, fechamentos, origem, privilégio e preenchimento pela migração); particionamento (9, card 37: duplicidade em outro período recusada pelo banco, partição do mês, migração com dados) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -169,9 +171,9 @@ A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em 
 
 Auditoria de dependências (card 31.1): o restore audita as dependências, transitivas inclusive, e alerta alto ou crítico vira erro (`NuGetAudit` explícito no `Directory.Build.props`, modo `all`, nível `high`); vale localmente, no CI e na imagem. O CI lista as demais severidades num passo informativo. Em 2026-10-04, nenhum pacote vulnerável em nenhuma severidade.
 
-Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release, e reprova abaixo de 85%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010. Desde o card 34.1, o coletor é o `coverlet.MTP`: hoje 94,45%, contra 88,15% na última medida do `coverlet.msbuild`. Os números não são comparáveis entre os coletores; a causa da diferença não foi decomposta [NVI]. O limite foi verificado de novo: sem os testes de contrato, 77,83%, e o passo reprova.
+Cobertura mínima (card 31.2): passo próprio mede a cobertura de linha do `PacioliBank.Ledger` só pelos testes de domínio, em Release, e reprova abaixo de 85%. Com isso, o CI aplica todo o critério de bloqueio do ADR-0010. Desde o card 34.1, o coletor é o `coverlet.MTP`: hoje 95,41% (94,45% antes do card 38), contra 88,15% na última medida do `coverlet.msbuild`. Os números não são comparáveis entre os coletores; a causa da diferença não foi decomposta [NVI]. O limite foi verificado de novo: sem os testes de contrato, 77,83%, e o passo reprova.
 
-Teste de mutação (card 36): tarefa própria do CI roda o Stryker.NET 5.0.0 (fixado em `dotnet-tools.json`) sobre o domínio, em 17 segundos localmente e 64 no runner, em paralelo, e reprova abaixo de 85% de mutantes mortos. Num ramo de prova sem os testes de contrato, a tarefa reprovou (ramo apagado). Hoje: 89,17%, igual em duas execuções, com o executor `mtp` do Stryker (card 34.1; era 89,81% no VSTest, diferença não decomposta [NVI]); com limite de 95% a execução falha, o que confirma o limite. Exclusões e sobreviventes aceitos, todos com motivo, na revisão do ADR-0010. Localmente: `dotnet tool restore` e, em `tests/PacioliBank.Domain.Tests`, `dotnet stryker`.
+Teste de mutação (card 36): tarefa própria do CI roda o Stryker.NET 5.0.0 (fixado em `dotnet-tools.json`) sobre o domínio, em 17 segundos localmente e 64 no runner, em paralelo, e reprova abaixo de 85% de mutantes mortos. Num ramo de prova sem os testes de contrato, a tarefa reprovou (ramo apagado). Hoje: 87,06% (card 38: as cinco sobreviventes novas são das categorias já aceitas, quatro `Guid.ToString("D")` equivalentes e o valor padrão do corpo da resposta); antes, 89,17% com o executor `mtp` do Stryker (card 34.1; era 89,81% no VSTest, diferença não decomposta [NVI]); com limite de 95% a execução falha, o que confirma o limite. Exclusões e sobreviventes aceitos, todos com motivo, na revisão do ADR-0010. Localmente: `dotnet tool restore` e, em `tests/PacioliBank.Domain.Tests`, `dotnet stryker`.
 
 ### Especificações e diagramas
 
@@ -196,6 +198,8 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
+| Regras de negócio da transferência (QA-009) | Não definidas: estorno de transferência, tarifa, limite e moedas diferentes. Conduta provisória na EF §10; estornar uma perna pelo caminho comum desfaz só metade da transferência |
+| Identificador da transferência nos eventos | Não incluído: cada perna gera o evento comum da sua conta, com a mesma correlação; juntar as pernas pelo evento exige versão do contrato (EF §9, ADR-0014) |
 | Arquivamento de períodos do ledger (R-04) | Não implementado: depende da política de retenção (QA-004), sem resposta. O ledger já é particionado por mês (card 37); nada é arquivado ou apagado |
 
 ---
@@ -448,9 +452,11 @@ Do Backlog, por antecipação decidida pelo usuário (gatilho não ocorrido):
 
 19. ~~**[37] Particionar o ledger por tempo** (R-04)~~ concluído em 2026-10-05 por antecipação, opção b2: chaves de unicidade numa tabela não particionada (ADR-0013)
 
-A Fazer está vazia. Por decisão do usuário, a seguir:
+Do Backlog, por decisão do usuário:
 
-20. **[38] Transferência entre contas** (fora do escopo pela EF 3.2), do Backlog
+20. ~~**[38] Transferência entre contas**~~ concluído em 2026-10-05: transação local, contas bloqueadas em ordem crescente de identificador, pernas amarradas pelo banco (ADR-0014)
+
+A Fazer e Backlog estão vazios. Próximos por decisão do usuário.
 
 ---
 
@@ -458,7 +464,7 @@ A Fazer está vazia. Por decisão do usuário, a seguir:
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 192 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 230 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -596,3 +602,4 @@ confirmação.
 | 2026-10-05 | Card 32 concluído por antecipação (o gatilho, p99 da histórica acima da RNF-002, não foi medido): fechamento diário síncrono, mantido na transação do lançamento, com correção dos dias seguintes a um retroativo; migração 0002 com preenchimento; `computedFrom` = `dailyBalance` (EF 1.6). Revisão do ADR-0007 com 3 alternativas rejeitadas, inclusive a recomputação assíncrona que o próprio ADR previa. 5 testes, cinco mutações detectadas. A 0002 foi aplicada ao volume local em uso, sem recriar o banco: nenhuma divergência. ENF 1.9. 183 verdes |
 | 2026-10-05 | Card 37 concluído por antecipação (QA-004 sem resposta), opção b2 decidida pelo usuário: ledger particionado por mês de `recorded_at`; as quatro restrições de unicidade, verificadas como recusadas pelo PostgreSQL em tabela particionada, foram para `entry_keys`, não particionada, com os mesmos nomes; regra 6 preservada. Migração 0003 com cópia dos dados e repontamento das chaves estrangeiras; função de partição chamada pelo migrador. 9 testes, mutações detectadas; duas mutações (sequência e partição por fato) são recusadas pela própria estrutura. No volume local: 260 lançamentos e a mesma soma antes e depois. ADR-0013 com 5 alternativas rejeitadas. 192 verdes |
 | 2026-10-05 | Card 34.1 concluído por antecipação (o xunit v2 segue suportado): xunit v3 4.0.1 nos quatro projetos. O escopo inicial, manter o VSTest, se mostrou impossível, medido: o `dotnet test` do SDK 10 recusa VSTest com a Microsoft Testing Platform ligada, e com ela desligada o Stryker pontua 0% (não exercita o código mutado). Adotada a Microsoft Testing Platform: `global.json` declara o executor, `coverlet.MTP` no lugar dos dois coletores, Stryker com executor `mtp`, CI reescrito. Mesmos 192 testes. Cobertura do domínio 94,45% com o coletor novo (88,15% com o antigo; não comparáveis) e mutação 89,17%; os dois limites verificados de novo, reprovando. Achado: um teste de métricas e dois de rastreamento liam o exportador em memória com a API viva, intermitente sob o v3; a API passou a ser encerrada antes da leitura. ADR-0010 revisado; ENF 1.11 |
+| 2026-10-05 | Card 38 concluído, por decisão do usuário: transferência entre contas como **transação local**, e não a saga da ENF 5.2, cujo motivo (particionamento por conta) não existe. As duas contas bloqueadas em ordem crescente de identificador; serviço de domínio `Transfer` decide as pernas por `Account.Post`; migração 0004 com `transfers` e chaves estrangeiras compostas que conferem conta, sentido, valor, moeda e registro de cada perna; `POST /api/v1/transfers`, código `SAME_ACCOUNT_TRANSFER`. 38 testes novos, reprovando antes da implementação; oito mutações detectadas, entre elas a ordem do sentido (o teste de ordem é determinístico) e o débito confirmado em transação separada (falha provocada no banco). Insomnia com 3 requisições novas, 52/52. A 0004 foi aplicada ao volume local em uso. ADR-0014 com 8 alternativas rejeitadas; revisões do ADR-0001, ADR-0005, ADR-0006 e ADR-0009; EF 1.7 (RF-012, RN-013, QA-009), ENF 1.12, BDD 1.3 (F11), ERD reconferido. Condutas provisórias de negócio aceitas pelo usuário. 230 verdes |

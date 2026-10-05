@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.11
+**Versão:** 1.12
 **Data:** 2026-10-05
 **Status:** Proposto
 
@@ -100,7 +100,7 @@ Declarar o modelo de consistência é obrigação de qualquer sistema financeiro
 | Fronteira | Garantia | Justificativa |
 |---|---|---|
 | Dentro de uma conta | **Forte, linearizável.** Lançamento confirmado é imediatamente visível a qualquer leitura subsequente da mesma conta. | É o escopo da invariante de saldo não negativo |
-| Entre contas distintas | **Sem garantia de ordenação global.** Não há transação atômica abrangendo duas contas no escopo atual. | Transferência entre contas é caso de uso de contexto superior; ver §5.2 |
+| Entre contas distintas | **Sem garantia de ordenação global.** A única operação sobre duas contas é a transferência, **atômica**: as duas pernas numa transação, com as contas bloqueadas em ordem crescente de identificador (card 38). | Ver §5.2 e [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md) |
 | Entre o ledger e os eventos de integração | **Eventual, ao menos uma vez.** O evento é gravado na mesma transação do lançamento e publicado depois. | Padrão Outbox; evita perda e evita commit distribuído |
 | Entre o ledger e o snapshot | **Eventual, com correção garantida.** Snapshot atrasado aumenta o custo da leitura, nunca altera o resultado. | Snapshot é derivado ([EF](./EF-especificacao-funcional.md) RN-010) |
 | Entre réplicas de leitura | **Eventual.** Consulta que exige leitura própria da escrita deve ser direcionada ao primário. | Decisão explícita; a resposta informa `computedAtSequence` para o consumidor detectar atraso |
@@ -113,6 +113,8 @@ Transferência não está em escopo ([EF](./EF-especificacao-funcional.md) §3.2
 - com particionamento, exige saga com compensação e estado intermediário visível.
 
 **Posição:** quando a transferência entrar em escopo, a recomendação é saga com lançamento em duas pernas e conta transitória de liquidação, que é o modelo contábil padrão e o único que permanece correto sob particionamento. Formalizar em ADR no momento da inclusão, nunca improvisar sobre a API atual.
+
+> **Revisão de 2026-10-05 (card 38): a transferência entrou no escopo como transação local, e não como saga.** Decisão do usuário, formalizada no [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md). O motivo da posição acima, o particionamento, não se aplica: o particionamento adotado ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)) é por tempo, num banco único, e as duas contas de uma transferência estão sempre no mesmo banco. Com banco único, a transação local é viável, como o primeiro item acima já dizia; a saga traria estado intermediário visível e faria da conta transitória um ponto único de contenção. O custo previsto, janela de bloqueio ampliada e as duas contas acopladas durante a transação, é aceito e registrado como consequência negativa no ADR, sem medição sob carga [NVI]. A saga volta se as contas passarem a viver em bancos ou partições distintas por conta.
 
 ---
 
@@ -357,4 +359,4 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | 1.9 | 2026-10-05 | Eduardo J. G. do Carmo | §11: a posição histórica deixa de somar todo o histórico (card 32, fechamento diário). RNF-006 passa a valer também nela; a latência da RNF-003 continua sem medição |
 | 1.10 | 2026-10-05 | Eduardo J. G. do Carmo | §9, R-04: ledger particionado por mês de registro (card 37, ADR-0013), com as chaves de unicidade numa tabela não particionada. A mitigação de arquivamento depende da QA-004 |
 | 1.11 | 2026-10-05 | Eduardo J. G. do Carmo | §11: RNF-036 medida com o `coverlet.MTP` (card 34.1, xunit v3 na Microsoft Testing Platform): 94,45%, limite de 85% verificado de novo |
-
+| 1.12 | 2026-10-05 | Eduardo J. G. do Carmo | §5.1 e §5.2: transferência entre contas no escopo como transação local, com as contas bloqueadas em ordem crescente de identificador (card 38, ADR-0014); a saga passa a alternativa rejeitada, com gatilho |

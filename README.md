@@ -69,6 +69,7 @@ Contrato completo na [EF §8](./docs/specs/EF-especificacao-funcional.md). As me
 | `POST` | `/api/v1/accounts/{conta}/credits` | Registra crédito |
 | `POST` | `/api/v1/accounts/{conta}/debits` | Registra débito; recusa se a posição ficaria negativa |
 | `POST` | `/api/v1/accounts/{conta}/entries/{lancamento}/reversals` | Estorna um lançamento por compensação |
+| `POST` | `/api/v1/transfers` | Transfere entre duas contas: débito na origem e crédito no destino, numa única transação |
 | `GET` | `/api/v1/accounts/{conta}/balance` | Posição corrente; com `?asOf=`, a posição naquele instante |
 | `GET` | `/api/v1/accounts/{conta}/entries` | Extrato paginado por cursor |
 | `GET` | `/health/live`, `/health/ready` | Vivo; pronto (consulta o PostgreSQL) |
@@ -114,7 +115,7 @@ curl -i -X POST $A/entries/<entryId>/reversals \
 
 ### Coleção do Insomnia
 
-[`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 15 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 43 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`.
+[`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 18 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 52 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, transferência, seu reenvio e a transferência para a própria conta, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`, e a `1111…` como destino da transferência.
 
 - **No aplicativo:** *Import*, escolher o arquivo, e *Run* na coleção
 - **Pela linha de comando**, com o [`inso`](https://github.com/Kong/insomnia/releases) (verificado na versão 13.3.0), o mesmo motor do aplicativo:
@@ -158,17 +159,17 @@ Catálogo completo, com a regra de negócio de cada código, na [EF §8.6](./doc
 ## Testes
 
 ```bash
-dotnet test        # 192 testes, sem erro e sem aviso; xunit v3 na Microsoft Testing Platform (global.json)
+dotnet test        # 230 testes, sem erro e sem aviso; xunit v3 na Microsoft Testing Platform (global.json)
 ```
 
 Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integração sobem um PostgreSQL real por execução (Testcontainers) e aplicam o mesmo script de esquema do ambiente local, com os mesmos papéis e privilégios.
 
 | Projeto | Testes | O que verifica |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 98 | Invariantes do agregado, `Money`, validações da porta de entrada. Sem I/O, menos de um segundo |
+| `PacioliBank.Domain.Tests` | 116 | Invariantes do agregado, `Money`, transferência, validações da porta de entrada. Sem I/O, menos de um segundo |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência (NetArchTest): domínio sem aplicação, Ledger sem banco nem HTTP, Events sem Ledger, endpoints sem banco |
 | `PacioliBank.Contract.Tests` | 2 | Contrato da API: o OpenAPI gerado é comparado com o instantâneo aprovado; mudança de contrato reprova |
-| `PacioliBank.Integration.Tests` | 86 | Transação, bloqueio, idempotência, estorno, extrato, privilégio negado, concorrência real, despachante de outbox, migrações, fechamento diário, particionamento, log, rastreamento e métricas |
+| `PacioliBank.Integration.Tests` | 106 | Transação, bloqueio, idempotência, estorno, transferência, extrato, privilégio negado, concorrência real, despachante de outbox, migrações, fechamento diário, particionamento, log, rastreamento e métricas |
 
 ```bash
 dotnet test --project tests/PacioliBank.Domain.Tests                                         # só domínio, sem Docker
@@ -222,10 +223,10 @@ src/
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
   PacioliBank.Migrations/          migrador (DbUp): aplica o que falta com o papel de migração e termina
 tests/
-  PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
+  PacioliBank.Domain.Tests/        116 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   86 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, fechamento diário, particionamento, log, traço e métricas
+  PacioliBank.Integration.Tests/   106 testes, PostgreSQL real, inclui concorrência, estorno, transferência, extrato, outbox, migrações, snapshot, fechamento diário, particionamento, log, traço e métricas
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
@@ -247,8 +248,9 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Bloqueio por conta e idempotência, inclusive sob envio simultâneo | Implementado, com testes |
 | Posição corrente com snapshot amortizado, e posição em instante passado a partir do fechamento diário | Implementado, com testes: snapshot com limite de 99 lançamentos somados (card 30.1); posição histórica conferida contra o ledger, inclusive com lançamentos retroativos (card 32) |
 | Estorno por lançamento compensatório | Implementado, com testes |
+| Transferência entre contas numa única transação, contas bloqueadas em ordem de identificador, pernas amarradas pelo banco ([ADR-0014](./docs/adr/ADR-0014-transferencia-entre-contas.md)) | Implementado, com testes; estorno de transferência, tarifa e limites pendentes da QA-009; evento sem o identificador da transferência |
 | Extrato paginado por cursor | Implementado, com testes |
-| Porta de entrada e os 5 endpoints de negócio | Implementado |
+| Porta de entrada e os 6 endpoints de negócio | Implementado |
 | Gravação de eventos na outbox, na transação do lançamento | Implementado |
 | Ambiente local em um comando | Implementado |
 | **Autenticação e autorização por titularidade (RF-009)** | **Pendente: hoje qualquer chamador opera qualquer conta** |
@@ -257,7 +259,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
-| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,17% |
+| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 87,06% |
 | Log estruturado em JSON, com correlação e identificadores mascarados (RNF-031, ADR-0009 §5) | Implementado, com teste pelo caminho completo ([ADR-0012](./docs/adr/ADR-0012-observabilidade.md)) |
 | Rastreamento ponta a ponta (RNF-030): requisição, caso de uso e PostgreSQL no mesmo traço, com painel local | Implementado, com teste |
 | Métricas de negócio (RNF-032): lançamentos, reenvios, rejeições por código, origem do cálculo da posição, fila da outbox | Implementado, com teste |
@@ -265,7 +267,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Ledger particionado por mês de registro, com as garantias de unicidade mantidas no banco ([ADR-0013](./docs/adr/ADR-0013-particionamento-do-ledger.md)) | Implementado, com testes; arquivamento de períodos pendente da política de retenção (QA-004) |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
-| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 94,45% (coverlet.MTP) |
+| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 95,41% (coverlet.MTP) |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
@@ -282,7 +284,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
 7. **Alertas sobre as métricas.** Log, traço e métricas estão no ar (cards 33, 33.1 e 33.2); falta o alerta, principalmente sobre a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar, e sobre a fila estacionada da outbox.
 8. **Teste de carga** para medir os RNF de desempenho, hoje especificados e não verificados.
-9. **Itens com gatilho declarado, que não devem ser feitos antes dele:** posição diária pré-calculada para consulta histórica (quando o p99 passar do alvo), particionamento do ledger por tempo (depende da política de retenção, QA-004), transferência entre contas (exige novo ADR e bloqueio em ordem determinística).
+9. **Regras de negócio da transferência (QA-009):** estorno de transferência, tarifa, limite por transferência e moedas diferentes; e o identificador da transferência no evento, com versão do contrato. Os três itens que esta lista deixava para depois do gatilho, posição diária, particionamento e a própria transferência, foram feitos por antecipação (cards 32, 37 e 38).
 
 As questões de negócio que mudariam o desenho, como limite de cheque especial, lançamento retroativo e multimoeda, estão na [EF §10](./docs/specs/EF-especificacao-funcional.md), cada uma com a conduta provisória adotada.
 

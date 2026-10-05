@@ -206,3 +206,5 @@ Havia ainda um impedimento técnico escondido: a coluna era `jsonb`, que reorden
 ## Gatilho de revisão desta revisão
 
 Qualquer caminho de escrita que não adquira o bloqueio da conta (operação em lote, transferência entre contas) invalida o argumento de ausência de janela e exige reavaliar a leitura prévia para esse caminho.
+
+> **Conferência de 2026-10-05 (card 38): a transferência não invalida o argumento.** O caminho novo de escrita, a transferência entre contas ([ADR-0014](./ADR-0014-transferencia-entre-contas.md)), adquire o bloqueio das duas contas antes de ler o registro de idempotência, que fica na conta de origem; só quem detém o bloqueio da origem grava uma chave dela. A ausência de janela continua valendo. A perna de crédito usa uma chave derivada da transferência, que nenhum chamador escolhe. Verificado: reenvio com a origem já sem saldo devolve o corpo original; dez envios simultâneos com a mesma chave geram uma transferência.

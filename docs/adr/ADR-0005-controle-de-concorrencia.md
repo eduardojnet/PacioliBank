@@ -92,7 +92,7 @@ Defesa em profundidade aqui significa que a correção não depende de nenhuma c
 | Conflito de sequência (constraint violada) | Nova tentativa automática com recuo exponencial e aleatorização, até 3 tentativas |
 | Esgotamento das tentativas | `503 SERVICE_UNAVAILABLE`, marcado como repetível; seguro porque a chave de idempotência protege o reenvio |
 | `lock_timeout` atingido | Tratado como conflito; mesma política de nova tentativa |
-| Deadlock | Impossível no escopo atual: cada transação bloqueia exatamente uma linha de conta. Quando transferência entrar em escopo, as contas devem ser bloqueadas em ordem determinística de identificador |
+| Deadlock | Lançamento comum e estorno bloqueiam uma linha de conta só. A transferência bloqueia duas, **sempre em ordem crescente de identificador**, qualquer que seja o sentido (revisão do card 38, abaixo); nenhum caminho de escrita fecha ciclo de espera |
 
 ### Mitigação do inchaço de linha
 
@@ -178,3 +178,9 @@ Duas mitigações aplicadas:
 2. Entrada de transferência entre contas em escopo, exigindo ordenação determinística de bloqueios
 3. Inchaço da tabela `accounts` exigindo intervenção de vacuum fora do automático
 4. Migração de SGBD, que exige revalidar a semântica equivalente de bloqueio
+
+> **Revisão de 2026-10-05 (card 38): gatilho 2 ocorrido, ordem de bloqueio decidida.** A transferência entre contas entrou no escopo ([ADR-0014](./ADR-0014-transferencia-entre-contas.md)) e bloqueia duas contas na mesma transação. Fica decidido: **as duas contas são bloqueadas em ordem crescente de identificador**, cada uma com o mesmo `FOR NO KEY UPDATE` e a mesma leitura da posição depois do bloqueio que o lançamento comum usa. Com ordem única, duas transferências cruzadas pedem os bloqueios na mesma sequência, e a segunda espera na primeira conta sem segurar nada; o lançamento comum, que bloqueia uma conta só, nunca fecha ciclo com elas.
+>
+> - **Verificado de forma determinística:** com a conta de maior identificador presa por outra transação, a transferência dela para a menor já bloqueou a menor (uma sonda com `NOWAIT` é recusada). Bloqueando pela ordem do sentido, a menor ficaria livre, e o teste reprova; o teste de transferências cruzadas simultâneas também reprova nessa ordem
+> - **Rejeitado:** a ordem do sentido (origem primeiro), que produz impasse entre A para B e B para A, desfeito pelo PostgreSQL abortando uma delas; e um único comando com `ORDER BY ... FOR NO KEY UPDATE`, que deixaria a ordem a cargo do plano de execução
+> - **Custo aceito:** a transferência segura dois bloqueios, e a contenção de uma conta passa a afetar transferências que a envolvem. [NVI] Não medido sob carga

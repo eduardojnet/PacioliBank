@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 1 de 3 do pacote de especificação
-**Versão:** 1.2
-**Data:** 2026-10-04
+**Versão:** 1.3
+**Data:** 2026-10-05
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -90,6 +90,7 @@ Os termos abaixo têm significado fixo em todos os três documentos e no código
 | F08 | Degradação graciosa e falha parcial | RF-008, RNF-010 | Alta |
 | F09 | Controle de acesso e proteção de dados | RF-009, RNF-020 | Crítica |
 | F10 | Consistência do snapshot | RF-010 | Alta |
+| F11 | Transferência entre contas | RF-012, RN-013 | Crítica |
 
 ---
 
@@ -603,6 +604,67 @@ Funcionalidade: Consistência da posição pré-calculada
 
 ---
 
+### F11: Transferência entre contas
+
+```gherkin
+# language: pt
+@F11
+Funcionalidade: Transferência entre contas
+  Como cliente do banco
+  Quero transferir um valor da minha conta para outra conta
+  Para que o dinheiro saia de uma e chegue à outra sem nunca estar em trânsito
+
+  Contexto:
+    Dado que existe a conta "CONTA-A" ativa com saldo "100.00"
+    E que existe a conta "CONTA-B" ativa com saldo "5.00"
+
+  @RF-012 @RN-013 @integracao @critico
+  Cenário: Transferência debita a origem e credita o destino pelo mesmo valor
+    Quando for transferido "40.00" de "CONTA-A" para "CONTA-B" com a chave "T-1"
+    Então a posição de "CONTA-A" deve ser "60.00"
+    E a posição de "CONTA-B" deve ser "45.00"
+    E cada conta deve ter no extrato a sua perna da transferência
+
+  @RF-012 @RN-001 @integracao @critico
+  Cenário: Saldo insuficiente na origem não grava nada em nenhuma das contas
+    Quando for transferido "100.01" de "CONTA-A" para "CONTA-B"
+    Então a operação deve ser rejeitada com o código "INSUFFICIENT_FUNDS"
+    E nenhuma das duas contas deve ter lançamento novo
+
+  @RF-012 @RN-013 @integracao @critico
+  Cenário: Falha ao gravar a perna de crédito desfaz a perna de débito
+    Dado que a gravação de lançamentos em "CONTA-B" falha no banco
+    Quando for transferido "30.00" de "CONTA-A" para "CONTA-B"
+    Então a operação deve falhar
+    E a posição de "CONTA-A" deve continuar "100.00"
+
+  @RF-012 @RN-013 @unidade
+  Cenário: Transferência para a própria conta é rejeitada
+    Quando for transferido "10.00" de "CONTA-A" para "CONTA-A"
+    Então a operação deve ser rejeitada com o código "SAME_ACCOUNT_TRANSFER"
+
+  @RF-012 @RN-005 @integracao
+  Cenário: Reenvio com a mesma chave devolve a resposta original
+    Dado que foi transferido "40.00" de "CONTA-A" para "CONTA-B" com a chave "T-1"
+    E que "CONTA-A" foi debitada no saldo restante
+    Quando a mesma transferência for reenviada com a chave "T-1"
+    Então a resposta deve ser a original, marcada como repetição
+    E nenhuma transferência nova deve ser gravada
+
+  @RF-012 @concorrencia @critico
+  Cenário: Transferências cruzadas simultâneas terminam todas
+    Dado que "CONTA-A" e "CONTA-B" têm saldo "1000.00" cada
+    Quando 15 transferências de "10.00" de "CONTA-A" para "CONTA-B" e 15 de "CONTA-B" para "CONTA-A" forem disparadas ao mesmo tempo
+    Então todas devem ser concluídas
+    E as duas posições devem continuar "1000.00"
+```
+
+**Por que o último cenário é crítico:** com as contas bloqueadas na ordem do sentido, A para B e B para A simultâneas esperam uma pela outra. As contas são bloqueadas em ordem crescente de identificador ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)), e a ordem é verificada também de forma determinística nos testes de integração.
+
+**Questão aberta para o negócio:** estorno de transferência, tarifa, limite por transferência e transferência entre moedas não estão definidos. Registrado na EF §10 como QA-009, com conduta provisória.
+
+---
+
 ## 6. Matriz de rastreabilidade
 
 | Requisito | Origem | Funcionalidades BDD | Status |
@@ -617,10 +679,11 @@ Funcionalidade: Consistência da posição pré-calculada
 | RF-008 Degradação graciosa | Enunciado ("falhas parciais") | F08 | Especificado |
 | RF-009 Controle de acesso | Enunciado ("dados sensíveis") | F09 | Especificado |
 | RF-010 Snapshot consistente | Inferido (desempenho) | F10 | Especificado |
+| RF-012 Transferência entre contas | Decisão do usuário (card 38) | F11 | Especificado e implementado, com questão aberta |
 
 | Regra | Funcionalidades que a validam |
 |---|---|
-| RN-001 Posição não negativa | F02, F06, F07 |
+| RN-001 Posição não negativa | F02, F06, F07, F11 |
 | RN-002 Valor positivo com duas casas | F01 |
 | RN-003 Lançamento imutável | F01, F06 |
 | RN-004 Estorno por compensação | F06 |
@@ -632,6 +695,7 @@ Funcionalidade: Consistência da posição pré-calculada
 | RN-010 Snapshot é derivado | F10 |
 | RN-011 Inclusão no limite do instante | F04 |
 | RN-012 Separação fato e registro | F04 |
+| RN-013 Transferência em duas pernas | F11 |
 
 **Requisitos não funcionais com validação comportamental:** RNF-002, RNF-010, RNF-011, RNF-012, RNF-020, RNF-021, RNF-022. Os demais RNF são verificados por teste de carga, análise estática ou inspeção, conforme a [ENF](./ENF-especificacao-nao-funcional.md) §8.
 
@@ -662,6 +726,7 @@ Funcionalidade: Consistência da posição pré-calculada
 | QA-003 | Estorno pode gerar posição negativa? | Altera F06 | **Decidida:** rejeitar (ESTADO §3). Sem política configurável |
 | QA-004 | Qual a política de retenção do ledger? | Altera dimensionamento e LGPD | Assumir retenção integral no escopo do desafio |
 | QA-005 | Há exigência de operação multimoeda? | Altera RN-007 e modelo de `Money` | Assumir BRL, com `Money` preparado para moeda |
+| QA-009 | Quais as regras de negócio da transferência? | Altera F11 e RN-013 | Mesma moeda, origem diferente do destino, sem tarifa, saldo da origem pela RN-001, sem estorno de transferência (EF §10) |
 
 Nenhuma destas lacunas foi preenchida com número ou política inventada. Todas estão registradas na [EF](./EF-especificacao-funcional.md) §10 com a conduta provisória adotada e o critério para revisão.
 
@@ -674,3 +739,4 @@ Nenhuma destas lacunas foi preenchida com número ou política inventada. Todas 
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | F09: conta de terceiro responde `ACCOUNT_NOT_FOUND`, e não `FORBIDDEN`, para não revelar existência ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3; lacuna L-05) |
 | 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §8: QA-001 e QA-003 corrigidas contra o código; QA-003 decidida (lacuna L-14, card 29) |
+| 1.3 | 2026-10-05 | Eduardo J. G. do Carmo | F11: transferência entre contas (RF-012, RN-013, card 38, [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)); QA-009 em §8 |

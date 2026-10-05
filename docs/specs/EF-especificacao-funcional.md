@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.6
+**Versão:** 1.7
 **Data:** 2026-10-05
 **Status:** Proposto
 
@@ -51,6 +51,7 @@ Esta disciplina é intencional e é parte da entrega. Em contrato de consultoria
 - Cálculo da posição consolidada atual e em instante passado
 - Consulta de extrato de movimentações
 - Estorno por lançamento compensatório
+- Transferência entre contas, em duas pernas numa única transação (RF-012; incluída pelo card 38)
 - Garantia de idempotência de comandos
 - Controle de acesso por titularidade da conta
 - Publicação de eventos de integração para sistemas consumidores
@@ -160,6 +161,10 @@ Posição(conta, T) = Snapshot(conta, mais recente com AsOf ≤ T).Balance
                     aplicando +Amount para Credit e -Amount para Debit
 ```
 
+### 4.7 Transferência (*Transfer*)
+
+Não é agregado. É um serviço de domínio sobre dois agregados `Account`, que produz dois lançamentos comuns: um débito na conta de origem e um crédito na conta de destino, pelo mesmo valor, com o mesmo `OccurredAt` e a mesma correlação. Cada perna é decidida pelo agregado da sua conta, com as mesmas regras de qualquer lançamento. A tabela `transfers` registra a transferência e aponta para as duas pernas ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)).
+
 ---
 
 ## 5. Regras de negócio
@@ -178,6 +183,7 @@ Posição(conta, T) = Snapshot(conta, mais recente com AsOf ≤ T).Balance
 | **RN-010** | Snapshot, cache e projeção são derivados. O ledger é a única fonte da verdade. Perda de qualquer derivado não altera nenhuma resposta. | `[INFERIDO]` princípio arquitetural | F10 |
 | **RN-011** | O limite temporal da consulta é inclusivo: lançamento com `OccurredAt` exatamente igual a T entra no cálculo. | `[INFERIDO]` desambiguação necessária | F04 |
 | **RN-012** | A validação de saldo em débito usa a **posição corrente**, não a posição retroativa. Lançamento retroativo altera o histórico, nunca invalida débito já aceito. | `[INFERIDO]`, sujeito a QA-002 | F04 |
+| **RN-013** | Transferência é um débito na origem e um crédito no destino, pelo mesmo valor e na mesma moeda, gravados juntos ou nenhum. Origem e destino são contas diferentes. | Decisão do usuário (card 38); condutas provisórias sujeitas a QA-009 | F11 |
 
 ### 5.1 Trade-off explícito de RN-012
 
@@ -280,6 +286,15 @@ O sistema **deveria** publicar evento por lançamento efetivado, com entrega ao 
 - Justificativa da inferência: em banco digital, extrato, notificação e antifraude consomem movimentação; sem evento, esses sistemas fariam polling, reproduzindo a contenção do legado
 - Aceite: [BDD](./BDD-comportamento.md) F08
 
+### RF-012: Transferir entre contas `[Decisão do usuário, card 38]`
+
+O sistema **deve** transferir um valor de uma conta para outra numa única operação atômica: o débito na origem e o crédito no destino são gravados juntos ou nenhum. Transferência para a própria conta é rejeitada. A operação é idempotente pela chave na conta de origem.
+
+- Origem: fora do escopo na versão 1.0 (ENF §5.2); incluída por decisão do usuário, como transação local, e não como saga ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md))
+- Regras: RN-001, RN-002, RN-005, RN-006, RN-007, RN-008, RN-013
+- Aceite: [BDD](./BDD-comportamento.md) F11
+- Questão aberta: QA-009
+
 ---
 
 ## 7. Casos de uso
@@ -360,6 +375,7 @@ JSON não define precisão numérica. Parsers em JavaScript convertem número pa
 | `POST` | `/api/v1/accounts/{accountId}/credits` | RF-001 |
 | `POST` | `/api/v1/accounts/{accountId}/debits` | RF-002 |
 | `POST` | `/api/v1/accounts/{accountId}/entries/{entryId}/reversals` | RF-007 |
+| `POST` | `/api/v1/transfers` | RF-012 |
 | `GET` | `/api/v1/accounts/{accountId}/balance` | RF-003, RF-004 |
 | `GET` | `/api/v1/accounts/{accountId}/entries` | RF-005 |
 | `GET` | `/health/live` | ENF RNF-013 |
@@ -418,6 +434,44 @@ Content-Type: application/json
 }
 ```
 
+### 8.4.1 Transferir entre contas
+
+**Requisição**
+
+```http
+POST /api/v1/transfers
+Idempotency-Key: 4f7c2a10-...
+Content-Type: application/json
+
+{
+  "sourceAccountId": "11111111-1111-1111-1111-111111111111",
+  "destinationAccountId": "22222222-2222-2222-2222-222222222222",
+  "amount": "40.00",
+  "currency": "BRL",
+  "occurredAt": "2026-10-05T12:00:00Z"
+}
+```
+
+As contas viajam no corpo: a operação é de duas contas, e nenhuma delas é o recurso. A chave de idempotência é da conta de origem.
+
+**Resposta `201 Created`** (repetição: `200 OK` com `Idempotency-Replayed: true` e o mesmo corpo, byte a byte)
+
+```json
+{
+  "transferId": "02dd8138-...",
+  "sourceAccountId": "11111111-1111-1111-1111-111111111111",
+  "destinationAccountId": "22222222-2222-2222-2222-222222222222",
+  "amount": "40.00",
+  "currency": "BRL",
+  "occurredAt": "2026-10-05T12:00:00Z",
+  "recordedAt": "2026-10-05T19:53:50.816265Z",
+  "debit": { "entryId": "ccb1842b-...", "sequence": 2, "balanceAfter": "60.00" },
+  "credit": { "entryId": "278f6046-..." }
+}
+```
+
+Da perna de crédito, só o identificador do lançamento: saldo e sequência do destino pertencem ao titular do destino. Rejeições: as de um débito na origem e de um crédito no destino (§8.6), mais `400 SAME_ACCOUNT_TRANSFER`. Conta de origem ou de destino inexistente: `404 ACCOUNT_NOT_FOUND`.
+
 ### 8.5 Consultar posição consolidada
 
 ```http
@@ -448,6 +502,7 @@ O campo `computedFrom` assume `snapshot` (posição corrente a partir do snapsho
 | `INVALID_POINT_IN_TIME` | 400 | Não | RN-009 |
 | `PAGE_SIZE_EXCEEDED` | 400 | Não | RF-005 |
 | `IDEMPOTENCY_KEY_REQUIRED` | 400 | Não | RN-005 |
+| `SAME_ACCOUNT_TRANSFER` | 400 | Não | RN-013 |
 | `UNAUTHENTICATED` | 401 | Não | RF-009 |
 | `FORBIDDEN` | 403 | Não | RF-009. **Só para serviço interno com escopo amplo.** Cliente final recebe `404 ACCOUNT_NOT_FOUND` também para conta de terceiro ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3) |
 | `ACCOUNT_NOT_FOUND` | 404 | Não | RF-003, RF-009 |
@@ -490,6 +545,8 @@ A escrita dos endpoints encontrou pontos que esta especificação não respondia
 O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão no próprio nome permite coexistência de versões durante a migração de consumidores.
 
 **Garantia:** entrega ao menos uma vez, com `message_id` estável entre republicações, que permite deduplicação pelo consumidor ([ADR-0008](../adr/ADR-0008-outbox-transacional.md)). O `message_id` é o identificador da mensagem na outbox e viaja junto do evento, fora do payload. Ordenação é garantida apenas **dentro da mesma conta**, pelo campo `sequence`. Ordenação global não é oferecida porque não é necessária e custaria serialização total do sistema.
+
+**Transferência.** Cada perna gera o evento `entry-recorded` da sua conta, como um lançamento comum: um débito na origem e um crédito no destino. O payload **não** traz o identificador da transferência; as duas pernas têm o mesmo `correlationId`. Juntar as pernas pelo evento exigirá um campo novo e versão do contrato ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md), gatilho 5).
 
 **Payload.** Os dois tipos compartilham o mesmo corpo JSON. Os formatos são os da API (§8.1 e §8.2): valor monetário como string, instante em ISO 8601 UTC com sufixo `Z`.
 
@@ -545,6 +602,7 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | QA-006 | Volume esperado: lançamentos por segundo, contas, taxa de leitura? | Dimensiona toda a ENF | Dados do legado | Premissa declarada na [ENF](./ENF-especificacao-nao-funcional.md) §3, explicitamente marcada como premissa |
 | QA-007 | Quem são os originadores e qual o modelo de autenticação vigente? | Altera RF-009 | Arquitetura corporativa | Especificada: JWT validado contra emissor externo (ADR-0009). **Não implementada:** hoje não há autenticação, e qualquer chamador opera qualquer conta (RF-009 pendente) |
 | QA-008 | Qual o tamanho máximo de página do extrato? | Altera RF-005 e a proteção contra abuso (RNF-012) | Produto e canais | Padrão 50, máximo 200, acima disso `400 PAGE_SIZE_EXCEEDED`. Número escolhido na implementação, não informado pelo negócio; constantes da porta de entrada (`LedgerService`), não configuração |
+| QA-009 | Quais as regras de negócio da transferência: moedas diferentes, tarifa, limite por transferência, estorno? | Altera RN-013, RF-012 e o contrato de §8.4.1 | Produto, operações e contabilidade | Mesma moeda nas duas contas (RN-007); origem diferente do destino; sem tarifa (cálculo de tarifa é externo, §3.2); saldo da origem validado pela RN-001; idempotência pela chave na conta de origem; **sem estorno de transferência**: estornar uma perna pelo caminho comum desfaz só metade. Condutas aceitas pelo usuário ao iniciar o card 38 |
 
 **Compromisso de método:** nenhuma destas lacunas foi preenchida com número apresentado como fato, e cada conduta provisória é reversível.
 
@@ -567,6 +625,7 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | RF-009 | n/a | F09 | RNF-020, RNF-021, RNF-022, RNF-012 |
 | RF-010 | RN-010 | F10 | RNF-002, RNF-005 |
 | RF-011 | n/a | F08 | RNF-011 |
+| RF-012 | RN-001, RN-002, RN-005, RN-006, RN-007, RN-008, RN-013 | F11 | RNF-001, RNF-004 |
 
 ---
 
@@ -581,3 +640,4 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | 1.4 | 2026-10-02 | Eduardo J. G. do Carmo | §8.5: campo `entriesReplayed` na posição consolidada, exibido pelo painel de evidência (card 25) |
 | 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §10: condutas provisórias corrigidas contra o código (lacuna L-14). Não há política substituível nem configuração; há um ponto único de mudança por questão. QA-003 marcada como decidida, coerente com o ESTADO §3. QA-007 declarada como especificada e não implementada (card 29) |
 | 1.6 | 2026-10-05 | Eduardo J. G. do Carmo | §8.5: `computedFrom` ganha o valor `dailyBalance`, para a posição em instante passado calculada a partir do fechamento diário (card 32, ADR-0007). `entriesReplayed`, nesse caso, conta só os lançamentos do dia consultado |
+| 1.7 | 2026-10-05 | Eduardo J. G. do Carmo | Transferência entre contas no escopo (card 38, [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)): §3.1, §4.7, RN-013, RF-012, §8.3, §8.4.1, código `SAME_ACCOUNT_TRANSFER` em §8.6, nota em §9, QA-009 em §10, §11 |

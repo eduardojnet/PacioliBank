@@ -1,6 +1,6 @@
 # Esquema do ledger: entidades e relacionamentos
 
-As 7 tabelas do esquema `ledger`, transcritas das migrações [`0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql), [`0002_saldo_diario.sql`](../../db/migrations/0002_saldo_diario.sql) e [`0003_particionamento_do_ledger.sql`](../../db/migrations/0003_particionamento_do_ledger.sql) coluna por coluna. `ledger_entries` é particionada por mês de `recorded_at` ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)); as partições são detalhe físico e não aparecem como entidades. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
+As 8 tabelas do esquema `ledger`, transcritas das migrações [`0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql), [`0002_saldo_diario.sql`](../../db/migrations/0002_saldo_diario.sql), [`0003_particionamento_do_ledger.sql`](../../db/migrations/0003_particionamento_do_ledger.sql) e [`0004_transferencias.sql`](../../db/migrations/0004_transferencias.sql) coluna por coluna. `ledger_entries` é particionada por mês de `recorded_at` ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)); as partições são detalhe físico e não aparecem como entidades. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
 
 **Por que este diagrama importa:** neste sistema, várias regras de negócio não estão no código, estão no banco. Lançamento positivo, sequência sem duplicata, um único estorno por lançamento e chave de idempotência única são constraints; a imutabilidade do ledger é ausência de privilégio. Ler o esquema é ler as invariantes.
 
@@ -15,6 +15,8 @@ erDiagram
     entry_keys |o--o| entry_keys : "reversal_of: no máximo um estorno"
     entry_keys ||--o| idempotency_records : "entry_id"
     entry_keys ||--o| outbox_messages : "(account_id, sequence)"
+    accounts ||--o{ transfers : "origem e destino"
+    ledger_entries ||--o| transfers : "fk_transfers_debit e fk_transfers_credit: conta, sentido, valor, moeda, registro"
 
     accounts {
         uuid account_id PK
@@ -48,6 +50,19 @@ erDiagram
         uuid reversal_of FK "NULL, com entry_id aponta para entry_keys"
         numeric balance_after "numeric(19,4), posição após o lançamento"
         jsonb metadata "DEFAULT vazio"
+    }
+
+    transfers {
+        uuid transfer_id PK
+        uuid source_account_id FK "CHECK diferente do destino"
+        uuid destination_account_id FK
+        numeric amount "numeric(19,4), CHECK maior que 0"
+        char currency "char(3)"
+        timestamptz recorded_at "o mesmo das duas pernas"
+        uuid debit_entry_id FK "UNIQUE; FK composta para ledger_entries"
+        uuid credit_entry_id FK "UNIQUE; FK composta para ledger_entries"
+        smallint debit_direction "DEFAULT -1, CHECK igual a -1, entra na FK"
+        smallint credit_direction "DEFAULT 1, CHECK igual a 1, entra na FK"
     }
 
     balance_snapshots {
@@ -88,7 +103,7 @@ erDiagram
     }
 ```
 
-## As quatro notas
+## As notas
 
 ### 1. Autorrelacionamento do estorno: no máximo um estorno por lançamento
 
@@ -130,6 +145,12 @@ O registro pode ser expurgado no futuro (ADR-0006 prevê 90 dias); a constraint 
 
 No PostgreSQL, restrição única de tabela particionada só vale dentro de cada partição. Para não perder as quatro garantias (identidade, sequência, idempotência, estorno único), elas vivem em `entry_keys`, que não é particionada, com os mesmos nomes de antes. Cada linha do ledger é amarrada à sua chave por `fk_entries_keys (entry_id, account_id, sequence, idempotency_key)`; o estorno, por `fk_entries_reversal (entry_id, reversal_of)`. Outbox e idempotência apontam para `entry_keys`. Por isso as notas 1, 3 e 4 acima valem como antes: a regra é a mesma, o lugar da restrição mudou ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)).
 
+### 6. Transferência: as duas pernas amarradas pelo banco (card 38)
+
+A transferência são dois lançamentos comuns, um débito na origem e um crédito no destino, gravados na mesma transação ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)). `transfers` aponta para os dois por chaves estrangeiras compostas: `fk_transfers_debit (debit_entry_id, recorded_at, source_account_id, debit_direction, amount, currency)` só aceita um **débito da origem**, e `fk_transfers_credit` só um **crédito do destino**, os dois pelo valor, na moeda e no instante de registro da transferência. As colunas de sentido são constantes fixadas por `CHECK`: existem porque a chave estrangeira não aceita literal. O alvo das duas chaves é `uq_entries_leg UNIQUE (entry_id, recorded_at, account_id, direction, amount, currency)` no ledger, que inclui `recorded_at` porque o ledger é particionado. `uq_transfers_debit` e `uq_transfers_credit` impedem que uma perna sirva a duas transferências; `ck_transfers_distinct_accounts` recusa origem igual ao destino.
+
+O que o banco **não** garante, e fica com a transação: que as duas pernas existam juntas. Um débito sem transferência é um débito comum; o que impede o débito de uma transferência sem o crédito é a transação única, verificada com falha provocada na gravação da perna de crédito.
+
 ## Índices
 
 | Índice | Tabela | Colunas | Para quê |
@@ -138,9 +159,10 @@ No PostgreSQL, restrição única de tabela particionada só vale dentro de cada
 | `ix_entries_account_occurred` | `ledger_entries`, em cada partição | `(account_id, occurred_at, sequence)` `INCLUDE (direction, amount)` | Lançamentos do dia na consulta histórica (RNF-003) |
 | `ix_entries_account_sequence` | `ledger_entries`, em cada partição | `(account_id, sequence)` | Extrato e posição corrente por sequência; antes atendidos pelo índice de `uq_entries_sequence`, que foi para `entry_keys` (card 37) |
 | `ix_idempotency_created` | `idempotency_records` | `created_at` | Expurgo por idade |
+| `ix_transfers_source`, `ix_transfers_destination` | `transfers` | `source_account_id`; `destination_account_id` | Transferências de uma conta, nos dois sentidos |
 | `ix_outbox_pending` | `outbox_messages` | `next_attempt_at` `WHERE published_at IS NULL` | Varredura proporcional à fila, não ao histórico |
 
-As constraints `UNIQUE` também criam índices, em `entry_keys`; `uq_entries_reversal` é o que atende a verificação de estorno existente.
+As constraints `UNIQUE` também criam índices, em `entry_keys`; `uq_entries_reversal` é o que atende a verificação de estorno existente. `uq_entries_leg` cria um índice em cada partição do ledger, só para servir de alvo às chaves de `transfers` (custo registrado no ADR-0014).
 
 ## Privilégios do papel da aplicação
 
@@ -150,6 +172,7 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 |---|---|---|
 | `ledger_entries` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `entry_keys` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
+| `transfers` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `balance_snapshots` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `daily_balances` | `SELECT`, `INSERT`, `UPDATE` (corrigir os dias seguintes a um retroativo) | `DELETE` |
 | `idempotency_records` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
@@ -161,6 +184,8 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 ## Conferência contra o script
 
 Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql` (movido sem alteração de esquema para `db/migrations/0001_esquema_inicial.sql` no card 27), linha por linha, e contra o catálogo do PostgreSQL com o script aplicado (`information_schema.columns` e `pg_constraint`), por comparação automática de nome, tipo e ordem de cada coluna:
+
+**Reconferido em 2026-10-05, com a migração 0004 (card 38)**, contra o catálogo do PostgreSQL, sem contar as partições: 8 tabelas, 60 colunas (10 de `transfers`), 8 PK, 14 FK (4 novas, de `transfers`), 8 UNIQUE (`uq_entries_leg`, `uq_transfers_debit`, `uq_transfers_credit` novas), 11 CHECK (4 novos, de `transfers`).
 
 **Reconferido em 2026-10-05, com a migração 0003 (card 37)**, contra o catálogo do PostgreSQL, sem contar as partições: 7 tabelas, 50 colunas (6 de `entry_keys`), 7 PK, 10 FK (as quatro que apontavam para o ledger agora apontam para `entry_keys`), 5 UNIQUE (as 3 das regras, em `entry_keys`, e as 2 que servem de alvo às chaves compostas), 7 CHECK.
 

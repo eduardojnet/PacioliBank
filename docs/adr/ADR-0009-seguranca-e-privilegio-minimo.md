@@ -54,6 +54,8 @@ GRANT SELECT, UPDATE (last_sequence) ON ledger.accounts TO pacioli_runtime;
 GRANT SELECT, INSERT, UPDATE ON ledger.daily_balances TO pacioli_runtime;
 -- Card 37: chaves de unicidade do ledger particionado (ADR-0013). Como o ledger.
 GRANT SELECT, INSERT ON ledger.entry_keys TO pacioli_runtime;
+-- Card 38: transferencias (ADR-0014). Como o ledger: gravada, nao se altera.
+GRANT SELECT, INSERT ON ledger.transfers TO pacioli_runtime;
 
 -- Consulta operacional e auditoria. Somente leitura.
 CREATE ROLE pacioli_readonly;

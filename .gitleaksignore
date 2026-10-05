@@ -8,8 +8,10 @@
 # cabecalho. A mesma linha aparece em dois commits.
 510afd69ed5b3b2d46dbae425beb88672deafb80:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
 431dfed7058576491274c67546944459bf4727e2:docs/specs/EF-especificacao-funcional.md:generic-api-key:375
-# A mesma linha, na varredura do diretorio (gitleaks dir), que nao leva o commit.
-docs/specs/EF-especificacao-funcional.md:generic-api-key:375
+# A mesma linha, na varredura do diretorio (gitleaks dir), que nao leva o
+# commit e identifica pela linha: passou da 375 para a 391 no card 38, com as
+# secoes de transferencia acrescentadas antes dela.
+docs/specs/EF-especificacao-funcional.md:generic-api-key:391
 
 # Card 33, teste de mascaramento do log: JWT sintetico escrito inteiro no
 # fonte (cabecalho {"alg":"HS256"}, corpo {"sub":"1234"}, assinatura

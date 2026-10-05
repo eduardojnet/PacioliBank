@@ -14,7 +14,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | [0002](./ADR-0002-plataforma-e-armazenamento.md) | .NET 10 LTS, PostgreSQL, Dapper e DbUp; migrador em passo separado (revisão do card 27) | Aceito, revisado em 2026-10-02 | RNF-001, RNF-037, RNF-038, R-06 |
 | [0003](./ADR-0003-ledger-append-only.md) | Ledger append-only como única fonte da verdade | Aceito | RN-003, RNF-003, RNF-016 |
 | [0004](./ADR-0004-representacao-monetaria.md) | `decimal` e `numeric(19,4)`, com Value Object `Money` | Aceito | RN-002, EF §8.2 |
-| [0005](./ADR-0005-controle-de-concorrencia.md) | Bloqueio pessimista de linha por conta | Aceito | RN-001, RNF-004, CQ-02 |
+| [0005](./ADR-0005-controle-de-concorrencia.md) | Bloqueio pessimista de linha por conta; duas contas em ordem crescente de identificador (revisão do card 38) | Aceito, revisado em 2026-10-05 | RN-001, RNF-004, CQ-02 |
 | [0006](./ADR-0006-idempotencia.md) | Chave obrigatória com unicidade no banco | Aceito, revisado em 2026-10-02 | RN-005, RNF-011, CQ-04 |
 | [0007](./ADR-0007-snapshot-e-projecao.md) | Snapshot inline amortizado por sequência | Aceito | RNF-002, RNF-003, RNF-006 |
 | [0008](./ADR-0008-outbox-transacional.md) | Outbox transacional com entrega ao menos uma vez | Aceito | RF-011, RNF-010, CQ-03 |
@@ -23,6 +23,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | [0011](./ADR-0011-painel-de-evidencia.md) | Painel de evidência como página estática | Aceito, condicional | RNF-037, demonstração de RN-001, RN-005, RN-009 |
 | [0012](./ADR-0012-observabilidade.md) | Log mascarado no formatador, correlação fora do adaptador HTTP, telemetria por OTLP | Aceito e implementado, revisado em 2026-10-05 | RNF-021, RNF-030, RNF-031, RNF-032 |
 | [0013](./ADR-0013-particionamento-do-ledger.md) | Ledger particionado por mês de registro, chaves de unicidade numa tabela não particionada | Aceito e implementado | R-04, RN-004, RN-005, RN-006 |
+| [0014](./ADR-0014-transferencia-entre-contas.md) | Transferência numa transação local, contas bloqueadas em ordem de identificador, pernas amarradas pelo banco | Aceito e implementado | RF-012, RN-013, RN-001, RN-005 |
 
 ## Especificações de origem
 
