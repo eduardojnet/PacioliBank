@@ -38,7 +38,7 @@ flowchart TB
 | Elemento | Estado | Evidência |
 |---|---|---|
 | API do Ledger | Implementado, sem autenticação | `src/PacioliBank.Api`; `docker compose up --build` serve em `:8080` |
-| Banco do Ledger | Implementado | `db/migrations/` (0001 e 0002): 6 tabelas, 3 papéis, constraints por regra |
+| Banco do Ledger | Implementado | `db/migrations/` (0001 a 0003): 7 tabelas, ledger particionado por mês com as chaves de unicidade numa tabela não particionada (ADR-0013), 3 papéis, constraints por regra |
 | Migrador | Implementado | Card 27: `src/PacioliBank.Migrations`, serviço `pacioli-migrations` do `docker compose`. Único processo com a credencial de migração; a API só sobe depois que ele termina com sucesso (ADR-0002, revisão; ADR-0009) |
 | Escrita na outbox | Implementado | `PostgresLedgerStore.WriteAsync`, na transação do lançamento (ADR-0008) |
 | Despachante de Outbox | Implementado | Card 24: `PacioliBank.Events/OutboxDispatcher.cs`, executado por `OutboxDispatcherService` no processo da API. Rodar no mesmo processo é decisão operacional (ADR-0008); várias instâncias convivem pelo `SKIP LOCKED` |

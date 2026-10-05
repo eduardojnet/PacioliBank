@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 183 testes; os de integração exigem Docker
+dotnet test                   # 192 testes; os de integração exigem Docker
 docker compose up --build     # migrador roda e termina; API em :8080, painel de observabilidade em :18888
 docker compose down -v        # só para recomeçar do zero, de propósito
 dotnet tool restore && (cd tests/PacioliBank.Domain.Tests && dotnet stryker)   # mutação, ~20 s
@@ -24,20 +24,21 @@ O esquema é aplicado pelo `PacioliBank.Migrations` (DbUp), num passo separado, 
 
 1. **O quadro no TickTick** (projeto PacioliBank) — fonte de toda atividade e da ordem. `docs/KANBAN.md` e `ESTADO.md §7` o espelham
 2. `docs/ESTADO.md` — estado atual, lacunas por severidade
-3. `docs/adr/README.md` — índice das 12 decisões arquiteturais
+3. `docs/adr/README.md` — índice das 13 decisões arquiteturais
 4. `docs/specs/EF-especificacao-funcional.md` — domínio, regras (RN-xxx) e contratos
 5. `docs/convencoes-de-nomenclatura.md`
 6. `docs/PROCESSO-KANBAN.md` — política do quadro (versão 2.0)
 
 ---
 
-## Arquitetura em cinco linhas
+## Arquitetura em seis linhas
 
 - **Monolito modular**, Ports and Adapters, DDD tático no domínio (ADR-0001)
 - **Ledger append-only é a única fonte da verdade.** Posição é derivada; snapshot e cache são descartáveis (ADR-0003)
 - **A conta é a unidade de serialização.** `FOR NO KEY UPDATE` na linha da conta, antes de ler a posição (ADR-0005)
 - **Idempotência obrigatória.** A repetição é reconhecida sob o bloqueio da conta, antes do agregado; a chave primária é a barreira estrutural contra duplicidade; o reenvio recebe o `response_body` gravado, byte a byte (ADR-0006, revisões dos cards 19.4 e 19.5)
 - **Imutabilidade por privilégio**: o papel da aplicação tem `SELECT, INSERT` no ledger e nada mais (ADR-0009)
+- **Ledger particionado por mês de registro**; as restrições de unicidade vivem em `entry_keys`, não particionada, porque o PostgreSQL só aceita unicidade por partição (ADR-0013)
 
 Inversão de dependência é física: `PacioliBank.Ledger` não declara nenhum `PackageReference`, então referenciar Npgsql no domínio é erro de compilação.
 
@@ -73,7 +74,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutacao (Stryker) do dominio >= 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependencia (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantaneo do OpenAPI (openapi.v1.approved.json)
-  PacioliBank.Integration.Tests/   77 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes, snapshot, fechamento diario, log, traco e metricas
+  PacioliBank.Integration.Tests/   86 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes, snapshot, fechamento diario, particionamento, log, traco e metricas
 db/migrations/                     esquema, papeis e privilegios, em migracoes numeradas
 db/seed/                           contas de exemplo, so no ambiente local
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
@@ -106,8 +107,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com seus subníveis, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.6, ENF 1.9, BDD 1.2), e painel de evidência na raiz da API. Depois dela, concluídos: 26 (NetArchTest), 27 (migrações DbUp em passo separado), 28 (analisadores em `Recommended`), 29 e 30 (encerrados como decisão registrada), 30.1 (teste do snapshot), 31 (CI no GitHub Actions), 31.1 (auditoria de dependências), 31.2 (cobertura do domínio com limite de 85%), 34 (ferramentas de teste atualizadas; xunit v3 no 34.1, Backlog), 36 (teste de mutação com Stryker, limite de 85%) 33 (log JSON com correlação e mascaramento, ADR-0012) 33.1 (rastreamento ponta a ponta, painel em :18888), 33.2 (métricas de negócio) e 32 (fechamento diário para a consulta histórica, por antecipação; migração 0002). A Fazer está vazia; próximos por decisão do usuário. O card 35 (PostgreSQL 18) foi removido do quadro. Ficam no Backlog até o gatilho: 34.1, 37 e 38. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com seus subníveis, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.6, ENF 1.10, BDD 1.2), e painel de evidência na raiz da API. Depois dela, concluídos: 26 (NetArchTest), 27 (migrações DbUp em passo separado), 28 (analisadores em `Recommended`), 29 e 30 (encerrados como decisão registrada), 30.1 (teste do snapshot), 31 (CI no GitHub Actions), 31.1 (auditoria de dependências), 31.2 (cobertura do domínio com limite de 85%), 34 (ferramentas de teste atualizadas; xunit v3 no 34.1, Backlog), 36 (teste de mutação com Stryker, limite de 85%) 33 (log JSON com correlação e mascaramento, ADR-0012) 33.1 (rastreamento ponta a ponta, painel em :18888), 33.2 (métricas de negócio) 32 (fechamento diário para a consulta histórica, por antecipação; migração 0002) e 37 (ledger particionado por mês, chaves de unicidade em `entry_keys`, ADR-0013; migração 0003). A Fazer está vazia; próximos por decisão do usuário. O card 35 (PostgreSQL 18) foi removido do quadro. Ficam no Backlog até o gatilho: 34.1 e 38. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
 Nenhuma lacuna aberta: a L-13 (RNF-036 declarada sem medição) foi encerrada no card 31.2, a L-14 (ponto de extensão declarado e inexistente na EF §10) no card 29, a L-15 (RNF-003 e RNF-006 dados como realizados sem ressalva) no card 30, e a L-16 (observabilidade dada como realizada sem existir) no card 33.
 
-Antes de começar, rode `dotnet test`. Esperado: 183 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 192 passando, sem avisos.

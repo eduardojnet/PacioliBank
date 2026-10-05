@@ -9,12 +9,12 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 3 | 34.1, 37, 38 |
+| Backlog/Ideias | 2 | 34.1, 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 51 | 01 a 34 e 36, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1 e 33.2. O 35 foi removido do quadro |
+| Concluído | 52 | 01 a 34, 36 e 37, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1 e 33.2. O 35 foi removido do quadro |
 
 ---
 
@@ -37,14 +37,6 @@ POR QUE NÃO AGORA: a suíte em xunit 2.9.x funciona, está verificada e roda no
 GATILHO DE ADOÇÃO: fim do suporte ao xunit v2, ou necessidade de recurso exclusivo do v3 (por exemplo, Microsoft Testing Platform no lugar do VSTest).
 
 CRITÉRIO, quando entrar: mesma contagem de testes, verde localmente e no CI; fixture compartilhada do PostgreSQL preservada; limite de cobertura do domínio medido de novo e funcionando.
-
-### 37. Particionar o ledger por tempo
-
-`prioridade: Nenhuma` · `infra` · `desempenho`
-
-Risco R-04 da ENF: o ledger cresce de forma monotônica, nada é apagado. Com as premissas da ENF 3, a ordem de grandeza é de bilhões de linhas por ano.
-
-DEPENDE DE: QA-004 (política de retenção), que é decisão de compliance e jurídico, não de engenharia.
 
 ### 38. Incluir transferência entre contas no escopo
 
@@ -1075,3 +1067,38 @@ CRITÉRIO ATENDIDO:
 - Insomnia 43/43; gitleaks limpo; 183 testes verdes; build sem avisos
 
 AJUSTES EM TESTES EXISTENTES: o teste do snapshot que registrava o comportamento antigo da consulta histórica ('não desejado') passou a verificar o novo; o de métricas, a nova origem; os de migração, a sexta tabela e o segundo script. O mapeamento do contrato HTTP deixaria a nova origem sair como 'ledger': corrigido com um valor por origem.
+
+### 37. Particionar o ledger por tempo
+
+`prioridade: Nenhuma` · `infra` · `desempenho`
+
+Risco R-04 da ENF: o ledger cresce de forma monotônica, nada é apagado. Com as premissas da ENF 3, a ordem de grandeza é de bilhões de linhas por ano.
+
+DEPENDE DE: QA-004 (política de retenção), que é decisão de compliance e jurídico, não de engenharia.
+
+--- ATUALIZAÇÃO 05/10/2026, ao iniciar (append-only) ---
+
+ANTECIPAÇÃO POR DECISÃO DO USUÁRIO: a QA-004 continua sem resposta. Particiona-se agora; arquivar ou apagar períodos fica fora, até a retenção ser definida.
+
+ACHADO, verificado no PostgreSQL 17: restrição única e chave primária de tabela particionada são recusadas sem a coluna da partição. Particionar por data faria sequência (RN-006), idempotência (RN-005), estorno único (RN-004) e identidade valerem só dentro de cada período.
+
+DECISÃO DO USUÁRIO: opção b2. O ledger é particionado por mês de registro (recorded_at); uma tabela NÃO particionada, entry_keys, guarda as chaves com as quatro restrições únicas, gravada na mesma transação. Regra 6 preservada.
+
+--- ENTREGA 05/10/2026 (append-only) ---
+
+ENTREGUE:
+- Migração 0003: entry_keys com as quatro restrições (mesmos nomes); ledger particionado por RANGE (recorded_at), partições mensais e padrão; fk_entries_keys e fk_entries_reversal amarram cada linha à sua chave; outbox e idempotência apontando para entry_keys; dados copiados; tabela antiga removida; privilégios iguais (aplicação só SELECT e INSERT)
+- Função ledger.ensure_month_partition, chamada pelo migrador a cada execução (12 meses à frente); a aplicação não pode executá-la
+- Escrita grava a chave antes da linha; verificação de estorno existente lê entry_keys
+- ADR-0013 com 5 alternativas rejeitadas; ADR-0003, ADR-0009, ERD (reconferido no catálogo: 7 tabelas, 50 colunas, 10 FK), C2, ENF 1.10
+
+CRITÉRIO ATENDIDO:
+- PartitioningTests (8): particionado por recorded_at com padrão; lançamento na partição do mês; mesma sequência, mesma chave de idempotência e segundo estorno em OUTRO período recusados pelo banco pelo nome da restrição; linha sem chave correspondente recusada; aplicação não altera nem apaga chave; migrador abre meses sem duplicar. Reprovaram antes da implementação
+- MigrationTests: 0003 sobre dados de três meses com estorno, outbox e idempotência: partição certa, soma e chaves preservadas, referências reapontadas
+- Suíte inteira verde sobre a estrutura nova: 192 testes, inclusive concorrência
+- Poder de detecção: idempotência e estorno únicos só por período, cada um reprovado pelo seu teste; linha amarrada só pelo identificador reprovada; função sem verificar mês existente reprovada. Sequência única só por período e partição por data do fato são recusadas pela própria estrutura (a migração falha)
+- Volume local em uso: 260 lançamentos e a mesma soma antes e depois, 260 chaves; Insomnia 43/43; fechamentos diários sem divergência; reexecução do migrador sem script nem partição nova
+- gitleaks limpo; build sem avisos
+- CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37327840453
+
+DECLARADO: retenção (QA-004) sem resposta, nada arquivado. Custo da inserção a mais e da busca por sequência em várias partições não medido sob carga [NVI].

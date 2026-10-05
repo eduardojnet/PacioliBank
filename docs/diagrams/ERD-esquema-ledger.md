@@ -1,18 +1,20 @@
 # Esquema do ledger: entidades e relacionamentos
 
-As 6 tabelas do esquema `ledger`, transcritas das migrações [`0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql) e [`0002_saldo_diario.sql`](../../db/migrations/0002_saldo_diario.sql) coluna por coluna. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
+As 7 tabelas do esquema `ledger`, transcritas das migrações [`0001_esquema_inicial.sql`](../../db/migrations/0001_esquema_inicial.sql), [`0002_saldo_diario.sql`](../../db/migrations/0002_saldo_diario.sql) e [`0003_particionamento_do_ledger.sql`](../../db/migrations/0003_particionamento_do_ledger.sql) coluna por coluna. `ledger_entries` é particionada por mês de `recorded_at` ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)); as partições são detalhe físico e não aparecem como entidades. Migração nova que altere tabela deste diagrama atualiza o diagrama no mesmo commit. O [C4](./README.md) descreve a arquitetura; este diagrama descreve onde os dados e as regras moram. Os dois se complementam.
 
 **Por que este diagrama importa:** neste sistema, várias regras de negócio não estão no código, estão no banco. Lançamento positivo, sequência sem duplicata, um único estorno por lançamento e chave de idempotência única são constraints; a imutabilidade do ledger é ausência de privilégio. Ler o esquema é ler as invariantes.
 
 ```mermaid
 erDiagram
+    accounts ||--o{ entry_keys : "account_id"
     accounts ||--o{ ledger_entries : "account_id"
     accounts ||--o{ balance_snapshots : "account_id"
     accounts ||--o{ daily_balances : "account_id"
     accounts ||--o{ idempotency_records : "account_id"
-    ledger_entries ||--o| idempotency_records : "entry_id"
-    ledger_entries |o--o| ledger_entries : "reversal_of: no máximo um estorno"
-    ledger_entries ||--o| outbox_messages : "(account_id, sequence)"
+    entry_keys ||--|| ledger_entries : "fk_entries_keys: mesma conta, sequência e chave"
+    entry_keys |o--o| entry_keys : "reversal_of: no máximo um estorno"
+    entry_keys ||--o| idempotency_records : "entry_id"
+    entry_keys ||--o| outbox_messages : "(account_id, sequence)"
 
     accounts {
         uuid account_id PK
@@ -23,18 +25,27 @@ erDiagram
         timestamptz created_at "DEFAULT now()"
     }
 
-    ledger_entries {
+    entry_keys {
         uuid entry_id PK
         uuid account_id FK "UNIQUE com sequence; UNIQUE com idempotency_key"
+        bigint sequence "CHECK maior ou igual a 1"
+        text idempotency_key
+        uuid reversal_of FK "NULL, UNIQUE, aponta para entry_keys"
+        timestamptz recorded_at
+    }
+
+    ledger_entries {
+        uuid entry_id PK, FK "PK com recorded_at; FK composta para entry_keys"
+        uuid account_id FK
         bigint sequence "CHECK maior ou igual a 1"
         smallint direction "CHECK IN (1, -1)"
         numeric amount "numeric(19,4), CHECK maior que 0"
         char currency "char(3)"
         timestamptz occurred_at "data do fato"
-        timestamptz recorded_at "DEFAULT now(), data do registro"
+        timestamptz recorded_at PK "DEFAULT now(), data do registro, coluna da partição"
         text idempotency_key "NOT NULL"
         uuid correlation_id "NOT NULL"
-        uuid reversal_of FK "NULL, UNIQUE, aponta para ledger_entries"
+        uuid reversal_of FK "NULL, com entry_id aponta para entry_keys"
         numeric balance_after "numeric(19,4), posição após o lançamento"
         jsonb metadata "DEFAULT vazio"
     }
@@ -115,16 +126,21 @@ A unicidade da chave de idempotência aparece duas vezes, e não é redundância
 
 O registro pode ser expurgado no futuro (ADR-0006 prevê 90 dias); a constraint no ledger, não, porque o ledger é append-only.
 
+### 5. Ledger particionado, chaves num registro não particionado (card 37)
+
+No PostgreSQL, restrição única de tabela particionada só vale dentro de cada partição. Para não perder as quatro garantias (identidade, sequência, idempotência, estorno único), elas vivem em `entry_keys`, que não é particionada, com os mesmos nomes de antes. Cada linha do ledger é amarrada à sua chave por `fk_entries_keys (entry_id, account_id, sequence, idempotency_key)`; o estorno, por `fk_entries_reversal (entry_id, reversal_of)`. Outbox e idempotência apontam para `entry_keys`. Por isso as notas 1, 3 e 4 acima valem como antes: a regra é a mesma, o lugar da restrição mudou ([ADR-0013](../adr/ADR-0013-particionamento-do-ledger.md)).
+
 ## Índices
 
 | Índice | Tabela | Colunas | Para quê |
 |---|---|---|---|
 | `ix_accounts_customer` | `accounts` | `customer_id` | Contas de um titular |
-| `ix_entries_account_occurred` | `ledger_entries` | `(account_id, occurred_at, sequence)` `INCLUDE (direction, amount)` | Consulta histórica sem acessar a tabela (RNF-003) |
+| `ix_entries_account_occurred` | `ledger_entries`, em cada partição | `(account_id, occurred_at, sequence)` `INCLUDE (direction, amount)` | Lançamentos do dia na consulta histórica (RNF-003) |
+| `ix_entries_account_sequence` | `ledger_entries`, em cada partição | `(account_id, sequence)` | Extrato e posição corrente por sequência; antes atendidos pelo índice de `uq_entries_sequence`, que foi para `entry_keys` (card 37) |
 | `ix_idempotency_created` | `idempotency_records` | `created_at` | Expurgo por idade |
 | `ix_outbox_pending` | `outbox_messages` | `next_attempt_at` `WHERE published_at IS NULL` | Varredura proporcional à fila, não ao histórico |
 
-As constraints `UNIQUE` também criam índices; `uq_entries_sequence` é o que atende o extrato paginado por cursor.
+As constraints `UNIQUE` também criam índices, em `entry_keys`; `uq_entries_reversal` é o que atende a verificação de estorno existente.
 
 ## Privilégios do papel da aplicação
 
@@ -133,6 +149,7 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 | Tabela | `pacioli_runtime` pode | Não pode |
 |---|---|---|
 | `ledger_entries` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
+| `entry_keys` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `balance_snapshots` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
 | `daily_balances` | `SELECT`, `INSERT`, `UPDATE` (corrigir os dias seguintes a um retroativo) | `DELETE` |
 | `idempotency_records` | `SELECT`, `INSERT` | `UPDATE`, `DELETE` |
@@ -144,6 +161,8 @@ A imutabilidade do ledger não está desenhada acima porque não é estrutura: �
 ## Conferência contra o script
 
 Conferido em 2026-10-02 contra `db/init/001_roles_and_schema.sql` (movido sem alteração de esquema para `db/migrations/0001_esquema_inicial.sql` no card 27), linha por linha, e contra o catálogo do PostgreSQL com o script aplicado (`information_schema.columns` e `pg_constraint`), por comparação automática de nome, tipo e ordem de cada coluna:
+
+**Reconferido em 2026-10-05, com a migração 0003 (card 37)**, contra o catálogo do PostgreSQL, sem contar as partições: 7 tabelas, 50 colunas (6 de `entry_keys`), 7 PK, 10 FK (as quatro que apontavam para o ledger agora apontam para `entry_keys`), 5 UNIQUE (as 3 das regras, em `entry_keys`, e as 2 que servem de alvo às chaves compostas), 7 CHECK.
 
 **Reconferido em 2026-10-05, com a migração 0002 (card 32)**, contra o catálogo do PostgreSQL: 6 tabelas, 44 colunas (as 40 da conferência original abaixo mais 4 de `daily_balances`), 6 PK, 7 FK, 3 UNIQUE, 6 CHECK (mais `ck_daily_last_sequence`); privilégios de `daily_balances` conforme a tabela de privilégios.
 

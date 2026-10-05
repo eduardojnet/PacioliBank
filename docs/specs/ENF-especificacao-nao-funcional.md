@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.9
+**Versão:** 1.10
 **Data:** 2026-10-05
 **Status:** Proposto
 
@@ -266,7 +266,7 @@ Formato SEI (fonte, estímulo, ambiente, artefato, resposta, medida). São os ce
 | R-01 | Contenção em conta quente acima do previsto | Média | Alto | Fila dedicada por conta para as contas identificadas; particionamento de lançamentos com consolidação | p99 de escrita por conta acima de 800 ms |
 | R-02 | Premissa de capacidade (§3) divergir da realidade | **Alta** | Alto | Substituir premissas pela telemetria do legado antes do dimensionamento final | Diferença acima de 50% em qualquer dimensão |
 | R-03 | Atraso crônico na geração de snapshot | Média | Médio | Gerar snapshot por gatilho de volume além do gatilho temporal; alerta por atraso | `entriesReplayed` p99 acima de 1.000 |
-| R-04 | Crescimento do ledger sem política de arquivamento | Alta no longo prazo | Médio | Particionamento por tempo; definir retenção (QA-004) | Tamanho da partição ativa acima do limiar |
+| R-04 | Crescimento do ledger sem política de arquivamento | Alta no longo prazo | Médio | Particionamento por tempo (implementado no card 37, ADR-0013); definir retenção (QA-004), ainda em aberto | Tamanho da partição ativa acima do limiar |
 | R-05 | Consumidor de evento que presume entrega única | Média | Alto | Contrato explícito de ao menos uma vez; `message_id` estável; validação na homologação do consumidor | Duplicidade reportada por consumidor |
 | R-06 | Acoplamento ao PostgreSQL via bloqueio de linha (`FOR NO KEY UPDATE`) e `SKIP LOCKED` | Média | Médio | Isolar a serialização atrás de abstração de domínio; documentar em ADR o custo de troca | Decisão corporativa de migração de SGBD |
 | R-07 | Erosão da fronteira de escopo (§3.2 da EF) | **Alta** | Alto | Teste de arquitetura; revisão de ADR obrigatória para novo escopo | Requisito de cálculo de produto chegando a este sistema |
@@ -355,4 +355,5 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | 1.7 | 2026-10-05 | Eduardo J. G. do Carmo | §11: RNF-030 realizada (card 33.1): traço ponta a ponta com teste automatizado e inspeção no painel local |
 | 1.8 | 2026-10-05 | Eduardo J. G. do Carmo | §11: RNF-032 realizada (card 33.2). "Atraso de snapshot" medido como lançamentos somados além dele: o snapshot é síncrono (ADR-0007) e não tem atraso de tempo |
 | 1.9 | 2026-10-05 | Eduardo J. G. do Carmo | §11: a posição histórica deixa de somar todo o histórico (card 32, fechamento diário). RNF-006 passa a valer também nela; a latência da RNF-003 continua sem medição |
+| 1.10 | 2026-10-05 | Eduardo J. G. do Carmo | §9, R-04: ledger particionado por mês de registro (card 37, ADR-0013), com as chaves de unicidade numa tabela não particionada. A mitigação de arquivamento depende da QA-004 |
 

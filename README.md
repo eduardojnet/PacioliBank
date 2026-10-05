@@ -188,7 +188,7 @@ As decisões estão registradas com alternativas rejeitadas e gatilho de revisã
 | Documento | Conteúdo |
 |---|---|
 | [`docs/diagrams/`](./docs/diagrams/) | Modelo C4 em Mermaid (contexto, contêineres, componentes, sequência), com o estado de cada elemento |
-| [`docs/adr/`](./docs/adr/) | 12 decisões arquiteturais em formato MADR |
+| [`docs/adr/`](./docs/adr/) | 13 decisões arquiteturais em formato MADR |
 | [`docs/specs/EF-especificacao-funcional.md`](./docs/specs/EF-especificacao-funcional.md) | Domínio, regras de negócio, requisitos funcionais, contrato de API |
 | [`docs/specs/ENF-especificacao-nao-funcional.md`](./docs/specs/ENF-especificacao-nao-funcional.md) | Atributos de qualidade, SLOs, riscos |
 | [`docs/specs/BDD-comportamento.md`](./docs/specs/BDD-comportamento.md) | Cenários de aceite em Gherkin |
@@ -225,7 +225,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   77 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, fechamento diário, log, traço e métricas
+  PacioliBank.Integration.Tests/   86 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot, fechamento diário, particionamento, log, traço e métricas
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
@@ -262,6 +262,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Rastreamento ponta a ponta (RNF-030): requisição, caso de uso e PostgreSQL no mesmo traço, com painel local | Implementado, com teste |
 | Métricas de negócio (RNF-032): lançamentos, reenvios, rejeições por código, origem do cálculo da posição, fila da outbox | Implementado, com teste |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
+| Ledger particionado por mês de registro, com as garantias de unicidade mantidas no banco ([ADR-0013](./docs/adr/ADR-0013-particionamento-do-ledger.md)) | Implementado, com testes; arquivamento de períodos pendente da política de retenção (QA-004) |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
 | Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 86,4% |

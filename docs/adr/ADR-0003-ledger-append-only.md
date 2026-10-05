@@ -128,3 +128,5 @@ Aqui, o "evento" é o próprio conceito de negócio: um lançamento contábil. E
 1. Volume real de lançamentos superando em 100% a premissa da [ENF](../specs/ENF-especificacao-nao-funcional.md) §3, exigindo reavaliar particionamento e retenção
 2. Definição da política de retenção (QA-004), que pode introduzir arquivamento com snapshot de abertura
 3. Entrada de múltiplos agregados com necessidade de replay, que reabriria a opção de event sourcing genérico
+
+> **Nota de 2026-10-05 (card 37).** O ledger passou a ser particionado por mês de registro, e as restrições de unicidade foram para `entry_keys`, tabela não particionada gravada na mesma transação ([ADR-0013](./ADR-0013-particionamento-do-ledger.md)). Esta decisão não muda: o ledger continua só recebendo inserções, e a aplicação continua sem `UPDATE` nem `DELETE` nele e nas chaves.

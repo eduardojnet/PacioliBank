@@ -22,6 +22,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | [0010](./ADR-0010-estrategia-de-testes.md) | Pirâmide com banco real e critério de bloqueio | Aceito | RNF-036, BDD §7 |
 | [0011](./ADR-0011-painel-de-evidencia.md) | Painel de evidência como página estática | Aceito, condicional | RNF-037, demonstração de RN-001, RN-005, RN-009 |
 | [0012](./ADR-0012-observabilidade.md) | Log mascarado no formatador, correlação fora do adaptador HTTP, telemetria por OTLP | Aceito e implementado, revisado em 2026-10-05 | RNF-021, RNF-030, RNF-031, RNF-032 |
+| [0013](./ADR-0013-particionamento-do-ledger.md) | Ledger particionado por mês de registro, chaves de unicidade numa tabela não particionada | Aceito e implementado | R-04, RN-004, RN-005, RN-006 |
 
 ## Especificações de origem
 
