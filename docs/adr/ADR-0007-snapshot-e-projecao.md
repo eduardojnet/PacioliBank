@@ -122,6 +122,10 @@ Um comando administrativo reconstrói todos os snapshots de uma conta a partir d
 - Teste de RNF-003: latência de consulta em conta com 100 e com 100.000 lançamentos, com variação inferior a 20%
 - Métrica `entriesReplayed` por consulta, com alerta no p99 acima de `N`
 
+> **Estado da validação em 2026-10-04 (card 30.1).** Feito: `SnapshotTests`, contra PostgreSQL real. A centésima escrita grava o snapshot com o saldo que ela mesma calculou; na âncora, a posição sai do snapshot sem somar nenhum lançamento; com mais 99, soma 99, o máximo; o valor confere sempre com a soma do ledger inteiro, calculada por fora (primeira parte do F10). Poder de detecção medido com três mutações, todas reprovadas: snapshot nunca gravado; snapshot com o valor do lançamento no lugar do saldo; leitura que soma de novo o lançamento da âncora. Não feito: remoção e reconstrução dos snapshots (resto do F10), F08 e o teste de latência da RNF-003.
+>
+> **Observado na mutação 2:** "descartável" vale para **apagar**, não para **errar**. Como a escrita parte do snapshot para validar o saldo (RN-001) e gravar `balance_after`, um snapshot com valor errado contaminaria todos os lançamentos seguintes e o extrato. As defesas que existem: o snapshot é gravado na mesma transação, a partir do saldo que ela calculou; o papel da aplicação não tem `UPDATE` em `balance_snapshots` (ADR-0009); e o teste acima compara o `balance_after` com a soma do ledger.
+
 ## Gatilho de revisão
 
 1. p99 da consulta histórica ultrapassando o alvo de RNF-002, que dispara a implementação de `daily_balances`

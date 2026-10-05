@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 150 passando (85 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 86,4%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%
+**Testes:** 153 passando (85 de domínio, 6 de arquitetura, 2 de contrato, 60 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 86,4%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -155,7 +155,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 57 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08) e migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) |
+| `PacioliBank.Integration.Tests` | 60 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -190,7 +190,6 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
-| Teste automatizado do snapshot e do limite de replay (RNF-006) | Não existe; card 30.1 |
 | Limite de replay e custo constante na posição histórica (RNF-003, RNF-006) | Não implementado: a consulta histórica soma todo o histórico até o instante; card 32, com gatilho |
 
 ---
@@ -317,7 +316,7 @@ Ao encerrar o card 30, a ENF §11 foi conferida contra o código. Ela listava RN
 - **Posição histórica:** não usa snapshot; soma todos os lançamentos até o instante pelo índice. Para ela, RNF-003 e RNF-006 não valem. A limitação já estava no card 32, com gatilho
 - A latência da RNF-003 nunca foi medida
 
-**Corrigido:** ENF 1.4 (§11 com as ressalvas) e README (snapshot sem teste automatizado). **Trabalho que virou card:** 30.1, teste de integração do snapshot e do limite de replay, com poder de detecção.
+**Corrigido:** ENF 1.4 (§11 com as ressalvas) e README (snapshot sem teste automatizado). **Trabalho que virou card:** 30.1, teste de integração do snapshot e do limite de replay, com poder de detecção. *Feito no card 30.1:* `SnapshotTests`, três testes, três mutações detectadas; ENF 1.5 e README voltam a dizer "com teste" para a posição corrente.
 
 **Severidade BAIXA:** nenhum comportamento muda. Mesma família da L-09, L-13 e L-14: documento afirmando mais do que o código prova.
 
@@ -414,9 +413,9 @@ Bloqueados, encerrados como decisão registrada por decisão do usuário:
 
 13. ~~**[29] Responder às questões de negócio em aberto**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-14
 14. ~~**[30] Testes de carga e RNF de desempenho**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-15
-   - **[30.1] Teste do limite de replay do snapshot** (RNF-006), descoberto no 30, em A Fazer
+   - ~~**[30.1] Teste do limite de replay do snapshot** (RNF-006)~~ concluído em 2026-10-04
 
-Em A Fazer: 30.1. Depois, próximos por decisão do usuário.
+A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
 
@@ -424,7 +423,7 @@ Em A Fazer: 30.1. Depois, próximos por decisão do usuário.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 150 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 153 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -539,3 +538,4 @@ confirmação.
 | 2026-10-04 | Card 31.2 concluído, opção (a): cobertura de linha do domínio, medida pelos testes de domínio em Release, de 56,8% para 86,4%, com limite de 85% no CI. 40 construtores de exceção sem uso removidos e 19 testes de domínio escritos. Sem os testes de contrato, 72,8%: o passo reprova (medido no CI). L-13 encerrada; nenhuma lacuna aberta. ADR-0010 revisado com o método e 3 alternativas rejeitadas; ENF 1.3. 150 verdes |
 | 2026-10-04 | Card 29 encerrado como decisão registrada, por decisão do usuário: as questões de negócio seguem sem interlocutor. Antes de encerrar, as condutas provisórias foram conferidas contra o código: a EF prometia política substituível e configuração que não existem, QA-007 dava como conduta um JWT não implementado e QA-003 estava decidida num documento e aberta em dois. Lacuna L-14 aberta e encerrada; EF 1.5 e BDD 1.2 |
 | 2026-10-04 | Card 30 encerrado como decisão registrada, por decisão do usuário: sem ambiente de carga nem volume real. Na conferência, a ENF dava RNF-003 e RNF-006 por realizadas sem ressalva, e o README dizia o snapshot "com testes": vale só na posição corrente, por construção, sem teste automatizado; a histórica soma todo o histórico. Lacuna L-15 aberta e encerrada; ENF 1.4; o teste virou o card 30.1 |
+| 2026-10-04 | Card 30.1 concluído: `SnapshotTests`, três testes de integração do snapshot (gravação na centésima escrita, posição corrente partindo dele com no máximo 99 somados, posição histórica sem snapshot), sempre conferidos contra a soma do ledger. Três mutações detectadas. A mutação 2 mostrou que snapshot errado contaminaria o `balance_after` dos lançamentos seguintes: registrado no ADR-0007. ENF 1.5. 153 verdes |

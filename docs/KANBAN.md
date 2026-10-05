@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 7 | 32 a 38 |
-| A Fazer | 1 | 30.1 |
+| A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 44 | 01 a 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 45 | 01 a 31, 30.1, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -94,17 +94,7 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 30.1. Testar o limite de replay do snapshot (RNF-006)
-
-`prioridade: Média` · `teste`
-
-DESCOBERTO NO ENCERRAMENTO DO CARD 30 (04/10/2026). A ENF §11 dava RNF-006 (no máximo 1.000 lançamentos somados após o snapshot) e RNF-003 como realizadas, e o README dizia 'posição corrente com snapshot amortizado: implementado, com testes'. Nenhum teste automatizado verifica que o snapshot é gravado nem que a posição corrente parte dele; a única evidência é a demonstração manual do painel (card 25). A posição histórica não usa snapshot e soma todo o histórico até o instante (limitação já registrada no card 32).
-
-CRITÉRIO:
-- Teste de integração, PostgreSQL real: ao atravessar a sequência 100, o snapshot é gravado na mesma transação; a posição corrente sai com computedFrom=snapshot e entriesReplayed menor que 100, e o valor confere com a soma do ledger
-- Poder de detecção medido: o teste reprova se o snapshot deixar de ser gravado (mutação temporária)
-- README e ENF §11 passam a dizer 'com teste' para a posição corrente
-
+_Vazia. Próximos por decisão do usuário._
 
 ---
 
@@ -876,3 +866,30 @@ CONFERÊNCIA ANTES DE ENCERRAR: a ENF §11 listava RNF-003 e RNF-006 como 'reali
 
 CORRIGIDO: ENF 1.4 (§11 com as ressalvas), README e ESTADO.
 DESCOBERTO, virou card: 30.1, teste de integração do snapshot e do limite de replay, com poder de detecção.
+
+### 30.1. Testar o limite de replay do snapshot (RNF-006)
+
+`prioridade: Média` · `teste`
+
+DESCOBERTO NO ENCERRAMENTO DO CARD 30 (04/10/2026). A ENF §11 dava RNF-006 (no máximo 1.000 lançamentos somados após o snapshot) e RNF-003 como realizadas, e o README dizia 'posição corrente com snapshot amortizado: implementado, com testes'. Nenhum teste automatizado verifica que o snapshot é gravado nem que a posição corrente parte dele; a única evidência é a demonstração manual do painel (card 25). A posição histórica não usa snapshot e soma todo o histórico até o instante (limitação já registrada no card 32).
+
+CRITÉRIO:
+- Teste de integração, PostgreSQL real: ao atravessar a sequência 100, o snapshot é gravado na mesma transação; a posição corrente sai com computedFrom=snapshot e entriesReplayed menor que 100, e o valor confere com a soma do ledger
+- Poder de detecção medido: o teste reprova se o snapshot deixar de ser gravado (mutação temporária)
+- README e ENF §11 passam a dizer 'com teste' para a posição corrente
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ENTREGUE: tests/PacioliBank.Integration.Tests/SnapshotTests.cs, três testes contra PostgreSQL real, sempre conferidos contra a soma do ledger inteiro calculada por fora:
+- Antes da centésima escrita: nenhum snapshot; posição sai do ledger com 99 somados
+- A centésima escrita grava o snapshot com o saldo que ela calculou; na âncora, a posição sai do snapshot com 0 somados; com mais 99, 99 somados, o máximo; o balance_after do último lançamento confere com a soma
+- Posição histórica não usa snapshot e soma tudo até o instante (comportamento registrado, card 32)
+
+CRITÉRIO ATENDIDO:
+- Poder de detecção, três mutações no adaptador, todas reprovadas: snapshot nunca gravado; snapshot com o valor do lançamento no lugar do saldo; leitura que soma de novo o lançamento da âncora
+- README e ENF §11 (1.5) voltam a dizer 'com teste' para a posição corrente
+- Build sem avisos; 153 testes verdes (85 + 60 + 6 + 2)
+
+ACHADO: a mutação 2 mostrou que snapshot errado contaminaria o balance_after de todos os lançamentos seguintes, porque a escrita parte do snapshot para validar o saldo. 'Descartável' vale para apagar, não para errar. Registrado no ADR-0007 com as defesas existentes (mesma transação, papel sem UPDATE, este teste).
+
+INCIDENTE DE PROCESSO, corrigido antes do commit: meu script de mutação restaurava o arquivo com mv, que preserva a data antiga; o MSBuild não recompilou e a DLL ficou com a mutação 3, o que fez o teste parecer instável. Diagnosticado, recompilado do zero e mutações refeitas com o script corrigido.

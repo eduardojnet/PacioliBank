@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.4
+**Versão:** 1.5
 **Data:** 2026-10-04
 **Status:** Proposto
 
@@ -297,7 +297,7 @@ O enunciado declara que não é necessário esgotar as possibilidades técnicas.
 
 | Categoria | Realizado no código | Apenas especificado |
 |---|---|---|
-| Desempenho | RNF-006 **só na posição corrente**: snapshot a cada 100 lançamentos, então no máximo 99 somados depois dele (por construção; teste automatizado no card 30.1). RNF-003: o mesmo mecanismo limita o custo da posição corrente, mas a latência nunca foi medida | RNF-001, RNF-002, RNF-005, RNF-007 (exigem ambiente de carga; card 30 encerrado como decisão). RNF-003 e RNF-006 na **posição histórica**, que soma todo o histórico até o instante, sem snapshot (card 32, com gatilho) |
+| Desempenho | RNF-006 **só na posição corrente**: snapshot a cada 100 lançamentos, então no máximo 99 somados depois dele (com teste de integração e poder de detecção medido, card 30.1). RNF-003: o mesmo mecanismo limita o custo da posição corrente, mas a latência nunca foi medida | RNF-001, RNF-002, RNF-005, RNF-007 (exigem ambiente de carga; card 30 encerrado como decisão). RNF-003 e RNF-006 na **posição histórica**, que soma todo o histórico até o instante, sem snapshot (card 32, com gatilho) |
 | Resiliência | RNF-010, RNF-011, RNF-013, RNF-016 | RNF-014, RNF-015, RNF-017, RNF-018 |
 | Segurança | RNF-020, RNF-021, RNF-022, RNF-024 (varredura de segredos no CI, card 31), RNF-025, RNF-026 (auditoria no restore, transitivas inclusive, card 31.1) | RNF-023, RNF-027 |
 | Observabilidade | RNF-031, RNF-032 | RNF-030, RNF-033 |
@@ -350,4 +350,5 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 | 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-036 movida de "realizado" para "apenas especificado". Nunca tinha sido medida; medida no card 31, a cobertura de linha do projeto de domínio é 56,8% com os testes de domínio e 74,9% somando os de integração, abaixo dos 85% (lacuna L-13). RNF-024 passa a verificada no CI; RNF-026 passa a realizada (card 31.1): alerta alto ou crítico em dependência, direta ou transitiva, reprova o restore |
 | 1.3 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-036 volta a "realizado no código", agora medida: 86,4% de cobertura de linha no projeto de domínio, medida só pelos testes de domínio, em Release, com o `coverlet.msbuild` 6.0.2 restrito ao assembly `PacioliBank.Ledger`, com limite de 85% no CI (card 31.2, lacuna L-13 encerrada). Método registrado no ADR-0010 |
 | 1.4 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-003 e RNF-006 deixam de constar como realizadas sem ressalva (lacuna L-15). RNF-006 vale só na posição corrente, por construção, ainda sem teste automatizado (card 30.1); na posição histórica não vale (card 32). A latência da RNF-003 nunca foi medida. RNF-001, RNF-002, RNF-005 e RNF-007 seguem especificadas e não verificadas (card 30 encerrado como decisão) |
+| 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-006 na posição corrente passa a ter teste de integração (`SnapshotTests`, card 30.1), com três mutações detectadas |
 
