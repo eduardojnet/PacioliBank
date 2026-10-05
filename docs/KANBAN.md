@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-04 · **Cartões:** 51 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 52 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 7 | 32 a 38 |
-| A Fazer | 0 | |
+| A Fazer | 1 | 30.1 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
-| Bloqueado | 1 | 30 |
-| Concluído | 43 | 01 a 29, 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Bloqueado | 0 | |
+| Concluído | 44 | 01 a 31, 31.1 e 31.2, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -94,7 +94,17 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-_Vazia. Próximos por decisão do usuário._
+### 30.1. Testar o limite de replay do snapshot (RNF-006)
+
+`prioridade: Média` · `teste`
+
+DESCOBERTO NO ENCERRAMENTO DO CARD 30 (04/10/2026). A ENF §11 dava RNF-006 (no máximo 1.000 lançamentos somados após o snapshot) e RNF-003 como realizadas, e o README dizia 'posição corrente com snapshot amortizado: implementado, com testes'. Nenhum teste automatizado verifica que o snapshot é gravado nem que a posição corrente parte dele; a única evidência é a demonstração manual do painel (card 25). A posição histórica não usa snapshot e soma todo o histórico até o instante (limitação já registrada no card 32).
+
+CRITÉRIO:
+- Teste de integração, PostgreSQL real: ao atravessar a sequência 100, o snapshot é gravado na mesma transação; a posição corrente sai com computedFrom=snapshot e entriesReplayed menor que 100, e o valor confere com a soma do ledger
+- Poder de detecção medido: o teste reprova se o snapshot deixar de ser gravado (mutação temporária)
+- README e ENF §11 passam a dizer 'com teste' para a posição corrente
+
 
 ---
 
@@ -112,15 +122,7 @@ _Vazia. Os dois cartões que ocupavam a coluna (21 e 22) foram concluídos em 20
 
 ## Bloqueado
 
-### 30. Executar testes de carga e validar os RNF de desempenho
-
-`prioridade: Nenhuma` · `teste`
-
-BLOQUEADO POR: ausência de ambiente de carga e de dados reais de volume (QA-006).
-
-RNF-001, RNF-002, RNF-005 e RNF-007 estão especificados com métrica na ENF, mas declarados como NÃO verificados na seção 11 da ENF.
-
-DECISÃO JÁ TOMADA: fora do escopo do desafio. Declarar como especificado e não implementado é parte da entrega.
+_Vazia. Cards 29 e 30 encerrados como decisão registrada em 2026-10-04._
 
 ---
 
@@ -852,3 +854,25 @@ CONFERÊNCIA ANTES DE ENCERRAR: as condutas da EF §10 foram comparadas com o c�
 CORRIGIDO: EF 1.5 e BDD 1.2 descrevem um ponto único de mudança por questão, coberto por teste; QA-003 decidida nos três documentos; QA-007 especificada e não implementada. As políticas não foram criadas: seria construir contra premissa não validada.
 
 OBSERVAÇÃO: o card listava 6 questões; a EF tem também a QA-008 (tamanho de página), acrescentada no card 21, igualmente sem resposta do negócio.
+
+### 30. Executar testes de carga e validar os RNF de desempenho
+
+`prioridade: Nenhuma` · `teste`
+
+BLOQUEADO POR: ausência de ambiente de carga e de dados reais de volume (QA-006).
+
+RNF-001, RNF-002, RNF-005 e RNF-007 estão especificados com métrica na ENF, mas declarados como NÃO verificados na seção 11 da ENF.
+
+DECISÃO JÁ TOMADA: fora do escopo do desafio. Declarar como especificado e não implementado é parte da entrega.
+
+--- ENCERRAMENTO 04/10/2026, como decisão registrada (append-only) ---
+
+DECIDIDO PELO USUÁRIO: encerrar como decisão registrada. O bloqueio não caiu (sem ambiente de carga nem volume real, QA-006). RNF-001, RNF-002, RNF-005 e RNF-007 seguem especificadas com métrica e declaradas não verificadas na ENF §11, no README e no ESTADO §5.
+
+CONFERÊNCIA ANTES DE ENCERRAR: a ENF §11 listava RNF-003 e RNF-006 como 'realizadas no código', e o README dizia 'snapshot amortizado: implementado, com testes' (lacuna L-15, aberta e encerrada neste card). O que vale:
+- Posição corrente: snapshot a cada 100 lançamentos, no máximo 99 somados depois dele. RNF-006 vale por construção, mas nenhum teste automatizado verifica que o snapshot é gravado ou usado; só a demonstração manual do painel
+- Posição histórica: soma todo o histórico até o instante, sem snapshot. RNF-003 e RNF-006 não valem para ela (card 32)
+- A latência da RNF-003 nunca foi medida
+
+CORRIGIDO: ENF 1.4 (§11 com as ressalvas), README e ESTADO.
+DESCOBERTO, virou card: 30.1, teste de integração do snapshot e do limite de replay, com poder de detecção.

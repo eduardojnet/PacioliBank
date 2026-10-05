@@ -243,7 +243,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Esquema, papéis e privilégio mínimo | Implementado |
 | Agregado Conta, `Money`, invariantes e lançamento imutável | Implementado, com testes |
 | Bloqueio por conta e idempotência, inclusive sob envio simultâneo | Implementado, com testes |
-| Posição corrente com snapshot amortizado, e posição em instante passado | Implementado, com testes |
+| Posição corrente com snapshot amortizado, e posição em instante passado | Implementado. Posição corrente e histórica com testes; o uso do snapshot ainda **sem teste automatizado** (card 30.1), demonstrado no painel. A posição histórica não usa snapshot e soma todo o histórico até o instante (card 32) |
 | Estorno por lançamento compensatório | Implementado, com testes |
 | Extrato paginado por cursor | Implementado, com testes |
 | Porta de entrada e os 5 endpoints de negócio | Implementado |

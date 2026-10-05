@@ -189,7 +189,9 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Expurgo das mensagens publicadas da outbox | Não implementado; a tabela cresce sem limite (ADR-0008, consequências) |
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
-| Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
+| Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
+| Teste automatizado do snapshot e do limite de replay (RNF-006) | Não existe; card 30.1 |
+| Limite de replay e custo constante na posição histórica (RNF-003, RNF-006) | Não implementado: a consulta histórica soma todo o histórico até o instante; card 32, com gatilho |
 
 ---
 
@@ -307,6 +309,18 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
+### L-15: Requisitos de desempenho dados como realizados sem ressalva nem teste (ENCERRADA em 2026-10-04, card 30)
+
+Ao encerrar o card 30, a ENF §11 foi conferida contra o código. Ela listava RNF-003 (custo de leitura não cresce com o histórico) e RNF-006 (no máximo 1.000 lançamentos somados após o snapshot) como "realizados no código", e o README dizia "snapshot amortizado: implementado, com testes". O que vale:
+
+- **Posição corrente:** snapshot gravado a cada 100 lançamentos (`SnapshotEvery`), então no máximo 99 somados depois dele. RNF-006 vale por construção, mas **nenhum teste automatizado** verifica que o snapshot é gravado ou usado; a evidência era a demonstração manual do painel (card 25)
+- **Posição histórica:** não usa snapshot; soma todos os lançamentos até o instante pelo índice. Para ela, RNF-003 e RNF-006 não valem. A limitação já estava no card 32, com gatilho
+- A latência da RNF-003 nunca foi medida
+
+**Corrigido:** ENF 1.4 (§11 com as ressalvas) e README (snapshot sem teste automatizado). **Trabalho que virou card:** 30.1, teste de integração do snapshot e do limite de replay, com poder de detecção.
+
+**Severidade BAIXA:** nenhum comportamento muda. Mesma família da L-09, L-13 e L-14: documento afirmando mais do que o código prova.
+
 ### L-14: Ponto de extensão declarado e inexistente nas questões de negócio (ENCERRADA em 2026-10-04, card 29)
 
 Ao encerrar o card 29, as condutas provisórias da EF §10 foram conferidas contra o código. Três afirmações não valiam:
@@ -353,7 +367,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 51 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 52 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -399,8 +413,10 @@ Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 Bloqueados, encerrados como decisão registrada por decisão do usuário:
 
 13. ~~**[29] Responder às questões de negócio em aberto**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-14
+14. ~~**[30] Testes de carga e RNF de desempenho**~~ encerrado em 2026-10-04 como decisão registrada; conferência achou e corrigiu a L-15
+   - **[30.1] Teste do limite de replay do snapshot** (RNF-006), descoberto no 30, em A Fazer
 
-A Fazer está vazia. Próximos por decisão do usuário.
+Em A Fazer: 30.1. Depois, próximos por decisão do usuário.
 
 ---
 
@@ -522,3 +538,4 @@ confirmação.
 | 2026-10-04 | Card 31.1 concluído: auditoria de dependências no restore, explícita (`NuGetAudit`, modo `all`, nível `high`). Medido localmente: nível `high` reprova o alerta alto e `critical` deixa passar; modo `all` pega a vulnerabilidade transitiva e `direct` deixa passar. No CI, um ramo com dependência transitiva vulnerável ficou vermelho (apagado depois). Nenhum pacote vulnerável hoje. RNF-026 realizada |
 | 2026-10-04 | Card 31.2 concluído, opção (a): cobertura de linha do domínio, medida pelos testes de domínio em Release, de 56,8% para 86,4%, com limite de 85% no CI. 40 construtores de exceção sem uso removidos e 19 testes de domínio escritos. Sem os testes de contrato, 72,8%: o passo reprova (medido no CI). L-13 encerrada; nenhuma lacuna aberta. ADR-0010 revisado com o método e 3 alternativas rejeitadas; ENF 1.3. 150 verdes |
 | 2026-10-04 | Card 29 encerrado como decisão registrada, por decisão do usuário: as questões de negócio seguem sem interlocutor. Antes de encerrar, as condutas provisórias foram conferidas contra o código: a EF prometia política substituível e configuração que não existem, QA-007 dava como conduta um JWT não implementado e QA-003 estava decidida num documento e aberta em dois. Lacuna L-14 aberta e encerrada; EF 1.5 e BDD 1.2 |
+| 2026-10-04 | Card 30 encerrado como decisão registrada, por decisão do usuário: sem ambiente de carga nem volume real. Na conferência, a ENF dava RNF-003 e RNF-006 por realizadas sem ressalva, e o README dizia o snapshot "com testes": vale só na posição corrente, por construção, sem teste automatizado; a histórica soma todo o histórico. Lacuna L-15 aberta e encerrada; ENF 1.4; o teste virou o card 30.1 |
