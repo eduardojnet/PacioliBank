@@ -1,3 +1,7 @@
+// Stryker disable String : mensagens de excecao sao texto para humanos. O
+// contrato com o chamador e o codigo da EF secao 8.6, decidido pelo tipo da
+// excecao, e os dados que ela carrega, verificados nos testes (card 36).
+
 namespace PacioliBank.Ledger.Domain;
 
 /// <summary>Raiz das excecoes de invariante do dominio do ledger.</summary>

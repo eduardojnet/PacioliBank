@@ -9,6 +9,9 @@ public readonly record struct Currency
     /// <summary>Real brasileiro. Escala de exposicao: 2 casas decimais.</summary>
     public static readonly Currency Brl = new("BRL", 2);
 
+    // Stryker disable once Block : roda uma unica vez por processo, na
+    // inicializacao estatica de Brl. Mutado, contamina todo o processo de teste
+    // e torna a pontuacao de mutacao instavel (medido no card 36).
     private Currency(string code, int scale)
     {
         Code = code;

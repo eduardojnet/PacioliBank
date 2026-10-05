@@ -16,3 +16,6 @@ coverage*.json
 # Teste de contrato: documento recebido quando diverge do aprovado. Revisar e
 # promover a aprovado, nunca versionar (ADR-0010, card 19.3).
 *.received.json
+
+# Relatorios do teste de mutacao (Stryker, card 36): gerados a cada execucao.
+StrykerOutput/

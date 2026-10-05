@@ -86,6 +86,36 @@ jobs:
           path: TestResults
           if-no-files-found: error
 
+  # Forca das assercoes do dominio (card 36, ADR-0010): o Stryker altera o
+  # codigo e confere se algum teste percebe. Abaixo de 85% de mutantes
+  # mortos, reprova (thresholds.break no stryker-config.json). Versao
+  # fixada no manifesto dotnet-tools.json.
+  mutation:
+    name: Teste de mutacao do dominio
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar o Stryker
+        run: dotnet tool restore
+
+      - name: Executar o teste de mutacao
+        working-directory: tests/PacioliBank.Domain.Tests
+        run: dotnet stryker
+
+      - name: Publicar o relatorio
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: relatorio-de-mutacao
+          path: tests/PacioliBank.Domain.Tests/StrykerOutput
+          if-no-files-found: warn
+
   insomnia:
     name: Colecao do Insomnia contra o docker compose
     runs-on: ubuntu-latest

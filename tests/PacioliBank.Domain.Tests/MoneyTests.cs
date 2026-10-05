@@ -76,7 +76,22 @@ public class MoneyTests
         var brl = Money.Of(10.00m, Currency.Brl);
         var indefinida = default(Money);
 
-        Assert.Throws<CurrencyMismatchException>(() => Money.Add(brl, indefinida));
+        var soma = Assert.Throws<CurrencyMismatchException>(() => Money.Add(brl, indefinida));
+        Assert.Throws<CurrencyMismatchException>(() => Money.Subtract(brl, indefinida));
+        Assert.Throws<CurrencyMismatchException>(() => Money.Compare(indefinida, brl));
+
+        // Sem moeda, o lado sai vazio, e nao nulo: o dado vai para o log.
+        Assert.Equal("BRL", soma.Left);
+        Assert.Equal(string.Empty, soma.Right);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Codigo_de_moeda_ausente_e_erro_de_argumento_e_nao_moeda_desconhecida(string? code)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => Currency.FromCode(code!));
     }
 
     [Fact]
@@ -123,6 +138,7 @@ public class MoneyTests
     {
         Assert.Equal("BRL 1234.50", Money.Of(1234.5m, Currency.Brl).ToString());
         Assert.Equal("BRL", Currency.Brl.ToString());
+        Assert.Equal(string.Empty, default(Currency).ToString());
     }
 
     [Fact]

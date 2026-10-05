@@ -121,6 +121,47 @@ public class ContractTests
     }
 
     [Fact]
+    public void Impressao_tem_valor_fixo_porque_e_gravada_e_comparada_entre_versoes()
+    {
+        // A impressao vai para idempotency_records. Se o formato canonico
+        // mudar entre duas versoes, o reenvio legitimo de um comando gravado
+        // pela versao anterior vira conflito. Valores calculados fora do .NET,
+        // a partir do formato documentado:
+        //   conta|sentido|valor|moeda|instante O|estornoDe
+        //   reversal|conta|lancamento|instante O
+        Assert.Equal(
+            "19b53d0050cf29edbfdab331dc2ade743abbacefbd7177fa4a679bd60267eebf",
+            Convert.ToHexStringLower(RequestFingerprint.Of(Conta, Comando())));
+        Assert.Equal(
+            "13ba2c795cbf88023db26657db181dadceccbfc0a45e98f603b6d32fe9d12603",
+            Convert.ToHexStringLower(RequestFingerprint.OfReversal(Conta, Original, new ReversalRequest(Fato, "k", Guid.NewGuid()))));
+    }
+
+    [Fact]
+    public void Instantes_que_diferem_por_um_milissegundo_produzem_impressoes_diferentes()
+    {
+        // O instante entra com precisao total. Num formato que descartasse a
+        // fracao de segundo, dois comandos distintos no mesmo segundo teriam a
+        // mesma impressao, e o segundo seria tomado por repeticao do primeiro.
+        var antes = new PostingRequest(EntryDirection.Credit, Money.Of(10.00m, Currency.Brl), Fato, "k", Guid.NewGuid());
+        var depois = antes with { OccurredAt = Fato.AddMilliseconds(1) };
+        var pedido = new ReversalRequest(Fato, "k", Guid.NewGuid());
+
+        Assert.NotEqual(RequestFingerprint.Of(Conta, antes), RequestFingerprint.Of(Conta, depois));
+        Assert.NotEqual(
+            RequestFingerprint.OfReversal(Conta, Original, pedido),
+            RequestFingerprint.OfReversal(Conta, Original, pedido with { OccurredAt = Fato.AddMilliseconds(1) }));
+    }
+
+    [Fact]
+    public void Lancamento_que_referencia_outro_tem_impressao_propria()
+    {
+        var comum = Comando();
+
+        Assert.NotEqual(RequestFingerprint.Of(Conta, comum), RequestFingerprint.Of(Conta, comum with { ReversalOf = Original }));
+    }
+
+    [Fact]
     public void Impressao_de_estorno_depende_do_lancamento_estornado_e_nunca_coincide_com_a_de_lancamento()
     {
         var pedido = new ReversalRequest(Fato, "k", Guid.NewGuid());
@@ -158,6 +199,16 @@ public class ContractTests
             Fato, "k", Guid.NewGuid(), null, Money.Of(1m, Currency.Brl)));
 
         Assert.Equal("entryId", erro.ParamName);
+    }
+
+    [Fact]
+    public void Primeira_sequencia_de_um_lancamento_gravado_e_aceita()
+    {
+        var primeiro = LedgerEntry.Rehydrate(
+            Lancamento, Conta, 1, EntryDirection.Credit, Money.Of(1m, Currency.Brl),
+            Fato, "k", Guid.NewGuid(), null, Money.Of(1m, Currency.Brl));
+
+        Assert.Equal(1, primeiro.Sequence);
     }
 
     [Theory]

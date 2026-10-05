@@ -91,8 +91,21 @@ public class AccountTests
     {
         var conta = Conta(saldo: 100.00m);
 
-        Assert.Throws<InvalidEntryAmountException>(
+        var erro = Assert.Throws<InvalidEntryAmountException>(
             () => conta.Post(Comando(EntryDirection.Credit, 0m)));
+
+        Assert.Equal(0m, erro.Amount);
+    }
+
+    [Fact]
+    public void Valor_negativo_e_recusado_e_a_rejeicao_informa_o_valor()
+    {
+        var conta = Conta(saldo: 100.00m);
+
+        var erro = Assert.Throws<InvalidEntryAmountException>(
+            () => conta.Post(Comando(EntryDirection.Credit, -10.00m)));
+
+        Assert.Equal(-10.00m, erro.Amount);
     }
 
     [Fact]
@@ -204,8 +217,11 @@ public class AccountTests
         var contaB = Conta(saldo: 0m, accountId: ContaB);
         var lancamentoDeA = contaA.Post(Comando(EntryDirection.Credit, 100.00m, "k1"));
 
-        Assert.Throws<EntryNotFromThisAccountException>(
+        var erro = Assert.Throws<EntryNotFromThisAccountException>(
             () => contaB.Reverse(lancamentoDeA, Agora, "k2", Guid.NewGuid()));
+
+        Assert.Equal(lancamentoDeA.EntryId, erro.EntryId);
+        Assert.Equal(ContaB, erro.AccountId);
     }
 
     [Fact]
@@ -243,9 +259,10 @@ public class AccountTests
         var credito = conta.Post(Comando(EntryDirection.Credit, 500.00m, "k1"));
         conta.Reverse(credito, Agora, "k2", Guid.NewGuid());
 
-        Assert.Throws<EntryAlreadyReversedException>(
+        var erro = Assert.Throws<EntryAlreadyReversedException>(
             () => conta.Reverse(credito, Agora, "k3", Guid.NewGuid(), alreadyReversed: true));
 
+        Assert.Equal(credito.EntryId, erro.EntryId);
         Assert.Equal(2L, conta.LastSequence);
     }
 
@@ -306,7 +323,10 @@ public class AccountTests
         var conta = Conta(saldo: 100.00m);
         var comando = new PostingRequest(EntryDirection.Credit, default, Agora, "k", Guid.NewGuid());
 
-        Assert.Throws<CurrencyMismatchException>(() => conta.Post(comando));
+        var erro = Assert.Throws<CurrencyMismatchException>(() => conta.Post(comando));
+
+        Assert.Equal("BRL", erro.Left);
+        Assert.Equal(string.Empty, erro.Right);
         Assert.Equal(0, conta.LastSequence);
     }
 

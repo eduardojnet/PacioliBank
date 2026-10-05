@@ -126,6 +126,45 @@ public class LedgerServiceTests
         Assert.False(_store.Called);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(LedgerService.MaxPageSize)]
+    public async Task Limites_da_faixa_de_pagina_sao_aceitos(int limite)
+    {
+        await _service.GetStatementAsync(new StatementQuery(Conta, null, null, null, limite), CancellationToken.None);
+
+        Assert.Equal(limite, _store.LastLimit);
+    }
+
+    [Fact]
+    public async Task Limite_acima_do_maximo_informa_o_pedido_e_o_maximo()
+    {
+        var erro = await Assert.ThrowsAsync<PageSizeExceededException>(
+            () => _service.GetStatementAsync(new StatementQuery(Conta, null, null, null, LedgerService.MaxPageSize + 1), CancellationToken.None));
+
+        Assert.Equal(LedgerService.MaxPageSize + 1, erro.Requested);
+        Assert.Equal(LedgerService.MaxPageSize, erro.Maximum);
+    }
+
+    [Fact]
+    public async Task Cursor_chega_ao_armazenamento_e_a_primeira_pagina_comeca_do_zero()
+    {
+        await _service.GetStatementAsync(new StatementQuery(Conta, null, null, 42, null), CancellationToken.None);
+        Assert.Equal(42, _store.LastAfterSequence);
+
+        await _service.GetStatementAsync(new StatementQuery(Conta, null, null, null, null), CancellationToken.None);
+        Assert.Equal(0, _store.LastAfterSequence);
+    }
+
+    [Fact]
+    public async Task Periodo_de_um_unico_instante_e_aceito()
+    {
+        // Limites inclusivos (RN-011): inicio igual ao fim e um periodo valido.
+        await _service.GetStatementAsync(new StatementQuery(Conta, Agora, Agora, null, null), CancellationToken.None);
+
+        Assert.True(_store.Called);
+    }
+
     [Fact]
     public async Task Limite_ausente_usa_o_padrao()
     {
@@ -170,6 +209,8 @@ public class LedgerServiceTests
 
         public int LastLimit { get; private set; }
 
+        public long LastAfterSequence { get; private set; } = -1;
+
         public Task<PostEntryResult> PostAsync(Guid accountId, PostingRequest request, ReadOnlyMemory<byte> requestHash, CancellationToken cancellationToken)
         {
             Called = true;
@@ -200,6 +241,7 @@ public class LedgerServiceTests
         {
             Called = true;
             LastLimit = limit;
+            LastAfterSequence = afterSequence;
             return Task.FromResult(new StatementPage(accountId, [], null));
         }
     }
