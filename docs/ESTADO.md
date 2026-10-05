@@ -4,7 +4,7 @@
 
 **Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
-**Testes:** 166 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 60 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
+**Testes:** 175 passando (98 de domínio, 6 de arquitetura, 2 de contrato, 69 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-04). Cobertura de linha do domínio: 88,15%, medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 89,81% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
 
 ---
@@ -56,6 +56,7 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 | 0009 | Imutabilidade por ausência de privilégio; resposta opaca a terceiros |
 | 0010 | Banco real (Testcontainers) para toda invariante de persistência |
 | 0011 | Painel de evidência como página estática, escopo condicional |
+| 0012 | Log mascarado no formatador, correlação fora do adaptador HTTP, telemetria por OTLP (card 33) |
 
 ### Questões de negócio decididas
 
@@ -136,6 +137,7 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 | `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como string, instantes ISO 8601 UTC |
 | `wwwroot/` | Painel de evidência (ADR-0011): quatro demonstrações na raiz, só com a API pública; sem teste automatizado próprio, verificado em Chrome headless |
 | `Endpoints/Correlation.cs` | `X-Correlation-Id` aceito ou gerado, devolvido inclusive em resposta de erro |
+| `Observability/` | Card 33, ADR-0012: log em JSON na saída padrão (Serilog), uma linha por entrada; correlação da requisição em toda entrada emitida durante ela; uma linha de resumo por requisição; mascaramento no formatador (todo GUID truncado aos quatro últimos caracteres, CPF e token por marcador), coberto por teste pelo caminho completo |
 
 Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo idêntico ao original; lançamento novo responde `201`.
 
@@ -155,7 +157,7 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 | Coleção do Insomnia (`insomnia/`) | 43 testes em 15 requisições | Contra a API no ar, pelo `inso` 13.3.0; código de saída 0 só com tudo verde |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 60 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot) |
+| `PacioliBank.Integration.Tests` | 69 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot e log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -192,6 +194,8 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio; card 30 encerrado como decisão registrada |
+| Rastreamento distribuído (RNF-030) | Não implementado; card 33.1. O log já traz os identificadores de traço do ASP.NET Core (`@tr`, `@sp`), mas nada é exportado |
+| Métricas de negócio (RNF-032) | Não implementadas; card 33.2 |
 | Limite de replay e custo constante na posição histórica (RNF-003, RNF-006) | Não implementado: a consulta histórica soma todo o histórico até o instante; card 32, com gatilho |
 
 ---
@@ -310,6 +314,16 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
+### L-16: Observabilidade dada como realizada sem existir (ENCERRADA em 2026-10-04, card 33)
+
+A ENF §11 listava RNF-031 (log estruturado com correlação) e RNF-032 (métricas de negócio) como "realizadas no código". A API usava o logger padrão do ASP.NET Core, em texto livre, sem correlação, sem mascaramento (exigido pelo ADR-0009 §5) e sem nenhuma métrica.
+
+**Corrigido no card 33:** RNF-031 implementada de fato, com teste pelo caminho completo e poder de detecção medido (ADR-0012). ENF 1.6: RNF-032 volta a apenas especificada até o card 33.2, e RNF-030 até o 33.1.
+
+**Achado no caminho:** com o resto do log em JSON, apareceu uma linha em texto livre do Npgsql, que tentava carregar `libgssapi_krb5`, ausente na imagem (12 vezes no migrador). Negociação GSS desligada nas connection strings locais.
+
+**Severidade MÉDIA:** além da afirmação falsa, faltava o mascaramento que o ADR-0009 exige; identificadores de conta saíam íntegros no log do despachante.
+
 ### L-15: Requisitos de desempenho dados como realizados sem ressalva nem teste (ENCERRADA em 2026-10-04, card 30)
 
 Ao encerrar o card 30, a ENF §11 foi conferida contra o código. Ela listava RNF-003 (custo de leitura não cresce com o histórico) e RNF-006 (no máximo 1.000 lançamentos somados após o snapshot) como "realizados no código", e o README dizia "snapshot amortizado: implementado, com testes". O que vale:
@@ -368,7 +382,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 53 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 55 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -424,7 +438,11 @@ Do Backlog, por decisão do usuário:
 
 16. ~~**[36] Teste de mutação com Stryker**~~ concluído em 2026-10-04: 57,49% para 89,81%, limite de 85% no CI
 
-A Fazer está vazia. Próximos por decisão do usuário.
+17. ~~**[33] Log estruturado com correlação e mascaramento** (RNF-031, L-16)~~ concluído em 2026-10-04; ADR-0012
+   - **[33.1] Rastreamento ponta a ponta** (RNF-030), em A Fazer
+   - **[33.2] Métricas de negócio** (RNF-032), em A Fazer
+
+Próximo: 33.1.
 
 ---
 
@@ -432,7 +450,7 @@ A Fazer está vazia. Próximos por decisão do usuário.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 166 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 175 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
@@ -459,7 +477,8 @@ Revisada no card 34 (2026-10-04): `dotnet list package --outdated` mostrou defas
 | Dapper | 2.1.89 | Persistence, Events, testes |
 | dbup-postgresql | 7.0.1 (traz dbup-core 6.1.1; card 27) | Migrations |
 | Microsoft.AspNetCore.OpenApi | 10.0.12 (igual ao runtime; card 19.3) | Api |
-| Microsoft.AspNetCore.Mvc.Testing | 10.0.12 | Contract.Tests |
+| Microsoft.AspNetCore.Mvc.Testing | 10.0.12 | Contract.Tests, Integration.Tests |
+| Serilog.AspNetCore | 10.0.0 (traz Serilog 4.3.0, Formatting.Compact 3.0.0, Sinks.Console 6.1.1; card 33) | Api |
 | NetArchTest.Rules | 1.3.2 (card 26) | Architecture.Tests |
 | Testcontainers.PostgreSql | 4.15.0 | Integration.Tests |
 | xunit | 2.9.3 (card 34; v3 no card 34.1) | testes |
@@ -487,7 +506,7 @@ por conta.
 Leia, nesta ordem, antes de qualquer sugestão:
   o quadro no TickTick, projeto PacioliBank   fonte das atividades e da ordem
   docs/ESTADO.md                 estado atual e lacunas; a §7 espelha o quadro
-  docs/adr/README.md             índice das 11 decisões arquiteturais
+  docs/adr/README.md             índice das 12 decisões arquiteturais
   docs/specs/EF-especificacao-funcional.md    domínio, regras e contratos
   docs/convencoes-de-nomenclatura.md
 
@@ -557,3 +576,4 @@ confirmação.
 | 2026-10-04 | Card 30.1 concluído: `SnapshotTests`, três testes de integração do snapshot (gravação na centésima escrita, posição corrente partindo dele com no máximo 99 somados, posição histórica sem snapshot), sempre conferidos contra a soma do ledger. Três mutações detectadas. A mutação 2 mostrou que snapshot errado contaminaria o `balance_after` dos lançamentos seguintes: registrado no ADR-0007. ENF 1.5. 153 verdes |
 | 2026-10-04 | Card 34 concluído: ferramentas de teste atualizadas dentro do xunit v2 (xunit 2.9.3, runner 4.0.0, Test.Sdk 18.10.1, coverlet 10.1.0); produção já estava na última versão. Mesmos 153 testes, build sem avisos, auditoria sem alerta, cobertura de linha do domínio igual (86,4%) e limite funcionando. xunit v3 separado no card 34.1, no Backlog com gatilho. §9 completada: quatro pacotes estavam sem registro |
 | 2026-10-04 | Card 36 concluído: teste de mutação com Stryker.NET 5.0.0 no domínio, 17 s por execução, tarefa própria do CI com limite de 85%. Pontuação de 57,49% para 89,81%, estável: 13 testes novos sobre asserções fracas de verdade (limites da página, período de um instante, cursor que não chegava ao armazenamento, precisão da impressão, dados das rejeições) e teste de valor fixo da impressão do comando, que é gravada. Achado: o construtor estático de `Currency` deixava a pontuação instável; excluído com motivo. ADR-0010 revisado. 166 verdes |
+| 2026-10-04 | Card 33 concluído, dividido em 33, 33.1 e 33.2: log em JSON (Serilog) com correlação e mascaramento no formatador, coberto por 9 testes, inclusive um pelo caminho completo com API e PostgreSQL reais; três mutações detectadas. Lacuna L-16 encerrada: a ENF dava RNF-031 e RNF-032 por realizadas sem nada no código. ADR-0012 com 6 alternativas rejeitadas; ENF 1.6. Achado: aviso do Npgsql em texto livre (GSS), desligado nas connection strings locais. No Docker, 100% das linhas da API em JSON e nenhum GUID íntegro fora dos campos preservados. 175 verdes |

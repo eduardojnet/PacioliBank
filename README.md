@@ -186,7 +186,7 @@ As decisões estão registradas com alternativas rejeitadas e gatilho de revisã
 | Documento | Conteúdo |
 |---|---|
 | [`docs/diagrams/`](./docs/diagrams/) | Modelo C4 em Mermaid (contexto, contêineres, componentes, sequência), com o estado de cada elemento |
-| [`docs/adr/`](./docs/adr/) | 11 decisões arquiteturais em formato MADR |
+| [`docs/adr/`](./docs/adr/) | 12 decisões arquiteturais em formato MADR |
 | [`docs/specs/EF-especificacao-funcional.md`](./docs/specs/EF-especificacao-funcional.md) | Domínio, regras de negócio, requisitos funcionais, contrato de API |
 | [`docs/specs/ENF-especificacao-nao-funcional.md`](./docs/specs/ENF-especificacao-nao-funcional.md) | Atributos de qualidade, SLOs, riscos |
 | [`docs/specs/BDD-comportamento.md`](./docs/specs/BDD-comportamento.md) | Cenários de aceite em Gherkin |
@@ -223,7 +223,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   60 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações e snapshot
+  PacioliBank.Integration.Tests/   69 testes, PostgreSQL real, inclui concorrência, estorno, extrato, outbox, migrações, snapshot e log
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto
@@ -256,6 +256,8 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
 | Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 89,81% |
+| Log estruturado em JSON, com correlação e identificadores mascarados (RNF-031, ADR-0009 §5) | Implementado, com teste pelo caminho completo ([ADR-0012](./docs/adr/ADR-0012-observabilidade.md)) |
+| Rastreamento distribuído (RNF-030) e métricas de negócio (RNF-032) | Pendente (cards 33.1 e 33.2) |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
@@ -274,7 +276,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 4. **Teste de mutação no adaptador de dados.** O domínio já tem mutação no CI (card 36); o adaptador PostgreSQL só tem teste de integração, e mutar exigiria banco por mutante. Fica para quando o tempo de execução couber.
 5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
-7. **Observabilidade (OpenTelemetry, Serilog),** com uma métrica de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
+7. **Rastreamento e métricas de negócio (OpenTelemetry).** O log já é estruturado, correlacionado e mascarado (card 33); faltam os traços e as métricas (cards 33.1 e 33.2), com a de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
 8. **Teste de carga** para medir os RNF de desempenho, hoje especificados e não verificados.
 9. **Itens com gatilho declarado, que não devem ser feitos antes dele:** posição diária pré-calculada para consulta histórica (quando o p99 passar do alvo), particionamento do ledger por tempo (depende da política de retenção, QA-004), transferência entre contas (exige novo ADR e bloqueio em ordem determinística).
 

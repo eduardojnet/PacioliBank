@@ -2,19 +2,19 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-04 · **Cartões:** 53 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 55 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 6 | 32, 33, 34.1, 35, 37, 38 |
-| A Fazer | 0 | |
+| Backlog/Ideias | 5 | 32, 34.1, 35, 37, 38 |
+| A Fazer | 2 | 33.1, 33.2 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 47 | 01 a 31, 30.1, 31.1, 31.2, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 48 | 01 a 31, 30.1, 31.1, 31.2, 33, 34 e 36, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -35,14 +35,6 @@ ADR-0007, evolução especificada e deliberadamente não implementada.
 O snapshot é ancorado em sequência (ordem de registro) e a consulta histórica usa occurred_at (ordem do fato). Com lançamento retroativo, as duas divergem, então hoje a consulta histórica agrega pelo índice.
 
 GATILHO DE ADOÇÃO: p99 da consulta histórica ultrapassar o alvo de RNF-002. Construir antes disso é construir contra premissa não validada.
-
-### 33. Adicionar OpenTelemetry e Serilog
-
-`prioridade: Baixa` · `codigo` · `observabilidade`
-
-RNF-030 a RNF-032. Rastreamento distribuído, log estruturado com correlação e métricas de negócio.
-
-MÉTRICA DE MAIOR VALOR DIAGNÓSTICO: a taxa de computedFrom=ledger nas consultas. É indicador ANTECEDENTE: seu crescimento precede degradação de latência em horas ou dias, permitindo agir antes que o cliente perceba.
 
 ### 34.1. Migrar os testes para xunit v3
 
@@ -88,7 +80,30 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-_Vazia. Próximos por decisão do usuário._
+### 33.1. Rastreamento ponta a ponta com OpenTelemetry (RNF-030)
+
+`prioridade: Baixa` · `codigo` · `observabilidade`
+
+SEPARADO DO CARD 33 (04/10/2026).
+
+CRITÉRIO:
+- OpenTelemetry (pacotes estáveis): span da requisição HTTP, span do caso de uso e spans do PostgreSQL no mesmo traço
+- Exportação OTLP configurável por variável de ambiente; sem destino configurado, nada é exportado e nada quebra
+- Teste automatizado com exportador em memória: uma escrita produz os três níveis de span, ligados pelo mesmo trace id; poder de detecção medido
+- Inspeção local conforme decidido no ADR-0012
+- ENF §11: RNF-030 passa a realizada
+
+### 33.2. Métricas de negócio (RNF-032)
+
+`prioridade: Baixa` · `codigo` · `observabilidade`
+
+SEPARADO DO CARD 33 (04/10/2026).
+
+CRITÉRIO:
+- Métricas da RNF-032 com System.Diagnostics.Metrics: lançamentos por tipo, rejeições por motivo (código da EF §8.6), lançamentos somados além do snapshot, profundidade da fila de eventos e consultas por origem do cálculo (computedFrom), de onde sai a taxa de computedFrom=ledger
+- Exportadas pelo mesmo caminho do ADR-0012
+- Teste automatizado que lê as medições depois de operações conhecidas; poder de detecção medido
+- ENF §11: RNF-032 passa a realizada
 
 ---
 
@@ -964,3 +979,36 @@ CRITÉRIO ATENDIDO:
 - Cobertura do domínio subiu de 86,4% para 88,15%; 166 testes verdes, build sem avisos
 
 ACHADO: o construtor de Currency roda uma vez por processo, na inicialização estática; mutado, contaminava o processo de teste e a pontuação oscilava entre 89,24% e 91,14% sem mudança de código. Diagnosticado comparando quatro relatórios; excluído da mutação com o motivo no código.
+
+### 33. Adicionar OpenTelemetry e Serilog
+
+`prioridade: Baixa` · `codigo` · `observabilidade`
+
+RNF-030 a RNF-032. Rastreamento distribuído, log estruturado com correlação e métricas de negócio.
+
+MÉTRICA DE MAIOR VALOR DIAGNÓSTICO: a taxa de computedFrom=ledger nas consultas. É indicador ANTECEDENTE: seu crescimento precede degradação de latência em horas ou dias, permitindo agir antes que o cliente perceba.
+
+--- ATUALIZAÇÃO 04/10/2026, ao iniciar (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário.
+
+ACHADO AO COMEÇAR (lacuna L-16): a ENF §11 dava RNF-031 e RNF-032 como 'realizadas no código'. Não há Serilog, log estruturado, correlação no log, métrica nem rastreamento: só o logger padrão do ASP.NET Core. O ADR-0002 já escolheu OpenTelemetry e Serilog; o ADR-0009 §5 exige mascaramento no log, também inexistente.
+
+DIVISÃO (PROCESSO-KANBAN §4): 33 (log, mascaramento, ADR-0012, L-16), 33.1 (rastreamento, RNF-030), 33.2 (métricas, RNF-032).
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ENTREGUE:
+- Serilog.AspNetCore 10.0.0: uma linha de JSON por entrada na saída padrão; níveis na seção Serilog da configuração; hosting em Warning; uma linha de resumo por requisição
+- Correlação no log por middleware próprio (Observability/LogCorrelation.cs), depois do de correlação: o adaptador HTTP não conhece a biblioteca de log
+- Mascaramento no formatador (Observability/MaskingJsonFormatter.cs): todo GUID truncado aos quatro últimos caracteres, CPF e token por marcador, em qualquer campo de texto, inclusive mensagem renderizada e exceção; preservados CorrelationId, MessageId, TraceId, SpanId, ParentId
+- ADR-0012 com 6 alternativas rejeitadas (entre elas o enriquecedor que o ADR-0009 sugeria, que não alcança mensagem nem exceção, e o exportador Prometheus, só em beta); nota no ADR-0009 §5; ENF 1.6
+
+CRITÉRIO ATENDIDO:
+- 9 testes: 8 do formatador e 1 pelo caminho completo (API e PostgreSQL reais, quatro requisições e a publicação do despachante), que varre toda a saída. Reprovaram antes da implementação
+- Poder de detecção, três mutações reprovadas: sem correlação no log; sem mascarar GUID; mensagem renderizada preservada
+- O teste achou que, com o Serilog, a seção Logging deixa de valer e as linhas de início e fim do hosting saíam sem correlação: níveis movidos para a seção Serilog
+- No Docker, depois da coleção do Insomnia (43/43): 100% das linhas da API em JSON; nenhum GUID íntegro fora dos campos preservados
+- Somente pacotes estáveis; build sem avisos; 175 testes verdes
+
+ACHADO NO CAMINHO: com o resto em JSON, apareceu uma linha em texto livre do Npgsql tentando carregar libgssapi_krb5 (ausente na imagem; 12 vezes no migrador). Negociação GSS desligada nas connection strings locais.

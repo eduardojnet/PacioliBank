@@ -95,6 +95,8 @@ Serilog com enriquecedor de destruição aplicado a todo o grafo serializado: `c
 
 A verificação é automatizada: um teste exercita o caminho completo com dados sintéticos reconhecíveis e varre toda a saída de log em busca deles. Falha no teste se qualquer valor aparecer íntegro (RNF-021).
 
+> **Estado em 2026-10-04 (card 33).** Implementado, com uma mudança de mecanismo: o mascaramento acontece no **formatador** que escreve a linha, e não num enriquecedor, porque o enriquecedor não alcança a mensagem renderizada nem o texto de exceção. Todo GUID sai truncado aos quatro últimos caracteres, e não só os de conta e cliente: num caminho de requisição não há como distinguir. CPF e token viram marcador. O teste descrito acima existe (`LogPipelineTests`, API e PostgreSQL reais). Decisão e alternativas no [ADR-0012](./ADR-0012-observabilidade.md).
+
 ### 6. Demais controles
 
 | Controle | Implementação |

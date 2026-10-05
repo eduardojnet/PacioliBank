@@ -10,7 +10,7 @@ Entrega de um desafio técnico de Arquiteto de Software. O avaliador lê o códi
 
 ```bash
 dotnet build                  # deve terminar sem erro E SEM AVISO
-dotnet test                   # 166 testes; os de integração exigem Docker
+dotnet test                   # 175 testes; os de integração exigem Docker
 docker compose up --build     # migrador roda e termina; API em http://localhost:8080
 docker compose down -v        # só para recomeçar do zero, de propósito
 dotnet tool restore && (cd tests/PacioliBank.Domain.Tests && dotnet stryker)   # mutação, ~20 s
@@ -24,7 +24,7 @@ O esquema é aplicado pelo `PacioliBank.Migrations` (DbUp), num passo separado, 
 
 1. **O quadro no TickTick** (projeto PacioliBank) — fonte de toda atividade e da ordem. `docs/KANBAN.md` e `ESTADO.md §7` o espelham
 2. `docs/ESTADO.md` — estado atual, lacunas por severidade
-3. `docs/adr/README.md` — índice das 11 decisões arquiteturais
+3. `docs/adr/README.md` — índice das 12 decisões arquiteturais
 4. `docs/specs/EF-especificacao-funcional.md` — domínio, regras (RN-xxx) e contratos
 5. `docs/convencoes-de-nomenclatura.md`
 6. `docs/PROCESSO-KANBAN.md` — política do quadro (versão 2.0)
@@ -73,7 +73,7 @@ tests/
   PacioliBank.Domain.Tests/        98 testes, sem I/O; cobertura e mutacao (Stryker) do dominio >= 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependencia (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantaneo do OpenAPI (openapi.v1.approved.json)
-  PacioliBank.Integration.Tests/   60 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes e snapshot
+  PacioliBank.Integration.Tests/   69 testes, PostgreSQL real, inclui concorrencia, estorno, extrato, outbox, migracoes, snapshot e log
 db/migrations/                     esquema, papeis e privilegios, em migracoes numeradas
 db/seed/                           contas de exemplo, so no ambiente local
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
@@ -106,8 +106,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.5, ENF 1.4, BDD 1.2), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002), 28 (analisadores em `Recommended`, L-06) e 31 (CI no GitHub Actions) concluídos. Cards 31.1 (auditoria de dependências, transitivas inclusive, no restore) e 31.2 (cobertura do domínio de 56,8% para 86,4%, limite de 85% no CI, L-13) concluídos. Cards 30.1 (teste do snapshot), 34 (ferramentas de teste atualizadas dentro do xunit v2; v3 no card 34.1, Backlog) e 36 (teste de mutação com Stryker, 89,81%, limite de 85% no CI) concluídos. A Fazer está vazia; próximos por decisão do usuário (proposta: 35, 33; 29 e 30 encerrados como decisão (L-14 e L-15 corrigidas); 30.1 concluído; 32, 37 e 38 ficam no Backlog até o gatilho). A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com seus subníveis, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.5, ENF 1.6, BDD 1.2), e painel de evidência na raiz da API. Depois dela, concluídos: 26 (NetArchTest), 27 (migrações DbUp em passo separado), 28 (analisadores em `Recommended`), 29 e 30 (encerrados como decisão registrada), 30.1 (teste do snapshot), 31 (CI no GitHub Actions), 31.1 (auditoria de dependências), 31.2 (cobertura do domínio com limite de 85%), 34 (ferramentas de teste atualizadas; xunit v3 no 34.1, Backlog), 36 (teste de mutação com Stryker, limite de 85%) e 33 (log JSON com correlação e mascaramento, ADR-0012). Em A Fazer: 33.1 (rastreamento) e 33.2 (métricas). Depois, proposta: 35 (PostgreSQL 18). Ficam no Backlog até o gatilho: 32, 34.1, 37 e 38. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
-Nenhuma lacuna aberta: a L-13 (RNF-036 declarada sem medição) foi encerrada no card 31.2, a L-14 (ponto de extensão declarado e inexistente na EF §10) no card 29, e a L-15 (RNF-003 e RNF-006 dados como realizados sem ressalva) no card 30.
+Nenhuma lacuna aberta: a L-13 (RNF-036 declarada sem medição) foi encerrada no card 31.2, a L-14 (ponto de extensão declarado e inexistente na EF §10) no card 29, a L-15 (RNF-003 e RNF-006 dados como realizados sem ressalva) no card 30, e a L-16 (observabilidade dada como realizada sem existir) no card 33.
 
-Antes de começar, rode `dotnet test`. Esperado: 166 passando, sem avisos.
+Antes de começar, rode `dotnet test`. Esperado: 175 passando, sem avisos.
