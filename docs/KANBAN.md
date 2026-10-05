@@ -2,14 +2,14 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-04 · **Cartões:** 55 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 54 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
 | Coluna | Cartões | Números |
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
-| Backlog/Ideias | 5 | 32, 34.1, 35, 37, 38 |
+| Backlog/Ideias | 4 | 32, 34.1, 37, 38 |
 | A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
@@ -47,16 +47,6 @@ POR QUE NÃO AGORA: a suíte em xunit 2.9.x funciona, está verificada e roda no
 GATILHO DE ADOÇÃO: fim do suporte ao xunit v2, ou necessidade de recurso exclusivo do v3 (por exemplo, Microsoft Testing Platform no lugar do VSTest).
 
 CRITÉRIO, quando entrar: mesma contagem de testes, verde localmente e no CI; fixture compartilhada do PostgreSQL preservada; limite de cobertura do domínio medido de novo e funcionando.
-
-### 35. Avaliar a migração para PostgreSQL 18
-
-`prioridade: Nenhuma` · `infra`
-
-O ADR-0002 fixou a 17. A 18 tem suporte até 2030 contra 2029 e traz uuidv7() nativo, que melhoraria a localidade de inserção no índice primário de uma tabela append-only.
-
-[NVI] A disponibilidade de uuidv7() na 18 precisa de confirmação na documentação oficial antes de virar decisão.
-
-EXIGE: revisão do ADR-0002 e uma linha do docker-compose.
 
 ### 37. Particionar o ledger por tempo
 

@@ -382,7 +382,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 55 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 54 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -442,7 +442,7 @@ Do Backlog, por decisão do usuário:
    - ~~**[33.1] Rastreamento ponta a ponta** (RNF-030)~~ concluído em 2026-10-05
    - ~~**[33.2] Métricas de negócio** (RNF-032)~~ concluído em 2026-10-05
 
-A Fazer está vazia. Próximos por decisão do usuário (proposta: 35).
+A Fazer está vazia. Próximos por decisão do usuário.
 
 ---
 
@@ -585,3 +585,4 @@ confirmação.
 | 2026-10-05 | Card 33, correção pós-entrega: o CI reprovou na varredura de segredos. O teste de mascaramento trazia um JWT sintético escrito inteiro, que o gitleaks tomou por credencial. Histórico publicado não se reescreve: a ocorrência do commit `481b566` foi ignorada pela impressão digital, com motivo, e o teste passou a montar o token em tempo de execução. Falha minha: rodei o gitleaks antes do card 33, não depois |
 | 2026-10-05 | Card 33.1 concluído: rastreamento ponta a ponta (RNF-030). Decorador de `ILedgerService` na API abre o span do caso de uso, e não código no núcleo, para não baixar a pontuação de mutação; requisição, caso de uso e PostgreSQL no mesmo traço, sem identificador integro. Filtro do Npgsql: só comando dentro de traço, senão o despachante geraria um traço solto por segundo (achado no painel). Painel Aspire no compose. 2 testes, quatro mutações detectadas. ADR-0012 revisado; ENF 1.7. 177 verdes |
 | 2026-10-05 | Card 33.2 concluído: seis métricas de negócio (RNF-032) pelo mesmo decorador do 33.1; código da rejeição do mesmo mapa do problem+json; fila da outbox lida do banco na coleta. 1 teste com sequência conhecida, quatro mutações detectadas; métricas conferidas no painel local. ADR-0012 revisado; ENF 1.8. Com o 33, 33.1 e 33.2, a RNF-030, a RNF-031 e a RNF-032 estão realizadas. 178 verdes |
+| 2026-10-05 | Card 35 (avaliar o PostgreSQL 18) removido do quadro por decisão do usuário. Motivo: sem gatilho (o 17 tem suporte até 2029) e o ganho citado, UUID v7 na chave primária, não depende do banco, porque o identificador é gerado pela aplicação, e o .NET 10 já tem `Guid.CreateVersion7()` |
