@@ -300,7 +300,7 @@ public class LedgerStoreTests
         // Depende de o papel da aplicacao nao ter o privilegio.
         var conta = await _fixture.CreateAccountAsync(openingCredit: 100.00m);
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
 
         var erro = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync(
             "UPDATE ledger.ledger_entries SET amount = 999999 WHERE account_id = @conta",
@@ -314,7 +314,7 @@ public class LedgerStoreTests
     {
         var conta = await _fixture.CreateAccountAsync(openingCredit: 100.00m);
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
 
         var erro = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync(
             "DELETE FROM ledger.ledger_entries WHERE account_id = @conta",
@@ -330,7 +330,7 @@ public class LedgerStoreTests
         // pertence a outro contexto delimitado (EF 3.2).
         var conta = await _fixture.CreateAccountAsync();
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
 
         var erro = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync(
             "UPDATE ledger.accounts SET status = 3 WHERE account_id = @conta",

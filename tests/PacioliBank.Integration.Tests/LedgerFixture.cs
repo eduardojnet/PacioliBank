@@ -48,7 +48,7 @@ public sealed class LedgerFixture : IAsyncLifetime
     /// <summary>Conexao administrativa, usada apenas para preparar massa de teste.</summary>
     public string MigratorConnectionString => _container.GetConnectionString();
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _container.StartAsync().ConfigureAwait(false);
 
@@ -68,7 +68,7 @@ public sealed class LedgerFixture : IAsyncLifetime
         _runtimeDataSource = NpgsqlDataSource.Create(runtime.ConnectionString);
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_runtimeDataSource is not null)
         {

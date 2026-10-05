@@ -4,16 +4,18 @@
     <RootNamespace>PacioliBank.Architecture.Tests</RootNamespace>
     <AssemblyName>PacioliBank.Architecture.Tests</AssemblyName>
     <IsTestProject>true</IsTestProject>
+    <!-- xunit v3 na Microsoft Testing Platform: o projeto de teste e um
+         executavel, e o dotnet test usa o executor declarado no global.json (card 34.1). -->
+    <OutputType>Exe</OutputType>
     <!-- Nomes de teste em portugues com underscore sao intencionais (ver Domain.Tests). -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Mesmas versoes dos demais projetos de teste, ja verificadas com build limpo. -->
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
-    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <!-- Cobertura na Microsoft Testing Platform (card 34.1). -->
+    <PackageReference Include="coverlet.MTP" Version="10.1.0" />
     <!-- Ultima versao publicada (2021, netstandard2.0, le os assemblies pelo
          Mono.Cecil). Conferida no nuget.org em 02/10/2026 e verificada contra os
          assemblies .NET 10 desta solucao (card 26). -->

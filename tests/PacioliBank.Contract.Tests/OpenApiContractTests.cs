@@ -44,19 +44,19 @@ public class OpenApiContractTests : IClassFixture<OpenApiContractTests.ApiEmMemo
     public async Task O_contrato_publicado_e_igual_ao_instantaneo_aprovado()
     {
         using var cliente = _api.CreateClient();
-        var gerado = Normalizar(await cliente.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative)));
+        var gerado = Normalizar(await cliente.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken));
 
         var pasta = PastaDoTeste();
         var aprovado = Path.Combine(pasta, Aprovado);
         var recebido = Path.Combine(pasta, Recebido);
 
-        if (File.Exists(aprovado) && await File.ReadAllTextAsync(aprovado) == gerado)
+        if (File.Exists(aprovado) && await File.ReadAllTextAsync(aprovado, TestContext.Current.CancellationToken) == gerado)
         {
             File.Delete(recebido);
             return;
         }
 
-        await File.WriteAllTextAsync(recebido, gerado);
+        await File.WriteAllTextAsync(recebido, gerado, TestContext.Current.CancellationToken);
         Assert.Fail(File.Exists(aprovado)
             ? $"O contrato mudou. Revise o diff entre {Aprovado} e {Recebido}; se a mudança é intencional, promova o recebido a aprovado."
             : $"Não há instantâneo aprovado. Revise {Recebido} e renomeie-o para {Aprovado}.");
@@ -66,7 +66,7 @@ public class OpenApiContractTests : IClassFixture<OpenApiContractTests.ApiEmMemo
     public async Task O_contrato_descreve_as_cinco_operacoes_de_negocio()
     {
         using var cliente = _api.CreateClient();
-        var documento = JsonNode.Parse(await cliente.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative)))!;
+        var documento = JsonNode.Parse(await cliente.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken))!;
         var caminhos = documento["paths"]!.AsObject();
 
         Assert.NotNull(caminhos["/api/v1/accounts/{accountId}/credits"]?["post"]);

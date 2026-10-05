@@ -52,13 +52,16 @@ jobs:
 
       # Dominio, arquitetura, contrato e integracao. A integracao sobe
       # PostgreSQL real pelo Testcontainers, com o Docker do proprio runner.
+      # Executor: Microsoft Testing Platform, declarado no global.json (card
+      # 34.1); as opcoes abaixo sao as dela, e nao as do VSTest.
       - name: Testes de dominio, arquitetura, contrato e integracao
         id: testes
         run: >-
           dotnet test --no-build -c Release
-          --collect:"XPlat Code Coverage"
-          --results-directory TestResults
-          --logger trx
+          --results-directory ${{ github.workspace }}/TestResults
+          --report-xunit-trx
+          --coverlet
+          --coverlet-output-format cobertura
 
       # RNF-036 e criterio de bloqueio do ADR-0010 (card 31.2): cobertura de
       # linha do projeto de dominio (PacioliBank.Ledger) medida SO pelos testes
@@ -66,13 +69,13 @@ jobs:
       # Abaixo de 85%, reprova.
       - name: Cobertura do dominio, limite de 85%
         run: >-
-          dotnet test tests/PacioliBank.Domain.Tests --no-build -c Release
-          -p:CollectCoverage=true
-          -p:Include="[PacioliBank.Ledger]*"
-          -p:Threshold=85
-          -p:ThresholdType=line
-          -p:CoverletOutputFormat=cobertura
-          -p:CoverletOutput=${{ github.workspace }}/TestResults/dominio/
+          dotnet test --project tests/PacioliBank.Domain.Tests --no-build -c Release
+          --results-directory ${{ github.workspace }}/TestResults/dominio
+          --coverlet
+          --coverlet-include "[PacioliBank.Ledger]*"
+          --coverlet-threshold 85
+          --coverlet-threshold-type line
+          --coverlet-output-format cobertura
 
       # Publica sempre que os testes rodaram, inclusive com falha; se o build
       # reprovou, nao ha o que publicar e o passo nao acrescenta outra falha.

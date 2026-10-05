@@ -38,12 +38,15 @@ public class MetricsTests
         Assert.Equal(HttpStatusCode.OK, await Escrever(cliente, conta, "credits", "100.00", "m-1"));            // reenvio
         Assert.Equal(HttpStatusCode.UnprocessableEntity, await Escrever(cliente, conta, "debits", "999.00", "m-2")); // saldo
         Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "debits", "10.00", "m-3"));
-        (await cliente.GetAsync(new Uri($"/api/v1/accounts/{conta}/balance", UriKind.Relative))).EnsureSuccessStatusCode();
+        (await cliente.GetAsync(new Uri($"/api/v1/accounts/{conta}/balance", UriKind.Relative), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
         var historica = await cliente.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(
-            new Uri($"/api/v1/accounts/{conta}/balance?asOf=2026-10-02T00:00:00Z", UriKind.Relative));
+            new Uri($"/api/v1/accounts/{conta}/balance?asOf=2026-10-02T00:00:00Z", UriKind.Relative), TestContext.Current.CancellationToken);
         Assert.Equal("dailyBalance", historica!["computedFrom"]!.ToString());
 
         api.Services.GetRequiredService<MeterProvider>().ForceFlush();
+        // Encerra a API antes de ler o que foi exportado: com o provedor
+        // descartado, nenhum span ou medicao chega durante a leitura da lista.
+        await api.DisposeAsync();
         var pendentesNoBanco = await PendentesAsync();
 
         // Lancamentos por tipo: so o que gravou lancamento novo

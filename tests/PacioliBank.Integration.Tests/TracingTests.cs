@@ -36,15 +36,18 @@ public class TracingTests
             Content = JsonContent.Create(new { amount = "10.00", currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
         };
         pedido.Headers.Add("Idempotency-Key", "traco-1");
-        using (var resposta = await cliente.SendAsync(pedido))
+        using (var resposta = await cliente.SendAsync(pedido, TestContext.Current.CancellationToken))
         {
             resposta.EnsureSuccessStatusCode();
         }
 
         // O despachante de outbox consulta o banco a cada segundo, fora de
         // qualquer requisicao. Espera ao menos uma consulta dele.
-        await Task.Delay(TimeSpan.FromSeconds(1.5));
+        await Task.Delay(TimeSpan.FromSeconds(1.5), TestContext.Current.CancellationToken);
         api.Services.GetRequiredService<TracerProvider>().ForceFlush();
+        // Encerra a API antes de ler o que foi exportado: com o provedor
+        // descartado, nenhum span ou medicao chega durante a leitura da lista.
+        await api.DisposeAsync();
 
         // Comando fora de um traco nao vira traco proprio: sem isso, cada
         // consulta do despachante seria um traco de um span so, por segundo.
@@ -85,11 +88,14 @@ public class TracingTests
             Content = JsonContent.Create(new { amount = "10.00", currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
         };
         pedido.Headers.Add("Idempotency-Key", "traco-2");
-        using (await cliente.SendAsync(pedido))
+        using (await cliente.SendAsync(pedido, TestContext.Current.CancellationToken))
         {
         }
 
         api.Services.GetRequiredService<TracerProvider>().ForceFlush();
+        // Encerra a API antes de ler o que foi exportado: com o provedor
+        // descartado, nenhum span ou medicao chega durante a leitura da lista.
+        await api.DisposeAsync();
 
         var casoDeUso = Assert.Single(spans, s => s.Source.Name == "PacioliBank.Ledger" && s.OperationName == "ledger.post");
         Assert.Equal(ActivityStatusCode.Error, casoDeUso.Status);

@@ -1,5 +1,6 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using TestResult = NetArchTest.Rules.TestResult;
 using PacioliBank.Api.Endpoints;
 using PacioliBank.Events;
 using PacioliBank.Ledger.Domain;

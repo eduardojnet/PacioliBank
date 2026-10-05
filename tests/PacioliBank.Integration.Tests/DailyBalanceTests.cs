@@ -139,7 +139,7 @@ public class DailyBalanceTests
     {
         var conta = await ContaComHistoricoAsync();
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         var erro = await Assert.ThrowsAsync<PostgresException>(() =>
             connection.ExecuteAsync("DELETE FROM ledger.daily_balances WHERE account_id = @conta", new { conta }));
 

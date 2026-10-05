@@ -2,6 +2,7 @@
   "stryker-config": {
     "project": "PacioliBank.Ledger.csproj",
     "test-projects": [ "PacioliBank.Domain.Tests.csproj" ],
+    "test-runner": "mtp",
     "reporters": [ "progress", "cleartext", "html", "json" ],
     "ignore-methods": [ "ArgumentNullException.ThrowIfNull", "*Exception.ctor" ],
     "thresholds": { "high": 90, "low": 85, "break": 85 }

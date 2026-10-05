@@ -202,7 +202,7 @@ public class OutboxDispatcherTests
         // disciplina de quem grava.
         var conta = await _fixture.CreateAccountAsync(openingCredit: 10.00m);
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         var erro = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync(
             """
             INSERT INTO ledger.outbox_messages (message_id, account_id, sequence, event_type, payload, occurred_at)

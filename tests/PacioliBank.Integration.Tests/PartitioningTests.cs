@@ -153,7 +153,7 @@ public class PartitioningTests
         var conta = await _fixture.CreateAccountAsync();
         var lancamento = await CreditarAsync(conta, "p-8");
 
-        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync();
+        await using var connection = await _fixture.RuntimeDataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
         var alterar = await Assert.ThrowsAsync<PostgresException>(() =>
             connection.ExecuteAsync("UPDATE ledger.entry_keys SET sequence = 7 WHERE entry_id = @id", new { id = lancamento.EntryId }));
         var apagar = await Assert.ThrowsAsync<PostgresException>(() =>
