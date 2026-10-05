@@ -39,7 +39,7 @@ public class MigrationTests
 
         var tabelas = await TabelasDoLedgerAsync(banco);
         Assert.Equal(
-            ["accounts", "balance_snapshots", "daily_balances", "entry_keys", "idempotency_records", "ledger_entries", "outbox_messages"],
+            ["accounts", "balance_snapshots", "daily_balances", "entry_keys", "idempotency_records", "ledger_entries", "outbox_messages", "transfers"],
             tabelas);
     }
 

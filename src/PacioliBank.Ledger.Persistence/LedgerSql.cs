@@ -182,6 +182,41 @@ internal static class LedgerSql
              @responseBody::json, @entryId)
         """;
 
+    /// <summary>
+    /// Transferencia, gravada depois das duas pernas, para as quais aponta. As
+    /// chaves estrangeiras conferem conta, sentido, valor, moeda e instante de
+    /// registro de cada perna (ADR-0014, migracao 0004).
+    /// </summary>
+    internal const string InsertTransfer = """
+        INSERT INTO ledger.transfers
+            (transfer_id, source_account_id, destination_account_id, amount, currency,
+             recorded_at, debit_entry_id, credit_entry_id)
+        VALUES
+            (@transferId, @sourceAccountId, @destinationAccountId, @amount, @currency,
+             @recordedAt, @debitEntryId, @creditEntryId)
+        """;
+
+    /// <summary>
+    /// Impressao e resposta originais de uma chave da conta de origem. A
+    /// transferencia vem por juncao externa: chave usada num lancamento comum
+    /// volta sem transferencia, e e reuso indevido (ADR-0006).
+    /// </summary>
+    internal const string SelectTransferForReplay = """
+        SELECT i.request_hash           AS RequestHash,
+               i.response_body::text    AS ResponseBody,
+               t.transfer_id            AS TransferId,
+               t.source_account_id      AS SourceAccountId,
+               t.destination_account_id AS DestinationAccountId,
+               t.debit_entry_id         AS DebitEntryId,
+               t.credit_entry_id        AS CreditEntryId,
+               t.amount                 AS Amount,
+               t.currency               AS Currency
+          FROM ledger.idempotency_records i
+          LEFT JOIN ledger.transfers t ON t.debit_entry_id = i.entry_id
+         WHERE i.account_id = @accountId
+           AND i.idempotency_key = @idempotencyKey
+        """;
+
     /// <summary>Evento de integracao, na mesma transacao (ADR-0008).</summary>
     internal const string InsertOutbox = """
         INSERT INTO ledger.outbox_messages

@@ -26,6 +26,17 @@ public sealed record PostingBody(string? Amount, string? Currency, DateTimeOffse
 /// <summary>Corpo do estorno. O instante e obrigatorio para que o reenvio tenha a mesma impressao.</summary>
 public sealed record ReversalBody(DateTimeOffset? OccurredAt);
 
+/// <summary>
+/// Corpo da transferencia (EF secao 8.4.1). As contas viajam no corpo, e nao
+/// na rota: a operacao e de duas contas, e nenhuma delas e o recurso.
+/// </summary>
+public sealed record TransferBody(
+    Guid? SourceAccountId,
+    Guid? DestinationAccountId,
+    string? Amount,
+    string? Currency,
+    DateTimeOffset? OccurredAt);
+
 // O corpo da resposta de escrita (EF secao 8.4) e PostingResponse, na camada
 // de aplicacao: e gravado no registro de idempotencia e devolvido como texto,
 // entao nao pode ser montado aqui (ADR-0006, card 19.5).

@@ -77,6 +77,11 @@ public sealed class LedgerProblems : IExceptionHandler
         CurrencyMismatchException or UnsupportedCurrencyException =>
             Problem(400, "CURRENCY_MISMATCH", "Moeda divergente da conta", exception.Message),
 
+        // Independe do estado das contas: o pedido e invalido em si (RN-013).
+        SameAccountTransferException =>
+            Problem(400, "SAME_ACCOUNT_TRANSFER", "Transferencia para a propria conta",
+                "Origem e destino da transferencia precisam ser contas diferentes."),
+
         InvalidPointInTimeException =>
             Problem(400, "INVALID_POINT_IN_TIME", "Instante de consulta invalido", exception.Message),
 

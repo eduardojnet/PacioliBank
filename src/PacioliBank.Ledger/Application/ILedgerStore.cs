@@ -48,6 +48,24 @@ public interface ILedgerStore
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Registra uma transferencia: debito na origem e credito no destino, numa
+    /// unica transacao, com as duas contas bloqueadas em ordem crescente de
+    /// identificador (RF-012, ADR-0014, ADR-0005). Idempotente pela chave na
+    /// conta de origem.
+    /// </summary>
+    /// <exception cref="AccountNotFoundException">Uma das contas nao existe.</exception>
+    /// <exception cref="SameAccountTransferException">Origem e destino sao a mesma conta.</exception>
+    /// <exception cref="AccountInactiveException">Uma das contas nao aceita lancamentos.</exception>
+    /// <exception cref="InsufficientFundsException">A origem ficaria negativa.</exception>
+    /// <exception cref="IdempotencyConflictException">Chave reutilizada com conteudo diferente.</exception>
+    Task<TransferResult> TransferAsync(
+        Guid sourceAccountId,
+        Guid destinationAccountId,
+        TransferRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Calcula a posicao consolidada. Com <paramref name="asOf"/> nulo,
     /// devolve a posicao corrente; com instante informado, a posicao daquele
     /// momento pela data do fato (RN-009, RN-011).

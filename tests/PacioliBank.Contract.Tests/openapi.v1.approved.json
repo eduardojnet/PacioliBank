@@ -32,6 +32,112 @@
         }
       }
     },
+    "/api/v1/transfers": {
+      "post": {
+        "tags": [
+          "Ledger"
+        ],
+        "summary": "Transfere entre duas contas, numa \u00FAnica transa\u00E7\u00E3o (RF-012)",
+        "operationId": "Transferir",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TransferBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/credits": {
       "post": {
         "tags": [
@@ -772,6 +878,118 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "TransferBody": {
+        "type": "object",
+        "properties": {
+          "sourceAccountId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "destinationAccountId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "amount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurredAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "TransferCreditLeg": {
+        "required": [
+          "entryId"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string"
+          }
+        }
+      },
+      "TransferDebitLeg": {
+        "required": [
+          "entryId",
+          "sequence",
+          "balanceAfter"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "balanceAfter": {
+            "type": "string"
+          }
+        }
+      },
+      "TransferResponse": {
+        "required": [
+          "transferId",
+          "sourceAccountId",
+          "destinationAccountId",
+          "amount",
+          "currency",
+          "occurredAt",
+          "recordedAt",
+          "debit",
+          "credit"
+        ],
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "type": "string"
+          },
+          "sourceAccountId": {
+            "type": "string"
+          },
+          "destinationAccountId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          },
+          "debit": {
+            "$ref": "#/components/schemas/TransferDebitLeg"
+          },
+          "credit": {
+            "$ref": "#/components/schemas/TransferCreditLeg"
           }
         }
       }

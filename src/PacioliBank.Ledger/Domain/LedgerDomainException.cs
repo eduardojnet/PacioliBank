@@ -262,3 +262,15 @@ public sealed class InvalidPointInTimeException : LedgerDomainException
     }
 
 }
+
+/// <summary>Transferencia com origem e destino na mesma conta. Ver RN-013.</summary>
+public sealed class SameAccountTransferException : LedgerDomainException
+{
+    public SameAccountTransferException(Guid accountId)
+        : base($"Origem e destino da transferencia sao a mesma conta: '{accountId}'.")
+    {
+        AccountId = accountId;
+    }
+
+    public Guid AccountId { get; }
+}

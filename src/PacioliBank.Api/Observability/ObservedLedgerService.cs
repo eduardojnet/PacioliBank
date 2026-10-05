@@ -22,6 +22,7 @@ public sealed class ObservedLedgerService(ILedgerService inner) : ILedgerService
 {
     private const string Post = "post";
     private const string Reverse = "reverse";
+    private const string Transfer = "transfer";
     private const string Balance = "balance";
     private const string Statement = "statement";
 
@@ -41,6 +42,27 @@ public sealed class ObservedLedgerService(ILedgerService inner) : ILedgerService
         var result = await Observe(Reverse, _ => { }, () => inner.ReverseAsync(command, cancellationToken)).ConfigureAwait(false);
 
         RecordWrite(result, Reverse);
+        return result;
+    }
+
+    public async Task<TransferResult> TransferAsync(TransferCommand command, CancellationToken cancellationToken)
+    {
+        var result = await Observe(Transfer, _ => { }, () => inner.TransferAsync(command, cancellationToken)).ConfigureAwait(false);
+
+        // Duas pernas, dois lancamentos: a contagem continua batendo com o ledger.
+        if (result.Replayed)
+        {
+            LedgerTelemetry.Replays.Add(1, new KeyValuePair<string, object?>("operation", Transfer));
+            return result;
+        }
+
+        foreach (var direction in (string[])["Debit", "Credit"])
+        {
+            LedgerTelemetry.EntriesRecorded.Add(1,
+                new KeyValuePair<string, object?>("direction", direction),
+                new KeyValuePair<string, object?>("operation", Transfer));
+        }
+
         return result;
     }
 

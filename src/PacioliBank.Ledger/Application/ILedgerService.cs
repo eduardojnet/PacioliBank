@@ -19,6 +19,9 @@ public interface ILedgerService
     /// <summary>Estorna um lancamento (RF-007).</summary>
     Task<PostEntryResult> ReverseAsync(ReversalCommand command, CancellationToken cancellationToken);
 
+    /// <summary>Transfere entre duas contas (RF-012).</summary>
+    Task<TransferResult> TransferAsync(TransferCommand command, CancellationToken cancellationToken);
+
     /// <summary>Posicao corrente, ou no instante informado (RF-003, RF-004).</summary>
     Task<BalanceResult> GetBalanceAsync(Guid accountId, DateTimeOffset? asOf, CancellationToken cancellationToken);
 

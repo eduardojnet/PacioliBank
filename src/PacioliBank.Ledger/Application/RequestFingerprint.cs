@@ -45,6 +45,30 @@ public static class RequestFingerprint
     /// nos dois comandos e reuso indevido e precisa produzir conflito, nunca
     /// coincidencia de impressao.
     /// </remarks>
+    /// <summary>
+    /// Calcula a impressao SHA-256 de uma transferencia (RF-012).
+    /// </summary>
+    /// <remarks>
+    /// O prefixo distingue a transferencia do debito comum da origem: a mesma
+    /// chave nos dois comandos e reuso indevido. A ordem das contas entra na
+    /// impressao: A para B e B para A sao operacoes diferentes.
+    /// </remarks>
+    public static byte[] OfTransfer(Guid sourceAccountId, Guid destinationAccountId, TransferRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var canonical = string.Join('|',
+            "transfer",
+            sourceAccountId.ToString("D", CultureInfo.InvariantCulture),
+            destinationAccountId.ToString("D", CultureInfo.InvariantCulture),
+            request.Amount.ToContractString(),
+            request.Amount.Currency.Code,
+            request.OccurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+
+        return SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+    }
+
+
     public static byte[] OfReversal(Guid accountId, Guid entryId, ReversalRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

@@ -149,7 +149,7 @@ jobs:
           tar xJf inso.tar.xz
           ./inso --version
 
-      - name: Executar a colecao (15 requisicoes, 43 testes)
+      - name: Executar a colecao (18 requisicoes, 52 testes)
         run: ./inso run collection wrk_pacioli_ledger -w insomnia/pacioli-ledger.insomnia.json --env env_pacioli_base --ci
 
       - name: Logs do ambiente, em caso de falha

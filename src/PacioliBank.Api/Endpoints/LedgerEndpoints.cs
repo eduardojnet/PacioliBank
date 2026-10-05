@@ -68,6 +68,18 @@ public static class LedgerEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        app.MapPost("/api/v1/transfers", TransferAsync)
+            .WithTags("Ledger")
+            .WithName("Transferir")
+            .WithSummary("Transfere entre duas contas, numa única transação (RF-012)")
+            .Produces<TransferResponse>(StatusCodes.Status201Created)
+            .Produces<TransferResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
 
@@ -135,6 +147,34 @@ public static class LedgerEndpoints
         return Written(result, http);
     }
 
+    private static async Task<IResult> TransferAsync(
+        TransferBody? body,
+        [FromHeader(Name = LedgerHeaders.IdempotencyKey)] string? idempotencyKey,
+        HttpContext http,
+        ILedgerService ledger,
+        CancellationToken cancellationToken)
+    {
+        if (body?.SourceAccountId is null || body.DestinationAccountId is null
+            || body.Amount is null || body.Currency is null || body.OccurredAt is null)
+        {
+            throw new InvalidRequestException(
+                "Os campos sourceAccountId, destinationAccountId, amount, currency e occurredAt sao obrigatorios.");
+        }
+
+        var result = await ledger.TransferAsync(
+            new TransferCommand(
+                body.SourceAccountId.Value,
+                body.DestinationAccountId.Value,
+                body.Amount,
+                body.Currency,
+                body.OccurredAt.Value,
+                idempotencyKey,
+                Correlation.Of(http)),
+            cancellationToken);
+
+        return Written(result.ResponseBody, result.Replayed, http);
+    }
+
     private static async Task<IResult> GetBalanceAsync(
         Guid accountId,
         DateTimeOffset? asOf,
@@ -179,17 +219,20 @@ public static class LedgerEndpoints
     /// registro de idempotencia, escrito sem reserializacao: a repeticao devolve
     /// a resposta original byte a byte, e nao uma reconstrucao (ADR-0006).
     /// </summary>
-    private static IResult Written(PostEntryResult result, HttpContext http)
+    private static IResult Written(PostEntryResult result, HttpContext http) =>
+        Written(result.ResponseBody, result.Replayed, http);
+
+    private static IResult Written(string responseBody, bool replayed, HttpContext http)
     {
-        if (result.Replayed)
+        if (replayed)
         {
             http.Response.Headers[LedgerHeaders.IdempotencyReplayed] = "true";
         }
 
         return Results.Content(
-            result.ResponseBody,
+            responseBody,
             "application/json",
             Encoding.UTF8,
-            result.Replayed ? StatusCodes.Status200OK : StatusCodes.Status201Created);
+            replayed ? StatusCodes.Status200OK : StatusCodes.Status201Created);
     }
 }

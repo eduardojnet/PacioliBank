@@ -78,8 +78,23 @@ public sealed class PostgresLedgerStore : ILedgerStore
             cancellationToken);
     }
 
-    private static async Task<PostEntryResult> WithRetryAsync(
-        Func<Task<PostEntryResult>> operation,
+    /// <inheritdoc />
+    public Task<TransferResult> TransferAsync(
+        Guid sourceAccountId,
+        Guid destinationAccountId,
+        TransferRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return WithRetryAsync(
+            () => TransferOnceAsync(sourceAccountId, destinationAccountId, request, requestHash, cancellationToken),
+            cancellationToken);
+    }
+
+    private static async Task<T> WithRetryAsync<T>(
+        Func<Task<T>> operation,
         CancellationToken cancellationToken)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
@@ -264,6 +279,147 @@ public sealed class PostgresLedgerStore : ILedgerStore
     }
 
     /// <summary>
+    /// Transferencia: as duas pernas na mesma transacao (ADR-0014).
+    /// </summary>
+    /// <remarks>
+    /// As duas contas sao bloqueadas em ordem crescente de identificador,
+    /// qualquer que seja o sentido (ADR-0005, revisao do card 38). Com a ordem
+    /// dada pelo sentido, A para B e B para A simultaneas bloqueariam cada uma
+    /// a sua origem e esperariam pela outra: impasse, que o PostgreSQL desfaz
+    /// abortando uma delas. Com ordem unica, quem chega segundo espera na
+    /// primeira conta, sem segurar nada. O lancamento comum bloqueia uma conta
+    /// so, e nunca fecha ciclo com a transferencia.
+    /// <para>
+    /// A repeticao e reconhecida pela chave na conta de origem, ja sob os dois
+    /// bloqueios, como no lancamento comum (ADR-0006).
+    /// </para>
+    /// </remarks>
+    private async Task<TransferResult> TransferOnceAsync(
+        Guid sourceAccountId,
+        Guid destinationAccountId,
+        TransferRequest request,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            .ConfigureAwait(false);
+
+        var (firstId, secondId) = sourceAccountId.CompareTo(destinationAccountId) <= 0
+            ? (sourceAccountId, destinationAccountId)
+            : (destinationAccountId, sourceAccountId);
+
+        var first = await LockAndLoadAsync(connection, transaction, firstId, cancellationToken).ConfigureAwait(false);
+        var second = await LockAndLoadAsync(connection, transaction, secondId, cancellationToken).ConfigureAwait(false);
+
+        var (source, destination) = firstId == sourceAccountId ? (first, second) : (second, first);
+
+        var earlier = await ReadTransferReplayAsync(
+            connection, transaction, sourceAccountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false);
+
+        if (earlier is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return earlier;
+        }
+
+        // O dominio decide as duas pernas antes de qualquer gravacao.
+        var legs = Transfer.Between(source, destination, request);
+
+        // Um so instante de registro para as duas pernas: as chaves
+        // estrangeiras da transferencia o exigem (migracao 0004).
+        var recordedAt = ToStoredPrecision(DateTimeOffset.UtcNow);
+        var responseBody = TransferResponse.From(legs, recordedAt).ToJson();
+
+        try
+        {
+            await WriteEntryAsync(connection, transaction, legs.Debit, recordedAt, cancellationToken).ConfigureAwait(false);
+            await WriteEntryAsync(connection, transaction, legs.Credit, recordedAt, cancellationToken).ConfigureAwait(false);
+
+            await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertTransfer, new
+            {
+                transferId = legs.TransferId,
+                sourceAccountId,
+                destinationAccountId,
+                amount = legs.Debit.Amount.Amount,
+                currency = legs.Debit.Amount.Currency.Code,
+                recordedAt = recordedAt.UtcDateTime,
+                debitEntryId = legs.Debit.EntryId,
+                creditEntryId = legs.Credit.EntryId,
+            }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            await InsertIdempotencyAsync(connection, transaction, legs.Debit, requestHash, responseBody, cancellationToken)
+                .ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (IsIdempotencyViolation(ex))
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+
+            await using var fresh = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            return await ReadTransferReplayAsync(
+                fresh, transaction: null, sourceAccountId, request.IdempotencyKey, requestHash, cancellationToken).ConfigureAwait(false)
+                ?? throw new LedgerUnavailableException();
+        }
+
+        return new TransferResult(
+            legs.TransferId,
+            sourceAccountId,
+            destinationAccountId,
+            legs.Debit.EntryId,
+            legs.Credit.EntryId,
+            legs.Debit.Amount,
+            Replayed: false)
+        {
+            ResponseBody = responseBody,
+        };
+    }
+
+    /// <summary>
+    /// Resultado original de uma transferencia pela chave na conta de origem,
+    /// ou nulo quando a chave nao tem registro. Impressao divergente e reuso
+    /// indevido, inclusive quando a chave foi usada num lancamento comum.
+    /// </summary>
+    private static async Task<TransferResult?> ReadTransferReplayAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        Guid sourceAccountId,
+        string idempotencyKey,
+        ReadOnlyMemory<byte> requestHash,
+        CancellationToken cancellationToken)
+    {
+        var row = await connection.QuerySingleOrDefaultAsync<TransferReplayRow>(new CommandDefinition(
+            LedgerSql.SelectTransferForReplay,
+            new { accountId = sourceAccountId, idempotencyKey },
+            transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        if (!requestHash.Span.SequenceEqual(row.RequestHash) || row.TransferId is null)
+        {
+            throw new IdempotencyConflictException(sourceAccountId, idempotencyKey);
+        }
+
+        return new TransferResult(
+            row.TransferId.Value,
+            row.SourceAccountId!.Value,
+            row.DestinationAccountId!.Value,
+            row.DebitEntryId!.Value,
+            row.CreditEntryId!.Value,
+            Money.Of(row.Amount!.Value, Currency.FromCode(row.Currency!)),
+            Replayed: true)
+        {
+            // O corpo devolvido e o gravado, nao uma reconstrucao (ADR-0006).
+            ResponseBody = row.ResponseBody,
+        };
+    }
+
+    /// <summary>
     /// Reconhece a repeticao de um comando ja efetivado, ANTES de o agregado
     /// decidir (lacuna L-10, revisao do ADR-0006).
     /// </summary>
@@ -339,6 +495,47 @@ public sealed class PostgresLedgerStore : ILedgerStore
         string responseBody,
         CancellationToken cancellationToken)
     {
+        await WriteEntryAsync(connection, transaction, entry, recordedAt, cancellationToken).ConfigureAwait(false);
+        await InsertIdempotencyAsync(connection, transaction, entry, requestHash, responseBody, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Registro de idempotencia do comando, apontando para o lancamento que o
+    /// efetivou. Na transferencia, o da perna de debito, na conta de origem.
+    /// </summary>
+    private static async Task InsertIdempotencyAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        LedgerEntry entry,
+        ReadOnlyMemory<byte> requestHash,
+        string responseBody,
+        CancellationToken cancellationToken)
+    {
+        await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertIdempotency, new
+        {
+            accountId = entry.AccountId,
+            idempotencyKey = entry.IdempotencyKey,
+            requestHash = requestHash.ToArray(),
+            responseStatus = (short)201,
+            responseBody,
+            entryId = entry.EntryId,
+        }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Um lancamento e tudo o que deriva dele na mesma transacao: chaves,
+    /// linha do ledger, sequencia da conta, evento, fechamento diario e
+    /// snapshot. Serve ao lancamento comum, ao estorno e a cada perna da
+    /// transferencia.
+    /// </summary>
+    private static async Task WriteEntryAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        LedgerEntry entry,
+        DateTimeOffset recordedAt,
+        CancellationToken cancellationToken)
+    {
         await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertEntryKey, new
         {
             entryId = entry.EntryId,
@@ -369,16 +566,6 @@ public sealed class PostgresLedgerStore : ILedgerStore
         {
             accountId = entry.AccountId,
             sequence = entry.Sequence,
-        }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
-
-        await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertIdempotency, new
-        {
-            accountId = entry.AccountId,
-            idempotencyKey = entry.IdempotencyKey,
-            requestHash = requestHash.ToArray(),
-            responseStatus = (short)201,
-            responseBody,
-            entryId = entry.EntryId,
         }, transaction, cancellationToken: cancellationToken)).ConfigureAwait(false);
 
         await connection.ExecuteAsync(new CommandDefinition(LedgerSql.InsertOutbox, new
@@ -753,6 +940,27 @@ public sealed class PostgresLedgerStore : ILedgerStore
         public decimal BalanceAfter { get; set; }
 
         public bool AlreadyReversed { get; set; }
+    }
+
+    private sealed class TransferReplayRow
+    {
+        public string ResponseBody { get; set; } = string.Empty;
+
+        public byte[] RequestHash { get; set; } = [];
+
+        public Guid? TransferId { get; set; }
+
+        public Guid? SourceAccountId { get; set; }
+
+        public Guid? DestinationAccountId { get; set; }
+
+        public Guid? DebitEntryId { get; set; }
+
+        public Guid? CreditEntryId { get; set; }
+
+        public decimal? Amount { get; set; }
+
+        public string? Currency { get; set; }
     }
 
     private sealed class ReplayRow

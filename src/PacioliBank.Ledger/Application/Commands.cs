@@ -33,6 +33,20 @@ public sealed record ReversalCommand(
     Guid CorrelationId);
 
 /// <summary>
+/// Comando de transferencia entre contas (RF-012), no formato em que chega da
+/// borda. Valor e moeda como texto, pela mesma razao do <see cref="PostingCommand"/>.
+/// </summary>
+/// <param name="IdempotencyKey">Chave na conta de origem. Nulo ou vazio e rejeitado com RN-005, antes de qualquer I/O.</param>
+public sealed record TransferCommand(
+    Guid SourceAccountId,
+    Guid DestinationAccountId,
+    string Amount,
+    string Currency,
+    DateTimeOffset OccurredAt,
+    string? IdempotencyKey,
+    Guid CorrelationId);
+
+/// <summary>
 /// Consulta de extrato (RF-005), paginada por cursor.
 /// </summary>
 /// <param name="From">Limite inferior inclusivo, pela data do fato.</param>

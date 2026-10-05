@@ -70,6 +70,24 @@ public sealed class LedgerService : ILedgerService
     }
 
     /// <inheritdoc />
+    public Task<TransferResult> TransferAsync(TransferCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var key = RequireIdempotencyKey(command.IdempotencyKey);
+        var amount = ParseAmount(command.Amount, ResolveCurrency(command.Currency));
+
+        var request = new TransferRequest(amount, command.OccurredAt, key, command.CorrelationId);
+
+        return _store.TransferAsync(
+            command.SourceAccountId,
+            command.DestinationAccountId,
+            request,
+            RequestFingerprint.OfTransfer(command.SourceAccountId, command.DestinationAccountId, request),
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<BalanceResult> GetBalanceAsync(Guid accountId, DateTimeOffset? asOf, CancellationToken cancellationToken)
     {
         // RF-004: posicao em instante futuro nao e consulta, e previsao.

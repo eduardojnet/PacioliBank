@@ -195,6 +195,45 @@ public class LedgerServiceTests
         Assert.Equal(RequestFingerprint.OfReversal(Conta, lancamento, _store.LastReversal!), _store.LastHash);
     }
 
+    // ---------------------------------------------------------------- RF-012
+
+    private static readonly Guid Destino = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    private static TransferCommand Transferencia(string valor = "40.00", string? chave = "tr-1") =>
+        new(Conta, Destino, valor, "BRL", Agora, chave, Guid.NewGuid());
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Transferencia_sem_chave_de_idempotencia_e_recusada_antes_de_qualquer_IO(string? chave)
+    {
+        await Assert.ThrowsAsync<MissingIdempotencyKeyException>(
+            () => _service.TransferAsync(Transferencia(chave: chave), CancellationToken.None));
+
+        Assert.False(_store.Called);
+    }
+
+    [Fact]
+    public async Task Transferencia_com_valor_invalido_e_recusada_antes_de_qualquer_IO()
+    {
+        await Assert.ThrowsAsync<InvalidEntryAmountException>(
+            () => _service.TransferAsync(Transferencia(valor: "1,50"), CancellationToken.None));
+
+        Assert.False(_store.Called);
+    }
+
+    [Fact]
+    public async Task Transferencia_chega_ao_armazenamento_com_as_duas_contas_e_a_impressao_de_transferencia()
+    {
+        var comando = Transferencia();
+
+        await _service.TransferAsync(comando, CancellationToken.None);
+
+        Assert.Equal((Conta, Destino), _store.LastTransferAccounts);
+        Assert.Equal(new TransferRequest(Money.Of(40.00m, Currency.Brl), Agora, "tr-1", comando.CorrelationId), _store.LastTransfer);
+        Assert.Equal(RequestFingerprint.OfTransfer(Conta, Destino, _store.LastTransfer!), _store.LastHash);
+    }
+
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
@@ -229,6 +268,20 @@ public class LedgerServiceTests
             var valor = Money.Of(10.00m, Currency.Brl);
             return Task.FromResult(new PostEntryResult(
                 Guid.NewGuid(), accountId, 2, EntryDirection.Debit, valor, request.OccurredAt, Agora, Money.Zero(Currency.Brl), false));
+        }
+
+        public TransferRequest? LastTransfer { get; private set; }
+
+        public (Guid Source, Guid Destination)? LastTransferAccounts { get; private set; }
+
+        public Task<TransferResult> TransferAsync(Guid sourceAccountId, Guid destinationAccountId, TransferRequest request, ReadOnlyMemory<byte> requestHash, CancellationToken cancellationToken)
+        {
+            Called = true;
+            LastHash = requestHash.ToArray();
+            LastTransfer = request;
+            LastTransferAccounts = (sourceAccountId, destinationAccountId);
+            return Task.FromResult(new TransferResult(
+                Guid.NewGuid(), sourceAccountId, destinationAccountId, Guid.NewGuid(), Guid.NewGuid(), request.Amount, false));
         }
 
         public Task<BalanceResult> GetBalanceAsync(Guid accountId, DateTimeOffset? asOf, CancellationToken cancellationToken)

@@ -18,6 +18,8 @@ public class ContractTests
     private static readonly Guid Lancamento = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     private static readonly Guid Original = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002");
     private static readonly Guid Conta = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid Destino = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid Transferencia = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001");
     private static readonly DateTimeOffset Fato = new(2026, 9, 30, 13, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Registro = new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero).AddTicks(1234567);
 
@@ -53,6 +55,25 @@ public class ContractTests
 
         Assert.EndsWith(""","reversalOf":"aaaaaaaa-0000-0000-0000-000000000002"}""", corpo, StringComparison.Ordinal);
         Assert.Contains(""""direction":"Debit"""", corpo, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Corpo_de_transferencia_tem_os_campos_do_contrato_e_nada_do_saldo_do_destino()
+    {
+        // O pagador ve o proprio saldo e so o identificador do lancamento no
+        // destino: saldo e sequencia do destino sao do titular do destino.
+        var debito = LedgerEntry.Rehydrate(
+            Lancamento, Conta, 7, EntryDirection.Debit, Money.Of(40.00m, Currency.Brl), Fato,
+            "tr-1", Guid.NewGuid(), null, Money.Of(60.00m, Currency.Brl));
+        var credito = LedgerEntry.Rehydrate(
+            Original, Destino, 3, EntryDirection.Credit, Money.Of(40.00m, Currency.Brl), Fato,
+            Transfer.CreditLegKey(Transferencia), Guid.NewGuid(), null, Money.Of(990.00m, Currency.Brl));
+
+        var corpo = TransferResponse.From(new TransferLegs(Transferencia, debito, credito), Registro).ToJson();
+
+        Assert.Equal(
+            """{"transferId":"bbbbbbbb-0000-0000-0000-000000000001","sourceAccountId":"11111111-1111-1111-1111-111111111111","destinationAccountId":"22222222-2222-2222-2222-222222222222","amount":"40.00","currency":"BRL","occurredAt":"2026-09-30T13:00:00Z","recordedAt":"2026-10-02T12:00:00.1234567Z","debit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000001","sequence":7,"balanceAfter":"60.00"},"credit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000002"}}""",
+            corpo);
     }
 
     // --------------------------------------------------- eventos (EF secao 9)
@@ -135,6 +156,25 @@ public class ContractTests
         Assert.Equal(
             "13ba2c795cbf88023db26657db181dadceccbfc0a45e98f603b6d32fe9d12603",
             Convert.ToHexStringLower(RequestFingerprint.OfReversal(Conta, Original, new ReversalRequest(Fato, "k", Guid.NewGuid()))));
+
+        //   transfer|origem|destino|valor|moeda|instante O
+        Assert.Equal(
+            "8ba04765652cd547134d4b18ba70047e6fbd34e8de9bffec362eba8c5476b3ea",
+            Convert.ToHexStringLower(RequestFingerprint.OfTransfer(Conta, Destino, Transferir())));
+    }
+
+    private static TransferRequest Transferir(decimal valor = 40.00m) =>
+        new(Money.Of(valor, Currency.Brl), Fato, "k", Guid.NewGuid());
+
+    [Fact]
+    public void Impressao_de_transferencia_depende_do_sentido_e_nunca_coincide_com_a_de_lancamento()
+    {
+        var ida = RequestFingerprint.OfTransfer(Conta, Destino, Transferir());
+
+        Assert.Equal(ida, RequestFingerprint.OfTransfer(Conta, Destino, Transferir()));
+        Assert.NotEqual(ida, RequestFingerprint.OfTransfer(Destino, Conta, Transferir()));
+        Assert.NotEqual(ida, RequestFingerprint.OfTransfer(Conta, Destino, Transferir(40.01m)));
+        Assert.NotEqual(ida, RequestFingerprint.Of(Conta, Comando(40.00m, EntryDirection.Debit)));
     }
 
     [Fact]
