@@ -36,8 +36,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restaurar pacotes
+      # O restore audita as dependencias, transitivas inclusive: alerta alto
+      # ou critico vira erro (NuGetAudit no Directory.Build.props, RNF-026).
+      - name: Restaurar pacotes e auditar dependencias
         run: dotnet restore
+
+      # Todas as severidades, para dar visibilidade ao que nao reprova.
+      - name: Listar dependencias vulneraveis (informativo)
+        run: dotnet list package --vulnerable --include-transitive
 
       # TreatWarningsAsErrors e AnalysisMode=Recommended vem do
       # Directory.Build.props: um aviso reprova este passo.

@@ -19,6 +19,16 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <AnalysisMode>Recommended</AnalysisMode>
 
+    <!-- RNF-026 e criterio de bloqueio do ADR-0010: dependencia com
+         vulnerabilidade alta ou critica reprova o restore, e portanto o build,
+         aqui, no CI e na imagem Docker (card 31.1). Explicito para nao depender
+         do padrao do SDK. Mode all inclui as transitivas, que o modo direct
+         deixa passar (medido). Level high: baixa e moderada nao reprovam; o CI
+         as lista num passo informativo. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
+
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
