@@ -74,6 +74,8 @@ services:
       ConnectionStrings__Ledger: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_runtime;Password=${POSTGRES_PASSWORD:-pacioli_local_dev};GSS Encryption Mode=Disable"
       # Tracos e metricas por OTLP para o painel. Sem esta variavel, nada e exportado.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://pacioli-observability:18889
+      # Metricas a cada 10 s no painel local; o padrao do OpenTelemetry e 60 s.
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"
     ports:
       - "8080:8080"
     networks:

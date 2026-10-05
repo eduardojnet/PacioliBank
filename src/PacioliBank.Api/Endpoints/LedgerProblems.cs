@@ -59,6 +59,14 @@ public sealed class LedgerProblems : IExceptionHandler
         context.ProblemDetails.Extensions["correlationId"] = Correlation.Of(context.HttpContext);
     }
 
+    /// <summary>
+    /// Codigo da EF secao 8.6 para a excecao, ou nulo se ela nao esta no mapa.
+    /// Sai do mesmo mapa que produz a resposta: a metrica de rejeicao e o
+    /// codigo devolvido ao chamador nunca divergem (ADR-0012).
+    /// </summary>
+    internal static string? CodeOf(Exception exception) =>
+        Map(exception)?.Extensions.TryGetValue("code", out var code) == true ? code as string : null;
+
     private static ProblemDetails? Map(Exception exception) => exception switch
     {
         InvalidEntryAmountException or InvalidMoneyScaleException =>

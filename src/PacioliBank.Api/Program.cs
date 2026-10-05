@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
 using Npgsql;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PacioliBank.Api.Endpoints;
@@ -53,22 +54,29 @@ builder.Services.AddSingleton<ILedgerStore, PostgresLedgerStore>();
 builder.Services.AddSingleton<LedgerService>();
 builder.Services.AddSingleton<ILedgerService>(services => new ObservedLedgerService(services.GetRequiredService<LedgerService>()));
 
-// Rastreamento ponta a ponta (RNF-030, ADR-0012): requisicao HTTP, caso de uso
-// e comandos do PostgreSQL no mesmo traco. Exporta por OTLP so quando o destino
-// esta configurado (OTEL_EXPORTER_OTLP_ENDPOINT); sem ele, nada sai e nada quebra.
+// Rastreamento ponta a ponta (RNF-030) e metricas de negocio (RNF-032),
+// ADR-0012: requisicao HTTP, caso de uso e comandos do PostgreSQL no mesmo
+// traco; medidor do ledger com lancamentos, reenvios, rejeicoes, origem do
+// calculo e fila da outbox. Exporta por OTLP so quando o destino esta
+// configurado (OTEL_EXPORTER_OTLP_ENDPOINT); sem ele, nada sai e nada quebra.
 // O caminho da requisicao leva o identificador da conta: vai mascarado, pelo
 // mesmo criterio do log (ADR-0009 secao 5).
-var tracing = builder.Services.AddOpenTelemetry()
+builder.Services.AddSingleton<OutboxMetrics>();
+
+var telemetry = builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("pacioli-ledger-api"))
     .WithTracing(traces => traces
         .AddSource(LedgerTelemetry.Name)
         .AddAspNetCoreInstrumentation(options => options.EnrichWithHttpRequest = (activity, request) =>
             activity.SetTag("url.path", MaskingJsonFormatter.MaskText(request.Path.Value ?? string.Empty)))
-        .AddNpgsql());
+        .AddNpgsql())
+    .WithMetrics(metrics => metrics.AddMeter(LedgerTelemetry.Name));
 
 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
 {
-    tracing.WithTracing(traces => traces.AddOtlpExporter());
+    telemetry
+        .WithTracing(traces => traces.AddOtlpExporter())
+        .WithMetrics(metrics => metrics.AddOtlpExporter());
 }
 
 // Despachante de outbox (ADR-0008), no mesmo processo por decisao operacional.
@@ -131,6 +139,9 @@ builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = 
 builder.Services.AddExceptionHandler<LedgerProblems>();
 
 var app = builder.Build();
+
+// Cria o medidor da fila da outbox, que so existe depois de resolvido.
+app.Services.GetRequiredService<OutboxMetrics>();
 
 app.UseCorrelation();
 app.UseLogCorrelation();
