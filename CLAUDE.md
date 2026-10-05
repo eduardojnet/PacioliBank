@@ -76,6 +76,7 @@ tests/
 db/migrations/                     esquema, papeis e privilegios, em migracoes numeradas
 db/seed/                           contas de exemplo, so no ambiente local
 docs/                              ESTADO, ADRs, diagramas, specs, convencoes, kanban
+.github/workflows/ci.yml           CI: build, testes, Insomnia, gitleaks; acoes fixadas por SHA
 ```
 
 ---
@@ -104,8 +105,8 @@ docs/                              ESTADO, ADRs, diagramas, specs, convencoes, k
 
 ## Pendência imediata
 
-Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.1, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002) e 28 (analisadores em `Recommended`, L-06) concluídos. A Fazer está vazia: o próximo cartão sai do Backlog, por decisão do usuário. A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
+Fila ativa 19 a 25 concluída, com os subníveis 18.1, 19.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2, e todos os requisitos obrigatórios do enunciado atendidos: endpoints de negócio no ar, modelo C4 em Mermaid em `docs/diagrams/`, especificações e ADRs coerentes com o código (EF 1.4, ENF 1.2, BDD 1.1), e painel de evidência na raiz da API. Cards 26 (NetArchTest), 27 (migrações DbUp em passo separado, revisão do ADR-0002), 28 (analisadores em `Recommended`, L-06) e 31 (CI no GitHub Actions) concluídos. Em A Fazer: 31.1 (auditoria de dependências no CI) e 31.2 (cobertura do domínio abaixo da RNF-036, lacuna L-13, espera decisão do usuário). A ordem é a do quadro. O quadro no TickTick é a fonte de toda atividade: trabalho sem cartão não começa. Ver `docs/ESTADO.md §7`.
 
-Nenhuma lacuna ALTA aberta: a L-10 foi corrigida no card 19.4, com revisão do ADR-0006.
+Nenhuma lacuna ALTA aberta. Aberta: L-13 (MÉDIA), a ENF declarava a RNF-036 realizada sem medição; medida, a cobertura do domínio é 74,9%.
 
 Antes de começar, rode `dotnet test`. Esperado: 131 passando, sem avisos.

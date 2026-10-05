@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-04 · **Cartões:** 49 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
+**Data:** 2026-10-04 · **Cartões:** 51 · **Sincronizado com o TickTick em:** 2026-10-04, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 7 | 32 a 38 |
-| A Fazer | 1 | 31 |
+| A Fazer | 2 | 31.1, 31.2 |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 2 | 29, 30 |
-| Concluído | 39 | 01 a 28, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
+| Concluído | 40 | 01 a 28 e 31, mais 18.1, 19.2, 19.3, 19.4, 19.5, 20.1, 21.1, 21.2, 24.1 e 24.2 |
 
 ---
 
@@ -94,35 +94,36 @@ EXIGE: novo ADR e revisão do ADR-0001 e do ADR-0005 (ordenação determinístic
 
 ## A Fazer
 
-### 31. Configurar CI no GitHub Actions
+### 31.1. Auditar dependências vulneráveis no CI
 
 `prioridade: Média` · `infra`
 
-Pipeline executando build sem avisos, as cinco camadas de teste, cobertura e varredura de segredos.
-
-VALOR NO DESAFIO: badge verde no README é evidência visível de que o critério de bloqueio do ADR-0010 é real e não apenas declarado.
-
---- ATUALIZAÇÃO 04/10/2026, ao entrar em A Fazer (append-only) ---
-
-MOTIVO DA ENTRADA: decisão do usuário, com A Fazer vazia após o card 28. Primeiro item da lista 'com mais tempo' do README que não depende de terceiros.
+DESCOBERTO NO CARD 31 (04/10/2026). O ADR-0010 lista 'vulnerabilidade de severidade alta em dependência' no critério de bloqueio, o ADR-0009 pede auditoria de pacotes no pipeline e a RNF-026 exige zero alertas altos ou críticos. O CI do card 31 não faz essa auditoria.
 
 CRITÉRIO:
-- Workflow em .github/workflows/, disparado em push e pull request para main
-- Build com TreatWarningsAsErrors e AnalysisMode=Recommended: aviso reprova o pipeline
-- As cinco camadas: domínio, arquitetura, contrato, integração (Testcontainers com o Docker do runner) e a coleção do Insomnia pelo inso contra o docker compose
-- Cobertura coletada (coverlet, já no projeto) e publicada como artefato. Sem limite mínimo: o número é informativo, e a força das asserções é assunto do card 36
-- Varredura de segredos no histórico; ações de terceiros fixadas por SHA
-- Badge no README
-- PODER DE DETECÇÃO medido: o pipeline fica vermelho num ramo com um aviso de compilação introduzido de propósito, e verde de novo sem ele
-- Execução verde registrada em main, com o link da execução no cartão
+- Passo no CI que lista pacotes vulneráveis, inclusive transitivos (dotnet list package --vulnerable --include-transitive), e reprova com severidade alta ou crítica
+- Poder de detecção medido: reprova com um pacote sabidamente vulnerável, num ramo de prova apagado depois
+- Resultado atual registrado (quais alertas existem hoje, se existirem)
+- ENF §11 e ESTADO atualizados: RNF-026 passa a realizada no CI
 
-[NVI] Tempo de execução no runner e disponibilidade do Docker para o Testcontainers no ubuntu-latest: confirmar na primeira execução.
+### 31.2. Tratar a cobertura do domínio abaixo da RNF-036 (L-13)
+
+`prioridade: Média` · `codigo` · `doc`
+
+DESCOBERTO NO CARD 31 (04/10/2026). LACUNA L-13. A ENF §11 declara a RNF-036 (cobertura de linha >= 85% no projeto de domínio) como 'realizada no código', e o ADR-0010 a põe no critério de bloqueio. Nunca tinha sido medida. Medida em 04/10/2026 no projeto PacioliBank.Ledger: 56,8% só com os testes de domínio, 49,9% só com os de integração, 74,9% somando os dois.
+
+DECISÃO DO USUÁRIO, antes de executar:
+(a) escrever testes até atingir 85% e ligar o limite no CI; ou
+(b) revisar a meta no ADR-0010 e na ENF, com alternativa rejeitada, e ligar o limite revisado; ou
+(c) manter a cobertura informativa e declarar a RNF-036 como especificada, não realizada.
+
+CRITÉRIO (qualquer opção): ENF §11 deixa de afirmar o que não é verdade; o número medido fica registrado com o método; se houver limite, o CI reprova abaixo dele (medido).
 
 ---
 
 ## Em Andamento
 
-_Vazia. O próximo é o 31, que entra aqui ao abrir o bloco de trabalho (PROCESSO-KANBAN §5)._
+_Vazia. O 31 foi concluído; o próximo é o 31.1._
 
 ---
 
@@ -752,3 +753,50 @@ CRITÉRIO ATENDIDO:
 - L-06 encerrada; ESTADO, README, CLAUDE.md, ADR-0002 e KANBAN atualizados
 
 ACHADO NO CAMINHO: as contagens de teste do ADR-0010 tinham ficado desatualizadas no card 27 (50 de integração, 5 regras). Corrigidas neste commit e registradas no histórico do ESTADO.
+
+### 31. Configurar CI no GitHub Actions
+
+`prioridade: Média` · `infra`
+
+Pipeline executando build sem avisos, as cinco camadas de teste, cobertura e varredura de segredos.
+
+VALOR NO DESAFIO: badge verde no README é evidência visível de que o critério de bloqueio do ADR-0010 é real e não apenas declarado.
+
+--- ATUALIZAÇÃO 04/10/2026, ao entrar em A Fazer (append-only) ---
+
+MOTIVO DA ENTRADA: decisão do usuário, com A Fazer vazia após o card 28. Primeiro item da lista 'com mais tempo' do README que não depende de terceiros.
+
+CRITÉRIO:
+- Workflow em .github/workflows/, disparado em push e pull request para main
+- Build com TreatWarningsAsErrors e AnalysisMode=Recommended: aviso reprova o pipeline
+- As cinco camadas: domínio, arquitetura, contrato, integração (Testcontainers com o Docker do runner) e a coleção do Insomnia pelo inso contra o docker compose
+- Cobertura coletada (coverlet, já no projeto) e publicada como artefato. Sem limite mínimo: o número é informativo, e a força das asserções é assunto do card 36
+- Varredura de segredos no histórico; ações de terceiros fixadas por SHA
+- Badge no README
+- PODER DE DETECÇÃO medido: o pipeline fica vermelho num ramo com um aviso de compilação introduzido de propósito, e verde de novo sem ele
+- Execução verde registrada em main, com o link da execução no cartão
+
+[NVI] Tempo de execução no runner e disponibilidade do Docker para o Testcontainers no ubuntu-latest: confirmar na primeira execução.
+
+--- ENTREGA 04/10/2026 (append-only) ---
+
+ENTREGUE: .github/workflows/ci.yml com três jobs, em push de qualquer ramo e pull request para main:
+- Build em Release (aviso é erro, modo Recommended) e testes de domínio, arquitetura, contrato e integração (Testcontainers no Docker do runner); resultados e cobertura publicados como artefato
+- Coleção do Insomnia pelo inso 13.3.0 contra o docker compose, com logs do ambiente em caso de falha
+- gitleaks 8.30.1 no histórico completo
+- Ações fixadas por SHA; inso e gitleaks conferidos por sha256 (digest oficial de cada release)
+- .gitleaksignore com 1 falso positivo (UUID de exemplo de Idempotency-Key na EF §8, em 2 commits), ignorado pela impressão digital e não pela regra
+- Badge no README
+
+CRITÉRIO ATENDIDO:
+- Verde em main: https://github.com/eduardojnet/PacioliBank/actions/runs/37245543804 (cerca de 1 minuto: build e testes 42 s, Insomnia 52 s, segredos 4 s, em paralelo)
+- Poder de detecção: ramo ci/prova-de-deteccao com CS0219 plantado ficou vermelho (https://github.com/eduardojnet/PacioliBank/actions/runs/37245626646), com a anotação na linha certa; o job do Insomnia também reprovou, porque a imagem compila com a mesma regra. Ramo apagado depois
+- gitleaks: acusou um segredo plantado num repositório temporário (código de saída 1)
+- Verde de novo em main depois da correção abaixo
+- [NVI] resolvido: Docker do ubuntu-latest atende o Testcontainers; tempo total por volta de 1 minuto
+
+CORRIGIDO NO CAMINHO: na prova, o passo de publicar cobertura acusava uma segunda falha por falta de arquivos quando o build reprovava; passou a rodar só quando os testes rodaram.
+
+DESCOBERTO, virou card (regra 10):
+- 31.1: auditoria de dependências vulneráveis (RNF-026, ADR-0009, critério de bloqueio do ADR-0010), que o CI ainda não faz
+- 31.2 / L-13: a ENF §11 dizia a RNF-036 (cobertura >= 85% no domínio) 'realizada'; nunca tinha sido medida. Medida: 56,8% (testes de domínio), 49,9% (integração), 74,9% (os dois). ENF corrigida para 1.2; a resolução depende de decisão do usuário

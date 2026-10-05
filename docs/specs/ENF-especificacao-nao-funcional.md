@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 3 de 3 do pacote de especificação
-**Versão:** 1.1
-**Data:** 2026-10-02
+**Versão:** 1.2
+**Data:** 2026-10-04
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -299,9 +299,9 @@ O enunciado declara que não é necessário esgotar as possibilidades técnicas.
 |---|---|---|
 | Desempenho | RNF-003, RNF-006 (snapshot e limite de replay) | RNF-001, RNF-002, RNF-005, RNF-007 (exigem ambiente de carga) |
 | Resiliência | RNF-010, RNF-011, RNF-013, RNF-016 | RNF-014, RNF-015, RNF-017, RNF-018 |
-| Segurança | RNF-020, RNF-021, RNF-022, RNF-024, RNF-025 | RNF-023, RNF-026, RNF-027 |
+| Segurança | RNF-020, RNF-021, RNF-022, RNF-024 (varredura de segredos no CI, card 31), RNF-025 | RNF-023, RNF-026 (card 31.1), RNF-027 |
 | Observabilidade | RNF-031, RNF-032 | RNF-030, RNF-033 |
-| Manutenibilidade | RNF-034, RNF-035, RNF-036, RNF-037, RNF-038, RNF-039 | n/a |
+| Manutenibilidade | RNF-034, RNF-035, RNF-037, RNF-038, RNF-039 | RNF-036: cobertura coletada no CI, mas abaixo da meta e sem limite que bloqueie (lacuna L-13, card 31.2) |
 
 Declarar essa separação é parte da entrega. Apresentar requisito especificado como se estivesse implementado seria, em contrato real, informação incorreta prestada ao cliente.
 
@@ -347,3 +347,4 @@ Esta seção é a ponte para `docs/adr/`. Cada item exige decisão formalizada e
 |---|---|---|---|
 | 1.0 | 2026-10-02 | Eduardo J. G. do Carmo | Versão inicial inferida a partir do enunciado do desafio |
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | R-05: `eventId` substituído por `message_id`, o identificador efetivo (ADR-0008). R-06: descrevia acoplamento por bloqueio consultivo, opção **rejeitada** no ADR-0005; corrigido para o mecanismo adotado, bloqueio de linha, mais o `SKIP LOCKED` do despachante (card 21.1) |
+| 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §11: RNF-036 movida de "realizado" para "apenas especificado". Nunca tinha sido medida; medida no card 31, a cobertura de linha do projeto de domínio é 56,8% com os testes de domínio e 74,9% somando os de integração, abaixo dos 85% (lacuna L-13). RNF-024 passa a verificada no CI |

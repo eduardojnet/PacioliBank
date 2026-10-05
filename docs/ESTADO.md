@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-03 (vigésima oitava revisão)
+**Última atualização:** 2026-10-04 (vigésima nona revisão)
 **Build:** verde, 0 avisos, 0 erros, os 6 projetos da solução, analisadores em modo `Recommended` (`dotnet build`, verificado em 2026-10-03)
 **Testes:** 131 passando (66 de domínio, 6 de arquitetura, 2 de contrato, 57 de integração), 0 falhando (`dotnet test`, verificado em 2026-10-03)
 **Verificação manual:** `docker compose up --build` servindo os 5 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19).
@@ -157,6 +157,12 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
+### Integração contínua (`.github/workflows/ci.yml`, card 31)
+
+A cada push, em qualquer ramo, e a cada pull request para `main`, três jobs em paralelo, em cerca de um minuto: build em Release com aviso tratado como erro e os quatro projetos de teste (integração com Testcontainers no Docker do runner), com resultados e cobertura publicados como artefato; a coleção do Insomnia pelo `inso` contra o `docker compose`; e o `gitleaks` no histórico completo. Ações fixadas por SHA; binários conferidos por sha256. Poder de detecção medido: um aviso plantado num ramo deixou o pipeline vermelho, com a anotação na linha. Um falso positivo do `gitleaks` está ignorado pela impressão digital em `.gitleaksignore`.
+
+Do critério de bloqueio do ADR-0010, faltam no CI a cobertura mínima (L-13) e a auditoria de dependências (card 31.1).
+
 ### Especificações e diagramas
 
 [BDD](./specs/BDD-comportamento.md) com 10 funcionalidades e ~55 cenários Gherkin, [EF](./specs/EF-especificacao-funcional.md) e [ENF](./specs/ENF-especificacao-nao-funcional.md), todas com rastreabilidade cruzada por IDs.
@@ -180,6 +186,8 @@ Declarar isto é parte da entrega. Apresentar requisito especificado como implem
 | Conciliação ledger × outbox (RNF-033) | Não implementada |
 | Regra de compatibilidade entre migração e versão da API | Não escrita. Com uma instância e o migrador antes da API, a janela é nula; com várias instâncias, a migração precisa ser compatível com a versão anterior (expandir antes, contrair depois). [NVI] Ver a revisão do ADR-0002 |
 | Testes de carga | Especificados na ENF §11, fora do escopo do desafio |
+| Auditoria de dependências vulneráveis no CI (RNF-026) | Não implementada; card 31.1 |
+| Cobertura mínima do domínio (RNF-036) | Não atendida: 74,9% medidos, sem limite no CI (L-13, card 31.2) |
 
 ---
 
@@ -297,6 +305,16 @@ Ao escrever os endpoints, seis pontos não tinham resposta na EF. Cada um recebe
 
 **Decidido pelo usuário e aplicado:** chave composta `fk_outbox_entry (account_id, sequence)` para `ledger_entries`. Registrada no ADR-0008 com três alternativas rejeitadas (chave simples para `accounts`; coluna `entry_id`; manter sem chave). Teste novo, com o papel da aplicação, verifica a recusa de mensagem sem lançamento; reprovou antes da mudança. ERD atualizado e reconferido contra o catálogo (6 FK). **Ambiente local:** mudança de esquema exige `docker compose down -v`.
 
+### L-13: RNF-036 declarada realizada sem nunca ter sido medida (MÉDIA, aberta em 2026-10-04)
+
+A ENF §11 listava a RNF-036 (cobertura de linha ≥ 85% no projeto de domínio) como "realizada no código", e o ADR-0010 a põe no critério de bloqueio. Ninguém tinha medido. Medida no card 31, no projeto `PacioliBank.Ledger`, com o coverlet: **56,8%** só com os testes de domínio, **49,9%** só com os de integração, **74,9%** somando os dois (união das linhas cobertas).
+
+**Já feito:** ENF corrigida para a versão 1.2 (RNF-036 como apenas especificada); nota de estado no ADR-0010; README declara a meta como não atendida.
+
+**Pendente, card 31.2, por decisão do usuário:** (a) escrever testes até 85% e ligar o limite no CI; (b) revisar a meta no ADR-0010 e na ENF, com alternativa rejeitada; ou (c) manter a cobertura informativa e a RNF-036 como especificada.
+
+**Severidade MÉDIA:** não há defeito de comportamento; há uma afirmação falsa sobre verificação, do mesmo tipo da L-09.
+
 ### L-06: `AnalysisMode` ainda em `Default` (ENCERRADA em 2026-10-03, card 28)
 
 O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build está limpo há três ciclos. Elevar é um commit próprio e pequeno.
@@ -314,7 +332,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 49 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 51 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -353,7 +371,9 @@ Previstos por ADR, que entram com a fila ativa vazia:
 
 Trazidos do Backlog por decisão do usuário, com critério escrito ao entrar:
 
-12. **[31] CI no GitHub Actions** (ADR-0010), em A Fazer desde 2026-10-04
+12. ~~**[31] CI no GitHub Actions** (ADR-0010)~~ concluído em 2026-10-04
+   - **[31.1] Auditoria de dependências vulneráveis no CI** (RNF-026), descoberto no 31
+   - **[31.2] Cobertura do domínio abaixo da RNF-036** (L-13), descoberto no 31; espera decisão do usuário
 
 ---
 
@@ -471,3 +491,4 @@ confirmação.
 | 2026-10-02 | Card 27 concluído: migrações DbUp em projeto próprio (`PacioliBank.Migrations`), executadas num passo separado do `docker compose` com o papel de migração; a API continua só com `SELECT, INSERT` (ADR-0009). Critério do card revisado (opção b, decisão do usuário): "aplicadas na subida da aplicação" exigiria dar à API a credencial de migração. Revisão do ADR-0002 com 4 alternativas rejeitadas. `db/init/` substituído por `db/migrations/` e `db/seed/`; C2 ganha o migrador. 7 testes de integração novos (reprovaram com o esboço) e 1 regra de arquitetura; poder de detecção medido em duas mutações. No Docker: do zero, migrador sai com 0 e API saudável; recriado sobre o mesmo volume, nada reaplicado e dado preservado; painel e Insomnia (43/43) verdes. Transição: um último `down -v` local. 124 verdes |
 | 2026-10-03 | Card 28 concluído: analisadores do .NET elevados a `Recommended`. O build reprovou com 4 regras (CA1716, CA1862, CA1711, CA1859), todas corrigidas no código, nenhuma suprimida; teste novo fixou o comportamento de `Currency.TryFromCode` antes da troca. L-06 encerrada; nenhuma lacuna aberta. Imagens Docker compilam no modo novo; filtro de período do extrato conferido contra a API. Contagens do ADR-0010 corrigidas: tinham ficado desatualizadas no card 27. 131 verdes |
 | 2026-10-04 | Card 31 (CI no GitHub Actions) movido do Backlog para A Fazer por decisão do usuário, com critério de conclusão escrito ao entrar (cinco camadas de teste, cobertura informativa, varredura de segredos, poder de detecção medido) |
+| 2026-10-04 | Card 31 concluído: CI no GitHub Actions com três jobs (build e testes, coleção do Insomnia, `gitleaks`), ações fixadas por SHA, verde em `main` em cerca de um minuto; vermelho num ramo com aviso plantado (prova apagada depois). Descobertos e viraram cards: 31.1 (auditoria de dependências) e 31.2, com a lacuna L-13: a ENF dava a RNF-036 por realizada, e a cobertura medida do domínio é 74,9%. ENF corrigida para 1.2 |

@@ -256,6 +256,9 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
 | Analisadores do .NET em modo `Recommended`, com aviso tratado como erro | Implementado |
+| CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
+| Auditoria de dependências vulneráveis no CI (RNF-026) | Pendente (card 31.1) |
+| Cobertura de linha do domínio ≥ 85% (RNF-036) | **Não atendida: 74,9% medidos, sem limite no CI** (lacuna L-13, card 31.2) |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
@@ -267,7 +270,7 @@ Em ordem de prioridade, com o motivo de cada posição.
 1. **Autenticação e autorização por titularidade (RF-009).** É a maior distância entre o especificado e o implementado, e a única que impediria uso real. O desenho está pronto no ADR-0009: JWT validado contra o provedor de identidade, titularidade conferida no domínio e não só na borda, `404` para conta de terceiro para não revelar existência.
 2. **Barramento de eventos real e expurgo da outbox (ADR-0008).** O despachante já lê a outbox com `FOR UPDATE SKIP LOCKED` e publica com recuo exponencial, mas publica em log: falta ligar a plataforma de mensageria do banco, expurgar as mensagens publicadas e conciliar ledger e outbox (RNF-033).
 3. **Regra de compatibilidade entre migração e versão da API.** As migrações já rodam em passo separado (card 27), mas com várias instâncias a migração precisa ser compatível com a versão anterior enquanto as duas coexistem (expandir antes, contrair depois). Hoje há uma instância só, e a regra não está escrita.
-4. **CI no GitHub Actions** com build sem avisos, as camadas de teste e varredura de segredos. Transforma o critério de bloqueio do ADR-0010 de declarado em verificado a cada commit.
+4. **Completar o critério de bloqueio no CI (ADR-0010).** O CI já roda build, testes e varredura de segredos a cada push (card 31); faltam a auditoria de dependências e a cobertura mínima do domínio, hoje abaixo da meta (L-13).
 5. **Interface de exploração do OpenAPI**, que já é gerado: custo baixo, um pacote a mais.
 6. **Executar os `.feature` do BDD com Reqnroll.** Os cenários foram traduzidos para testes xUnit; a tradução pode divergir da especificação. O ADR-0010 previa a execução direta.
 7. **Observabilidade (OpenTelemetry, Serilog),** com uma métrica de maior valor diagnóstico: a taxa de consultas calculadas pelo ledger em vez do snapshot, que cresce antes de a latência degradar.
