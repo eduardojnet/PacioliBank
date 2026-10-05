@@ -45,6 +45,20 @@ services:
     networks:
       - pacioli-net
 
+  # Painel de observabilidade (ADR-0012, card 33.1): recebe tracos e metricas
+  # por OTLP e os mostra em http://localhost:18888. Somente ambiente local:
+  # autenticacao desligada de proposito, e nada aqui e dado de producao.
+  pacioli-observability:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.0
+    container_name: pacioli-observability
+    environment:
+      DASHBOARD__FRONTEND__AUTHMODE: Unsecured
+      DASHBOARD__OTLP__AUTHMODE: Unsecured
+    ports:
+      - "18888:18888"
+    networks:
+      - pacioli-net
+
   pacioli-api:
     build:
       context: .
@@ -58,6 +72,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Ledger: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_runtime;Password=${POSTGRES_PASSWORD:-pacioli_local_dev};GSS Encryption Mode=Disable"
+      # Tracos e metricas por OTLP para o painel. Sem esta variavel, nada e exportado.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://pacioli-observability:18889
     ports:
       - "8080:8080"
     networks:

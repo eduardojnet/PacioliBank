@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi;
 using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using PacioliBank.Api.Endpoints;
 using PacioliBank.Api.Events;
 using PacioliBank.Api.Observability;
@@ -30,10 +33,43 @@ builder.Services.AddSerilog((services, log) => log
     .Enrich.FromLogContext()
     .WriteTo.Console(new MaskingJsonFormatter()));
 
-builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+// Rastreia so o comando executado dentro de um traco existente (requisicao ou
+// caso de uso). O despachante de outbox consulta o banco a cada segundo, fora
+// de qualquer requisicao: sem o filtro, cada consulta seria um traco de um
+// span so (ADR-0012).
+builder.Services.AddSingleton(_ =>
+{
+    var dataSource = new NpgsqlDataSourceBuilder(connectionString);
+    dataSource.ConfigureTracing(tracing => tracing
+        .ConfigureCommandFilter(_ => Activity.Current is not null)
+        .ConfigureBatchFilter(_ => Activity.Current is not null)
+        .EnablePhysicalOpenTracing(false));
+    return dataSource.Build();
+});
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ILedgerStore, PostgresLedgerStore>();
-builder.Services.AddSingleton<ILedgerService, LedgerService>();
+// O caso de uso e envolvido por um decorador de observabilidade, que abre o
+// span e registra as metricas sem tocar no nucleo (ADR-0012, revisao 33.1).
+builder.Services.AddSingleton<LedgerService>();
+builder.Services.AddSingleton<ILedgerService>(services => new ObservedLedgerService(services.GetRequiredService<LedgerService>()));
+
+// Rastreamento ponta a ponta (RNF-030, ADR-0012): requisicao HTTP, caso de uso
+// e comandos do PostgreSQL no mesmo traco. Exporta por OTLP so quando o destino
+// esta configurado (OTEL_EXPORTER_OTLP_ENDPOINT); sem ele, nada sai e nada quebra.
+// O caminho da requisicao leva o identificador da conta: vai mascarado, pelo
+// mesmo criterio do log (ADR-0009 secao 5).
+var tracing = builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("pacioli-ledger-api"))
+    .WithTracing(traces => traces
+        .AddSource(LedgerTelemetry.Name)
+        .AddAspNetCoreInstrumentation(options => options.EnrichWithHttpRequest = (activity, request) =>
+            activity.SetTag("url.path", MaskingJsonFormatter.MaskText(request.Path.Value ?? string.Empty)))
+        .AddNpgsql());
+
+if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+{
+    tracing.WithTracing(traces => traces.AddOtlpExporter());
+}
 
 // Despachante de outbox (ADR-0008), no mesmo processo por decisao operacional.
 // O publicador registra em log ate a plataforma de mensageria ser definida.
