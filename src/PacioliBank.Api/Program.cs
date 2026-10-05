@@ -3,9 +3,11 @@ using Microsoft.OpenApi;
 using Npgsql;
 using PacioliBank.Api.Endpoints;
 using PacioliBank.Api.Events;
+using PacioliBank.Api.Observability;
 using PacioliBank.Events;
 using PacioliBank.Ledger.Application;
 using PacioliBank.Ledger.Persistence;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,18 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Ledger")
     ?? throw new InvalidOperationException(
         "Connection string 'Ledger' ausente. Defina ConnectionStrings__Ledger ou appsettings.");
+
+// Log estruturado em JSON na saida padrao, uma linha por entrada, com a
+// correlacao da requisicao e mascarado (RNF-031, ADR-0009 secao 5, ADR-0012).
+// Os niveis vem da secao Serilog da configuracao: com o Serilog no lugar da
+// fabrica de log, a secao Logging deixa de valer. O hosting fica em Warning:
+// suas linhas de inicio e fim sairiam antes da correlacao existir.
+// ReadFrom.Services deixa os testes acrescentarem um destino.
+builder.Services.AddSerilog((services, log) => log
+    .ReadFrom.Configuration(builder.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new MaskingJsonFormatter()));
 
 builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
 builder.Services.AddSingleton(TimeProvider.System);
@@ -83,6 +97,13 @@ builder.Services.AddExceptionHandler<LedgerProblems>();
 var app = builder.Build();
 
 app.UseCorrelation();
+app.UseLogCorrelation();
+
+// Uma linha por requisicao: metodo, caminho, status e duracao, ja com a
+// correlacao. Substitui as linhas de inicio e fim do hosting, que sairiam
+// antes da correlacao existir.
+app.UseSerilogRequestLogging();
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 

@@ -35,7 +35,10 @@ services:
       pacioli-db:
         condition: service_healthy
     environment:
-      ConnectionStrings__Migrator: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_migrator;Password=${POSTGRES_PASSWORD:-pacioli_local_dev}"
+      # GSS Encryption Mode=Disable: sem Kerberos no ambiente local; sem isso,
+      # o Npgsql tenta carregar libgssapi, ausente na imagem, e o sistema
+      # escreve um aviso em texto livre no meio do log JSON (card 33).
+      ConnectionStrings__Migrator: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_migrator;Password=${POSTGRES_PASSWORD:-pacioli_local_dev};GSS Encryption Mode=Disable"
       # Contas de exemplo do README e do painel. So no ambiente local.
       PACIOLI_SEED_LOCAL: "true"
     restart: "no"
@@ -54,7 +57,7 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Ledger: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_runtime;Password=${POSTGRES_PASSWORD:-pacioli_local_dev}"
+      ConnectionStrings__Ledger: "Host=pacioli-db;Port=5432;Database=pacioli;Username=pacioli_runtime;Password=${POSTGRES_PASSWORD:-pacioli_local_dev};GSS Encryption Mode=Disable"
     ports:
       - "8080:8080"
     networks:

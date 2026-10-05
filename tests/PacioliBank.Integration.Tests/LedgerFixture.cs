@@ -35,10 +35,15 @@ public sealed class LedgerFixture : IAsyncLifetime
         .Build();
 
     private NpgsqlDataSource? _runtimeDataSource;
+    private string? _runtimeConnectionString;
 
     /// <summary>Conexao com o papel da aplicacao, sem UPDATE nem DELETE no ledger.</summary>
     public NpgsqlDataSource RuntimeDataSource =>
         _runtimeDataSource ?? throw new InvalidOperationException("A fixture nao foi inicializada.");
+
+    /// <summary>Connection string do papel da aplicacao, para subir a API real nos testes.</summary>
+    public string RuntimeConnectionString =>
+        _runtimeConnectionString ?? throw new InvalidOperationException("A fixture nao foi inicializada.");
 
     /// <summary>Conexao administrativa, usada apenas para preparar massa de teste.</summary>
     public string MigratorConnectionString => _container.GetConnectionString();
@@ -59,6 +64,7 @@ public sealed class LedgerFixture : IAsyncLifetime
             Password = LocalPassword,
         };
 
+        _runtimeConnectionString = runtime.ConnectionString;
         _runtimeDataSource = NpgsqlDataSource.Create(runtime.ConnectionString);
     }
 
