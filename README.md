@@ -210,11 +210,11 @@ curl -i -X POST $A/entries/<entryId>/reversals \
 
 [`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 18 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 52 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, transferência, seu reenvio e a transferência para a própria conta, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`, e a `1111…` como destino da transferência.
 
-- **No aplicativo:** *Import*, escolher o arquivo, e *Run* na coleção
+- **No aplicativo:** *Import*, escolher o arquivo, selecionar o ambiente **Local** e *Run* na coleção. As variáveis ficam no sub-ambiente Local, e não no *Base Environment*: sem ambiente selecionado, as requisições não resolvem o endereço
 - **Pela linha de comando**, com o [`inso`](https://github.com/Kong/insomnia/releases) (verificado na versão 13.3.0), o mesmo motor do aplicativo:
 
 ```bash
-inso run collection wrk_pacioli_ledger -w insomnia/pacioli-ledger.insomnia.json --env env_pacioli_base
+inso run collection wrk_pacioli_ledger -w insomnia/pacioli-ledger.insomnia.json --env env_pacioli_local
 ```
 
 O código de saída é 0 só com todos os testes verdes, então o comando serve para CI.

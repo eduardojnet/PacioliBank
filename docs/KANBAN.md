@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-05 · **Cartões:** 61 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
+**Data:** 2026-10-05 · **Cartões:** 64 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 0 | |
-| A Fazer | 0 | |
+| A Fazer | 1 | 44 (ação no aplicativo, com o usuário) |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 61 | 01 a 34, 36 a 43, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
+| Concluído | 63 | 01 a 34, 36 a 43, 45, 46, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
 
 ---
 
@@ -1224,3 +1224,25 @@ ENTREGUE: §3 registra a reversão (não será restaurado; motivo não declarado
 ENTREGUE: `docs/REGRAS.md` com as dez regras (texto de `6d2e2d8~1`); citações repontadas em PROCESSO-KANBAN (2), diagrams/README, DECISOES-EM-RESUMO e ESTADO; link quebrado removido; "nove regras" corrigido para dez; README lista o arquivo. L-17 encerrada.
 
 VERIFICAÇÃO: busca por `CLAUDE` nos documentos vivos (README, PROCESSO-KANBAN, diagrams, DECISOES-EM-RESUMO, adr, specs) sem resultado; no ESTADO, só registro histórico e a decisão da §3.
+
+### 44. Apagar a requisição vazia "New Request" do workspace do Insomnia
+
+`prioridade: Baixa` · `teste` · **A Fazer**
+
+SITUAÇÃO: a requisição vazia (GET, sem URL) existe só no workspace importado no aplicativo; o arquivo versionado não a contém. Roda antes de tudo no runner e derruba a execução.
+
+PENDENTE: remoção pela interface do aplicativo (botão direito, *Delete*), com o usuário. O banco local do aplicativo não é editado com ele aberto.
+
+### 45. Criar o sub-ambiente "Local" na coleção do Insomnia
+
+`prioridade: Baixa` · `teste`
+
+ENTREGUE: `env_pacioli_local`, nome `Local`, filho do *Base Environment*, com as 4 variáveis; base vazio. CI e README com `--env env_pacioli_local`; README manda selecionar o `Local` no aplicativo.
+
+VERIFICADO em 06/10/2026: `inso` 13.3.0 (SHA-256 conferido) contra o `docker compose`, 52/52 duas vezes, código 0; com `--env env_pacioli_base`, reprova com código 1. No aplicativo com o `Local`: [NVI].
+
+### 46. Registrar no ESTADO §4 a execução da coleção do Insomnia no aplicativo, em 06/10
+
+`prioridade: Baixa` · `documentacao`
+
+ENTREGUE: §4 registra a execução no runner do Insomnia 13.1.0, pelo usuário, às 01:59 UTC de 06/10 contra o `docker compose`: 18 requisições, 52 testes verdes. Horário conferido no banco local do aplicativo; resultado verde pelo relato do usuário.

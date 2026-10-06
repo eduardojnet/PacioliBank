@@ -17,6 +17,17 @@
       "_type": "environment",
       "parentId": "wrk_pacioli_ledger",
       "name": "Base Environment",
+      "data": {},
+      "dataPropertyOrder": null,
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "env_pacioli_local",
+      "_type": "environment",
+      "parentId": "env_pacioli_base",
+      "name": "Local",
       "data": {
         "base_url": "http://localhost:8080",
         "conta": "22222222-2222-2222-2222-222222222222",
