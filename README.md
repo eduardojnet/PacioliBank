@@ -8,40 +8,131 @@ O nome é uma referência a Luca Pacioli, que codificou o método das partidas d
 
 ---
 
-## Em cinco minutos
+## Rodar localmente
 
-Pré-requisito único: Docker com Compose.
+### O que você precisa
+
+**Docker com Compose. Só isso.**
+
+Não precisa instalar .NET, nem PostgreSQL, nem nada mais. Tudo roda dentro de containers.
+
+### O que vai acontecer
+
+Quatro containers sobem, **nesta ordem, um esperando o outro**:
+
+```
+pacioli-db  ->  pacioli-migrations  ->  pacioli-api
+(o banco)       (cria as tabelas         (a API)
+                 e termina)
+
+pacioli-observability (traços e métricas, sobe em paralelo)
+```
+
+O migrador roda, cria as tabelas, e **sai**. A API só começa depois que ele terminou sem erro. É por isso que a primeira subida demora mais: ela é uma fila, não uma corrida.
+
+---
+
+### Passo 1 de 4: baixar o projeto
 
 ```bash
 git clone https://github.com/eduardojnet/PacioliBank.git
 cd PacioliBank
-docker compose up --build -d
-curl http://localhost:8080/health/ready        # {"status":"ready"}
 ```
 
-Os traços de cada requisição (HTTP, caso de uso e PostgreSQL) e as métricas de negócio aparecem no painel de observabilidade em **http://localhost:18888**, só no ambiente local.
+### Passo 2 de 4: subir tudo
 
-O banco é criado, o migrador aplica as migrações pendentes e termina, e só então a API sobe. Os papéis com privilégio mínimo são provisionados e cinco contas de exemplo, ativas e em BRL, já existem:
+```bash
+docker compose up --build -d
+```
 
-| Conta | Uso sugerido |
+Na primeira vez leva alguns minutos: as imagens são construídas. Nas seguintes, segundos.
+
+O `-d` solta o terminal. Para acompanhar o que está acontecendo:
+
+```bash
+docker compose logs -f pacioli-api
+```
+
+### Passo 3 de 4: confirmar que está no ar
+
+```bash
+curl http://localhost:8080/health/ready
+```
+
+**Esperado:** `{"status":"ready"}`
+
+Se respondeu isso, a API está no ar **e conversando com o banco**. São duas verificações diferentes, e esta é a que importa:
+
+| Rota | O que ela prova |
 |---|---|
-| `11111111-1111-1111-1111-111111111111` | Exemplos abaixo |
-| `22222222-2222-2222-2222-222222222222` | Testes livres |
+| `/health/live` | O processo está de pé. Não consulta nada |
+| `/health/ready` | O processo está de pé **e** o PostgreSQL responde |
+
+### Passo 4 de 4: fazer um lançamento e ver o saldo
+
+Cinco contas já existem, ativas e em BRL. **Não há endpoint de criação de conta**: criar conta é do Cadastro, que não faz parte deste serviço.
+
+| Conta | Para quê |
+|---|---|
+| `11111111-1111-1111-1111-111111111111` | Os exemplos abaixo |
+| `22222222-2222-2222-2222-222222222222` | Seus testes livres |
 | `33333333-…`, `44444444-…`, `55555555-…` | Reservadas ao [painel de evidência](#painel-de-evidência) |
 
-Registrar um crédito e consultar a posição:
+Guarde o endereço da conta numa variável, para os comandos ficarem curtos:
 
 ```bash
 A=http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111
+```
 
+**Registre um crédito de 150,00:**
+
+```bash
 curl -i -X POST $A/credits \
   -H 'Idempotency-Key: credito-001' -H 'Content-Type: application/json' \
   -d '{"amount":"150.00","currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
+```
 
+**Esperado:** `201 Created`, com o lançamento no corpo.
+
+**Consulte a posição:**
+
+```bash
 curl $A/balance
 ```
 
-O primeiro comando responde `201 Created` com o lançamento; o segundo, a posição `"150.00"`.
+**Esperado:** `"150.00"`.
+
+Pronto. A aplicação está rodando e você acabou de usá-la.
+
+**Duas coisas a notar no que você digitou**, porque não são detalhe:
+
+- **O valor é texto** (`"150.00"`), não número JSON. Número JSON passa por ponto flutuante em muitos clientes, e arredondamento silencioso em livro-razão é defeito financeiro
+- **O `Idempotency-Key` é obrigatório.** Repita o mesmo comando com a mesma chave: vem `200`, o cabeçalho `Idempotency-Replayed: true`, e o mesmo corpo. Nenhum lançamento novo. É assim que uma rede instável não cobra duas vezes
+
+---
+
+### Se algo der errado
+
+| O que você vê | Por quê | O que fazer |
+|---|---|---|
+| `curl: (7) Failed to connect` | A API ainda está subindo, ou o migrador falhou | `docker compose ps` e veja se `pacioli-api` está `running` |
+| `pacioli-api` não sobe nunca | O migrador saiu com erro, e a API depende dele | `docker compose logs pacioli-migrations` |
+| `404` ao usar uma conta | Conta inexistente, ou a massa de exemplo não foi aplicada | Comece do zero (abaixo) |
+| Porta 8080 ocupada | Outra coisa usando a porta | Pare a outra, ou mude a porta no `docker-compose.yml` |
+| Erro ao subir, sem mensagem clara | Estado antigo de um volume | Comece do zero (abaixo) |
+
+### Parar, e começar do zero
+
+```bash
+docker compose down        # para tudo, mantém os dados
+docker compose down -v     # para tudo e APAGA os dados
+```
+
+O `-v` apaga o volume do banco. Na próxima subida tudo é recriado do zero: tabelas, papéis e as cinco contas de exemplo. É a saída para qualquer estado estranho, e é seguro aqui porque é ambiente local.
+
+### Ver por dentro, se quiser
+
+Os traços de cada requisição (HTTP, caso de uso e PostgreSQL) e as métricas de negócio aparecem em **<http://localhost:18888>**, só no ambiente local. Não é necessário para rodar; é útil para entender o que acontece em cada chamada.
 
 ---
 
@@ -83,7 +174,7 @@ Contrato completo na [EF §8](./docs/specs/EF-especificacao-funcional.md). As me
 
 ### Exemplos
 
-Os comandos abaixo continuam a sequência de [Em cinco minutos](#em-cinco-minutos) e usam a mesma variável `$A`.
+Os comandos abaixo continuam a sequência de [Rodar localmente](#rodar-localmente) e usam a mesma variável `$A`.
 
 ```bash
 # Débito
