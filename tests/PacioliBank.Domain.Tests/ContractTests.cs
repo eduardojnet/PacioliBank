@@ -44,7 +44,7 @@ public class ContractTests
         var corpo = PostingResponse.From(Credito(), Registro).ToJson();
 
         Assert.Equal(
-            """{"entryId":"aaaaaaaa-0000-0000-0000-000000000001","accountId":"11111111-1111-1111-1111-111111111111","sequence":7,"direction":"Credit","amount":"150.00","currency":"BRL","occurredAt":"2026-09-30T13:00:00Z","recordedAt":"2026-10-02T12:00:00.1234567Z","balanceAfter":"250.00"}""",
+            """{"entryId":"aaaaaaaa-0000-0000-0000-000000000001","accountId":"11111111-1111-1111-1111-111111111111","sequence":7,"direction":"Credit","amount":150.00,"currency":"BRL","occurredAt":"2026-09-30T13:00:00Z","recordedAt":"2026-10-02T12:00:00.1234567Z","balanceAfter":250.00}""",
             corpo);
     }
 
@@ -72,7 +72,7 @@ public class ContractTests
         var corpo = TransferResponse.From(new TransferLegs(Transferencia, debito, credito), Registro).ToJson();
 
         Assert.Equal(
-            """{"transferId":"bbbbbbbb-0000-0000-0000-000000000001","sourceAccountId":"11111111-1111-1111-1111-111111111111","destinationAccountId":"22222222-2222-2222-2222-222222222222","amount":"40.00","currency":"BRL","occurredAt":"2026-09-30T13:00:00Z","recordedAt":"2026-10-02T12:00:00.1234567Z","debit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000001","sequence":7,"balanceAfter":"60.00"},"credit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000002"}}""",
+            """{"transferId":"bbbbbbbb-0000-0000-0000-000000000001","sourceAccountId":"11111111-1111-1111-1111-111111111111","destinationAccountId":"22222222-2222-2222-2222-222222222222","amount":40.00,"currency":"BRL","occurredAt":"2026-09-30T13:00:00Z","recordedAt":"2026-10-02T12:00:00.1234567Z","debit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000001","sequence":7,"balanceAfter":60.00},"credit":{"entryId":"aaaaaaaa-0000-0000-0000-000000000002"}}""",
             corpo);
     }
 
@@ -90,11 +90,11 @@ public class ContractTests
                 "11111111-1111-1111-1111-111111111111",
                 7,
                 "Credit",
-                "150.00",
+                150.00m,
                 "BRL",
                 "2026-09-30T13:00:00Z",
                 "2026-10-02T12:00:00.1234567Z",
-                "250.00",
+                250.00m,
                 null),
             evento);
     }

@@ -51,8 +51,8 @@ public class LogPipelineTests
                 correlacoes.Add(resposta.Headers.GetValues(CorrelationHeader).Single());
             }
 
-            await Enviar(Escrita(conta, "credits", "100.00", "log-1"));
-            await Enviar(Escrita(conta, "debits", "999.00", "log-2"));   // 422, saldo insuficiente
+            await Enviar(Escrita(conta, "credits", 100.00m, "log-1"));
+            await Enviar(Escrita(conta, "debits", 999.00m, "log-2"));   // 422, saldo insuficiente
             await Enviar(new HttpRequestMessage(HttpMethod.Get, $"/api/v1/accounts/{conta}/balance"));
             await Enviar(new HttpRequestMessage(HttpMethod.Get, $"/api/v1/accounts/{conta}/entries"));
 
@@ -88,7 +88,7 @@ public class LogPipelineTests
         }
     }
 
-    private static HttpRequestMessage Escrita(Guid conta, string operacao, string valor, string chave)
+    private static HttpRequestMessage Escrita(Guid conta, string operacao, decimal valor, string chave)
     {
         var pedido = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/accounts/{conta}/{operacao}")
         {

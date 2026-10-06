@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 2 de 3 do pacote de especificação
-**Versão:** 1.7
-**Data:** 2026-10-05
+**Versão:** 1.8
+**Data:** 2026-10-06
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -360,13 +360,22 @@ O sistema **deve** transferir um valor de uma conta para outra numa única opera
 | Formato de erro | `application/problem+json` conforme RFC 9457, com campo `code` estável para consumo programático |
 | Idempotência | Cabeçalho `Idempotency-Key`, obrigatório em todo verbo de escrita |
 | Rastreabilidade | Cabeçalho `X-Correlation-Id`, aceito do chamador ou gerado; sempre devolvido |
-| Valores monetários | String decimal, nunca número JSON |
+| Valores monetários | Número JSON decimal, com exatamente as casas da moeda (`150.00`); texto é recusado |
 | Instantes | ISO 8601 em UTC com sufixo `Z` |
 | Separação de verbos | Crédito e débito em recursos distintos, permitindo autorização e limites diferenciados |
 
-### 8.2 Por que valor monetário trafega como string
+### 8.2 Valor monetário como número JSON
 
-JSON não define precisão numérica. Parsers em JavaScript convertem número para IEEE-754 de dupla precisão, onde `0.1 + 0.2` não é `0.3`. Em livro-razão, arredondamento silencioso em qualquer ponto da cadeia é defeito financeiro. Transportar como string elimina a classe inteira de defeito, ao custo de uma conversão explícita no cliente. A conversão explícita é exatamente o que se deseja.
+O valor monetário trafega como **número JSON**, na entrada e na saída, por decisão do usuário (card 47, revisão do [ADR-0004](../adr/ADR-0004-representacao-monetaria.md)). Até a versão 1.7 deste documento, trafegava como texto.
+
+| Situação | Comportamento |
+|---|---|
+| Entrada como número (`150`, `150.5`, `150.00`) | Aceita; `150` e `150.00` são o mesmo comando, inclusive para a idempotência |
+| Entrada como texto (`"150.00"`) | `400 INVALID_REQUEST` |
+| Entrada com mais casas que a moeda (`10.001`) | `400 INVALID_AMOUNT` (RN-002) |
+| Saída | Número com exatamente as casas da moeda: `150.00`, nunca `150` nem `150.0000` |
+
+O servidor lê e escreve o número como decimal exato, sem passar por ponto flutuante. **O risco fica no consumidor:** JSON não define precisão numérica, e o parser padrão de JavaScript converte número para IEEE-754 de dupla precisão, onde `0.1 + 0.2` não é `0.3`. A leitura de um valor isolado é exata até 15 algarismos significativos; somas no cliente em ponto flutuante acumulam erro. O integrador deve ler o número como decimal. O documento OpenAPI declara os campos monetários com `"format": "decimal"`, para que cliente gerado a partir dele não use ponto flutuante.
 
 ### 8.3 Endpoints
 
@@ -393,7 +402,7 @@ X-Correlation-Id: 3e9d1a77-...
 Content-Type: application/json
 
 {
-  "amount": "250.00",
+  "amount": 250.00,
   "currency": "BRL",
   "occurredAt": "2026-10-02T14:21:00Z",
   "description": "Pagamento de boleto",
@@ -409,11 +418,11 @@ Content-Type: application/json
   "accountId": "7f3a...",
   "sequence": 1042,
   "direction": "Debit",
-  "amount": "250.00",
+  "amount": 250.00,
   "currency": "BRL",
   "occurredAt": "2026-10-02T14:21:00Z",
   "recordedAt": "2026-10-02T14:21:00.482Z",
-  "balanceAfter": "1750.00"
+  "balanceAfter": 1750.00
 }
 ```
 
@@ -428,8 +437,8 @@ Content-Type: application/json
   "status": 422,
   "code": "INSUFFICIENT_FUNDS",
   "detail": "O débito solicitado excede a posição disponível.",
-  "availableBalance": "100.00",
-  "requestedAmount": "250.00",
+  "availableBalance": 100.00,
+  "requestedAmount": 250.00,
   "correlationId": "3e9d1a77-..."
 }
 ```
@@ -446,7 +455,7 @@ Content-Type: application/json
 {
   "sourceAccountId": "11111111-1111-1111-1111-111111111111",
   "destinationAccountId": "22222222-2222-2222-2222-222222222222",
-  "amount": "40.00",
+  "amount": 40.00,
   "currency": "BRL",
   "occurredAt": "2026-10-05T12:00:00Z"
 }
@@ -461,11 +470,11 @@ As contas viajam no corpo: a operação é de duas contas, e nenhuma delas é o 
   "transferId": "02dd8138-...",
   "sourceAccountId": "11111111-1111-1111-1111-111111111111",
   "destinationAccountId": "22222222-2222-2222-2222-222222222222",
-  "amount": "40.00",
+  "amount": 40.00,
   "currency": "BRL",
   "occurredAt": "2026-10-05T12:00:00Z",
   "recordedAt": "2026-10-05T19:53:50.816265Z",
-  "debit": { "entryId": "ccb1842b-...", "sequence": 2, "balanceAfter": "60.00" },
+  "debit": { "entryId": "ccb1842b-...", "sequence": 2, "balanceAfter": 60.00 },
   "credit": { "entryId": "278f6046-..." }
 }
 ```
@@ -481,7 +490,7 @@ GET /api/v1/accounts/7f3a.../balance?asOf=2026-01-20T00:00:00Z HTTP/1.1
 ```json
 {
   "accountId": "7f3a...",
-  "balance": "750.00",
+  "balance": 750.00,
   "currency": "BRL",
   "asOf": "2026-01-20T00:00:00Z",
   "computedAtSequence": 87,
@@ -548,7 +557,7 @@ O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão 
 
 **Transferência.** Cada perna gera o evento `entry-recorded` da sua conta, como um lançamento comum: um débito na origem e um crédito no destino. O payload **não** traz o identificador da transferência; as duas pernas têm o mesmo `correlationId`. Juntar as pernas pelo evento exigirá um campo novo e versão do contrato ([ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md), gatilho 5).
 
-**Payload.** Os dois tipos compartilham o mesmo corpo JSON. Os formatos são os da API (§8.1 e §8.2): valor monetário como string, instante em ISO 8601 UTC com sufixo `Z`.
+**Payload.** Os dois tipos compartilham o mesmo corpo JSON. Os formatos são os da API (§8.1 e §8.2): valor monetário como número com as casas da moeda, instante em ISO 8601 UTC com sufixo `Z`. A mudança de texto para número, na versão 1.8, manteve `v1`: nenhum consumidor havia recebido eventos (mesmo critério da versão 1.3).
 
 | Campo | Tipo | Conteúdo |
 |---|---|---|
@@ -556,11 +565,11 @@ O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão 
 | `accountId` | string (UUID) | Conta |
 | `sequence` | inteiro | Sequência do lançamento na conta; é por ela que o consumidor ordena (RN-006) |
 | `direction` | string | `Credit` ou `Debit` |
-| `amount` | string | Valor, sempre positivo, na escala da moeda: `"150.00"` |
+| `amount` | número | Valor, sempre positivo, na escala da moeda: `150.00` |
 | `currency` | string | ISO 4217: `"BRL"` |
 | `occurredAt` | string | Data do fato |
 | `recordedAt` | string | Data do registro |
-| `balanceAfter` | string | Posição da conta imediatamente após o lançamento |
+| `balanceAfter` | número | Posição da conta imediatamente após o lançamento, na escala da moeda |
 | `reversalOf` | string (UUID) | **Só em `entry-reversed`:** o lançamento estornado. Ausente em `entry-recorded` |
 
 ```json
@@ -569,11 +578,11 @@ O tipo segue as [convenções](../convencoes-de-nomenclatura.md) §8: a versão 
   "accountId": "11111111-1111-1111-1111-111111111111",
   "sequence": 2,
   "direction": "Debit",
-  "amount": "10.00",
+  "amount": 10.00,
   "currency": "BRL",
   "occurredAt": "2026-10-02T12:00:00Z",
   "recordedAt": "2026-10-02T21:59:21.864935Z",
-  "balanceAfter": "0.00",
+  "balanceAfter": 0.00,
   "reversalOf": "c8a31790-e0ab-4d66-91c1-dedb0f45508f"
 }
 ```
@@ -641,3 +650,4 @@ Nenhum outro campo é enviado. O teste `EventPayloadTests` lê o payload gravado
 | 1.5 | 2026-10-04 | Eduardo J. G. do Carmo | §10: condutas provisórias corrigidas contra o código (lacuna L-14). Não há política substituível nem configuração; há um ponto único de mudança por questão. QA-003 marcada como decidida, coerente com o ESTADO §3. QA-007 declarada como especificada e não implementada (card 29) |
 | 1.6 | 2026-10-05 | Eduardo J. G. do Carmo | §8.5: `computedFrom` ganha o valor `dailyBalance`, para a posição em instante passado calculada a partir do fechamento diário (card 32, ADR-0007). `entriesReplayed`, nesse caso, conta só os lançamentos do dia consultado |
 | 1.7 | 2026-10-05 | Eduardo J. G. do Carmo | Transferência entre contas no escopo (card 38, [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)): §3.1, §4.7, RN-013, RF-012, §8.3, §8.4.1, código `SAME_ACCOUNT_TRANSFER` em §8.6, nota em §9, QA-009 em §10, §11 |
+| 1.8 | 2026-10-06 | Eduardo J. G. do Carmo | Valor monetário passa de texto a número JSON na API e no evento, por decisão do usuário (card 47, revisão do [ADR-0004](../adr/ADR-0004-representacao-monetaria.md)): §8.1, §8.2 reescrita, exemplos de §8.4, §8.4.1, §8.5 e §8.6, payload de §9 |

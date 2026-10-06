@@ -17,7 +17,7 @@ namespace PacioliBank.Ledger.Application;
 /// primeira resposta e o da repeticao poderiam divergir; montado aqui, uma vez,
 /// sao o mesmo texto por construcao.
 /// <para>
-/// Mesmos formatos da API: valores monetarios como string, instantes em Z,
+/// Mesmos formatos da API: valores monetarios como numero na escala da moeda, instantes em Z,
 /// <c>reversalOf</c> apenas no estorno.
 /// </para>
 /// </remarks>
@@ -26,11 +26,11 @@ public sealed record PostingResponse(
     string AccountId,
     long Sequence,
     string Direction,
-    string Amount,
+    decimal Amount,
     string Currency,
     string OccurredAt,
     string RecordedAt,
-    string BalanceAfter,
+    decimal BalanceAfter,
     string? ReversalOf)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -48,11 +48,11 @@ public sealed record PostingResponse(
             entry.AccountId.ToString("D", CultureInfo.InvariantCulture),
             entry.Sequence,
             entry.Direction.ToString(),
-            entry.Amount.ToContractString(),
+            entry.Amount.ToContractAmount(),
             entry.Amount.Currency.Code,
             WireFormat.Instant(entry.OccurredAt),
             WireFormat.Instant(recordedAt),
-            entry.BalanceAfter.ToContractString(),
+            entry.BalanceAfter.ToContractAmount(),
             entry.ReversalOf?.ToString("D", CultureInfo.InvariantCulture));
     }
 

@@ -14,7 +14,7 @@ Idempotency-Key: credito-001
 Content-Type: application/json
 
 {
-  "amount": "150.00",
+  "amount": 150.00,
   "currency": "BRL",
   "occurredAt": "2026-10-02T10:00:00Z"
 }
@@ -25,7 +25,7 @@ Idempotency-Key: debito-001
 Content-Type: application/json
 
 {
-  "amount": "40.00",
+  "amount": 40.00,
   "currency": "BRL",
   "occurredAt": "2026-10-02T11:00:00Z"
 }
@@ -57,7 +57,7 @@ Content-Type: application/json
 {
   "sourceAccountId": "{{account}}",
   "destinationAccountId": "22222222-2222-2222-2222-222222222222",
-  "amount": "10.00",
+  "amount": 10.00,
   "currency": "BRL",
   "occurredAt": "2026-10-05T12:00:00Z"
 }

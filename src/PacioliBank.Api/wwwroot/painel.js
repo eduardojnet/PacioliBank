@@ -18,8 +18,8 @@
   const $ = (seletor) => document.querySelector(seletor);
   const saida = (nome) => $(`[data-saida="${nome}"]`);
 
-  // Exibicao apenas: o valor continua trafegando como string (EF secao 8.2).
-  const brl = (texto) => Number(texto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Exibicao apenas: formata o numero do contrato (EF secao 8.2) em reais.
+  const brl = (valor) => Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const data = (iso) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { timeZone: 'UTC' }) + ' UTC';
 
@@ -44,7 +44,8 @@
     const resposta = await fetch(`${rota(conta)}/${tipo}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Idempotency-Key': chave },
-      body: JSON.stringify({ amount: valor, currency: 'BRL', occurredAt: quando }),
+      // O contrato recebe numero JSON (EF secao 8.2); texto e recusado com 400.
+      body: JSON.stringify({ amount: Number(valor), currency: 'BRL', occurredAt: quando }),
     });
     const { texto, json } = await lerJson(resposta);
     return {

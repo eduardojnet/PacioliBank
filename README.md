@@ -91,7 +91,7 @@ A=http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111
 ```bash
 curl -i -X POST $A/credits \
   -H 'Idempotency-Key: credito-001' -H 'Content-Type: application/json' \
-  -d '{"amount":"150.00","currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
+  -d '{"amount":150.00,"currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
 ```
 
 **Esperado:** `201 Created`, com o lançamento no corpo.
@@ -102,13 +102,12 @@ curl -i -X POST $A/credits \
 curl $A/balance
 ```
 
-**Esperado:** `"150.00"`.
+**Esperado:** a posição, com `"balance":150.00`.
 
 Pronto. A aplicação está rodando e você acabou de usá-la.
 
-**Duas coisas a notar no que você digitou**, porque não são detalhe:
+**Uma coisa a notar no que você digitou**, porque não é detalhe:
 
-- **O valor é texto** (`"150.00"`), não número JSON. Número JSON passa por ponto flutuante em muitos clientes, e arredondamento silencioso em livro-razão é defeito financeiro
 - **O `Idempotency-Key` é obrigatório.** Repita o mesmo comando com a mesma chave: vem `200`, o cabeçalho `Idempotency-Replayed: true`, e o mesmo corpo. Nenhum lançamento novo. É assim que uma rede instável não cobra duas vezes
 
 ---
@@ -169,7 +168,7 @@ Contrato completo na [EF §8](./docs/specs/EF-especificacao-funcional.md). As me
 
 **Regras do contrato que mais importam:**
 
-- **Valor monetário é string**, nunca número JSON: `"150.00"`. Número JSON passa por ponto flutuante em muitos clientes, e arredondamento silencioso em ledger é defeito financeiro (EF §8.2)
+- **Valor monetário é número JSON**, e a resposta traz sempre as casas da moeda: `150.00`. Valor entre aspas é recusado com `400`; mais casas que a moeda, com `400 INVALID_AMOUNT` (EF §8.2)
 - **`Idempotency-Key` é obrigatório** em toda escrita. Reenviar o mesmo comando com a mesma chave devolve `200`, o cabeçalho `Idempotency-Replayed: true` e o corpo original, byte a byte, mesmo que o saldo tenha mudado desde então. Mesma chave com conteúdo diferente: `409`
 - **Instantes em ISO 8601 UTC.** `occurredAt` é a data do fato; a consulta histórica usa ela, não a data de registro
 - **`X-Correlation-Id`** é aceito do chamador ou gerado, e sempre devolvido, inclusive em erro
@@ -182,17 +181,17 @@ Os comandos abaixo continuam a sequência de [Rodar localmente](#rodar-localment
 # Débito
 curl -i -X POST $A/debits \
   -H 'Idempotency-Key: debito-001' -H 'Content-Type: application/json' \
-  -d '{"amount":"40.00","currency":"BRL","occurredAt":"2026-10-02T11:00:00Z"}'
+  -d '{"amount":40.00,"currency":"BRL","occurredAt":"2026-10-02T11:00:00Z"}'
 
 # Reenvio do mesmo débito: 200, Idempotency-Replayed: true, nenhum lançamento novo
 curl -i -X POST $A/debits \
   -H 'Idempotency-Key: debito-001' -H 'Content-Type: application/json' \
-  -d '{"amount":"40.00","currency":"BRL","occurredAt":"2026-10-02T11:00:00Z"}'
+  -d '{"amount":40.00,"currency":"BRL","occurredAt":"2026-10-02T11:00:00Z"}'
 
 # Débito acima do saldo: 422 INSUFFICIENT_FUNDS, nada gravado
 curl -i -X POST $A/debits \
   -H 'Idempotency-Key: debito-002' -H 'Content-Type: application/json' \
-  -d '{"amount":"999.00","currency":"BRL","occurredAt":"2026-10-02T11:30:00Z"}'
+  -d '{"amount":999.00,"currency":"BRL","occurredAt":"2026-10-02T11:30:00Z"}'
 
 # Posição em um instante passado, antes do débito
 curl "$A/balance?asOf=2026-10-02T10:30:00Z"
@@ -208,7 +207,7 @@ curl -i -X POST $A/entries/<entryId>/reversals \
 
 ### Coleção do Insomnia
 
-[`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 18 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 52 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, transferência, seu reenvio e a transferência para a própria conta, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`, e a `1111…` como destino da transferência.
+[`insomnia/pacioli-ledger.insomnia.json`](./insomnia/pacioli-ledger.insomnia.json): 18 requisições em três pastas (saúde, escrita, consulta), cada uma com os próprios testes, 54 no total. Cobre crédito, débito, reenvio idempotente, conflito de chave, saldo insuficiente, chave ausente, estorno e estorno duplicado, transferência, seu reenvio e a transferência para a própria conta, posição corrente e histórica, instante futuro, extrato e conta inexistente. As escritas geram a chave de idempotência antes do envio, e o reenvio e o estorno usam o resultado das anteriores; a coleção pode ser rodada repetidamente. Usa a conta `2222…`, e a `1111…` como destino da transferência.
 
 - **No aplicativo:** *Import*, escolher o arquivo, selecionar o ambiente **Local** e *Run* na coleção. As variáveis ficam no sub-ambiente Local, e não no *Base Environment*: sem ambiente selecionado, as requisições não resolvem o endereço
 - **Pela linha de comando**, com o [`inso`](https://github.com/Kong/insomnia/releases) (verificado na versão 13.3.0), o mesmo motor do aplicativo:
@@ -230,8 +229,8 @@ Toda rejeição sai como `application/problem+json` (RFC 9457) com um campo `cod
   "status": 422,
   "code": "INSUFFICIENT_FUNDS",
   "detail": "O debito solicitado excede a posicao disponivel.",
-  "availableBalance": "110.00",
-  "requestedAmount": "999.00",
+  "availableBalance": 110.00,
+  "requestedAmount": 999.00,
   "traceId": "…",
   "correlationId": "…"
 }
@@ -252,17 +251,17 @@ Catálogo completo, com a regra de negócio de cada código, na [EF §8.6](./doc
 ## Testes
 
 ```bash
-dotnet test        # 230 testes, sem erro e sem aviso; xunit v3 na Microsoft Testing Platform (global.json)
+dotnet test        # 237 testes, sem erro e sem aviso; xunit v3 na Microsoft Testing Platform (global.json)
 ```
 
 Pré-requisitos: SDK do .NET 10 e **Docker em execução**. Os testes de integração sobem um PostgreSQL real por execução (Testcontainers) e aplicam o mesmo script de esquema do ambiente local, com os mesmos papéis e privilégios.
 
 | Projeto | Testes | O que verifica |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 116 | Invariantes do agregado, `Money`, transferência, validações da porta de entrada. Sem I/O, menos de um segundo |
+| `PacioliBank.Domain.Tests` | 117 | Invariantes do agregado, `Money`, transferência, validações da porta de entrada. Sem I/O, menos de um segundo |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência (NetArchTest): domínio sem aplicação, Ledger sem banco nem HTTP, Events sem Ledger, endpoints sem banco |
 | `PacioliBank.Contract.Tests` | 2 | Contrato da API: o OpenAPI gerado é comparado com o instantâneo aprovado; mudança de contrato reprova |
-| `PacioliBank.Integration.Tests` | 106 | Transação, bloqueio, idempotência, estorno, transferência, extrato, privilégio negado, concorrência real, despachante de outbox, migrações, fechamento diário, particionamento, log, rastreamento e métricas |
+| `PacioliBank.Integration.Tests` | 112 | Transação, bloqueio, idempotência, estorno, transferência, extrato, privilégio negado, concorrência real, despachante de outbox, migrações, fechamento diário, particionamento, log, rastreamento e métricas |
 
 ```bash
 dotnet test --project tests/PacioliBank.Domain.Tests                                         # só domínio, sem Docker
@@ -317,10 +316,10 @@ src/
     wwwroot/                       painel de evidência: HTML, CSS e JavaScript, sem dependências
   PacioliBank.Migrations/          migrador (DbUp): aplica o que falta com o papel de migração e termina
 tests/
-  PacioliBank.Domain.Tests/        116 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
+  PacioliBank.Domain.Tests/        117 testes, sem I/O; cobertura e mutação do domínio ≥ 85% exigidas no CI
   PacioliBank.Architecture.Tests/  6 regras de dependência (NetArchTest)
   PacioliBank.Contract.Tests/      2 testes, instantâneo do contrato OpenAPI
-  PacioliBank.Integration.Tests/   106 testes, PostgreSQL real, inclui concorrência, estorno, transferência, extrato, outbox, migrações, snapshot, fechamento diário, particionamento, log, traço e métricas
+  PacioliBank.Integration.Tests/   112 testes, PostgreSQL real, inclui concorrência, estorno, transferência, extrato, outbox, migrações, snapshot, fechamento diário, particionamento, log, traço e métricas
 db/migrations/                     esquema, papéis e privilégios, em migrações numeradas
 db/seed/                           contas de exemplo, só no ambiente local
 docs/                              diagramas, ADRs, especificações, estado do projeto

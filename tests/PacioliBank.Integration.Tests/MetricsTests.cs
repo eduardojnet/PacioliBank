@@ -34,10 +34,10 @@ public class MetricsTests
         await using var api = new ApiMedida(_fixture.RuntimeConnectionString, metricas);
         using var cliente = api.CreateClient();
 
-        Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "credits", "100.00", "m-1"));
-        Assert.Equal(HttpStatusCode.OK, await Escrever(cliente, conta, "credits", "100.00", "m-1"));            // reenvio
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, await Escrever(cliente, conta, "debits", "999.00", "m-2")); // saldo
-        Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "debits", "10.00", "m-3"));
+        Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "credits", 100.00m, "m-1"));
+        Assert.Equal(HttpStatusCode.OK, await Escrever(cliente, conta, "credits", 100.00m, "m-1"));            // reenvio
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, await Escrever(cliente, conta, "debits", 999.00m, "m-2")); // saldo
+        Assert.Equal(HttpStatusCode.Created, await Escrever(cliente, conta, "debits", 10.00m, "m-3"));
         (await cliente.GetAsync(new Uri($"/api/v1/accounts/{conta}/balance", UriKind.Relative), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
         var historica = await cliente.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(
             new Uri($"/api/v1/accounts/{conta}/balance?asOf=2026-10-02T00:00:00Z", UriKind.Relative), TestContext.Current.CancellationToken);
@@ -74,7 +74,7 @@ public class MetricsTests
         Assert.True(pendentesNoBanco >= 2, "Os dois lancamentos deste teste continuam na fila: o despachante foi retirado.");
     }
 
-    private static async Task<HttpStatusCode> Escrever(HttpClient cliente, Guid conta, string operacao, string valor, string chave)
+    private static async Task<HttpStatusCode> Escrever(HttpClient cliente, Guid conta, string operacao, decimal valor, string chave)
     {
         using var pedido = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/accounts/{conta}/{operacao}")
         {

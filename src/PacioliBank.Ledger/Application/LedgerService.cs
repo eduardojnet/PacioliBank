@@ -133,24 +133,7 @@ public sealed class LedgerService : ILedgerService
             ? currency
             : throw new UnsupportedCurrencyException(code ?? string.Empty);
 
-    private static Money ParseAmount(string value, Currency currency)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new InvalidEntryAmountException("O valor do lancamento e obrigatorio.");
-        }
-
-        try
-        {
-            return Money.Parse(value, currency);
-        }
-        catch (FormatException ex)
-        {
-            throw new InvalidEntryAmountException($"Valor em formato invalido: '{value}'.", ex);
-        }
-        catch (OverflowException ex)
-        {
-            throw new InvalidEntryAmountException($"Valor fora da faixa suportada: '{value}'.", ex);
-        }
-    }
+    // Escala acima da moeda sai como InvalidMoneyScaleException; zero e
+    // negativo, como InvalidEntryAmountException no agregado (RN-002).
+    private static Money ParseAmount(decimal value, Currency currency) => Money.Of(value, currency);
 }

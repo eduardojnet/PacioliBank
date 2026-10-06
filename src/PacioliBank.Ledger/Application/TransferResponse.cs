@@ -19,7 +19,7 @@ public sealed record TransferResponse(
     string TransferId,
     string SourceAccountId,
     string DestinationAccountId,
-    string Amount,
+    decimal Amount,
     string Currency,
     string OccurredAt,
     string RecordedAt,
@@ -37,11 +37,11 @@ public sealed record TransferResponse(
             Id(legs.TransferId),
             Id(legs.Debit.AccountId),
             Id(legs.Credit.AccountId),
-            legs.Debit.Amount.ToContractString(),
+            legs.Debit.Amount.ToContractAmount(),
             legs.Debit.Amount.Currency.Code,
             WireFormat.Instant(legs.Debit.OccurredAt),
             WireFormat.Instant(recordedAt),
-            new TransferDebitLeg(Id(legs.Debit.EntryId), legs.Debit.Sequence, legs.Debit.BalanceAfter.ToContractString()),
+            new TransferDebitLeg(Id(legs.Debit.EntryId), legs.Debit.Sequence, legs.Debit.BalanceAfter.ToContractAmount()),
             new TransferCreditLeg(Id(legs.Credit.EntryId)));
     }
 
@@ -52,7 +52,7 @@ public sealed record TransferResponse(
 }
 
 /// <summary>Perna de debito, na conta de origem: a do pagador, com o saldo dele.</summary>
-public sealed record TransferDebitLeg(string EntryId, long Sequence, string BalanceAfter);
+public sealed record TransferDebitLeg(string EntryId, long Sequence, decimal BalanceAfter);
 
 /// <summary>Perna de credito, na conta de destino: so o identificador do lancamento.</summary>
 public sealed record TransferCreditLeg(string EntryId);

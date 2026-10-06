@@ -116,7 +116,7 @@ public static class LedgerEndpoints
             new PostingCommand(
                 accountId,
                 direction,
-                body.Amount,
+                body.Amount.Value,
                 body.Currency,
                 body.OccurredAt.Value,
                 idempotencyKey,
@@ -165,7 +165,7 @@ public static class LedgerEndpoints
             new TransferCommand(
                 body.SourceAccountId.Value,
                 body.DestinationAccountId.Value,
-                body.Amount,
+                body.Amount.Value,
                 body.Currency,
                 body.OccurredAt.Value,
                 idempotencyKey,

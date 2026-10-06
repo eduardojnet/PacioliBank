@@ -109,7 +109,20 @@ builder.Services.AddOpenApi(options =>
     options.AddDocumentTransformer((document, _, _) =>
     {
         document.Info.Title = "PacioliBank Ledger API";
-        document.Info.Description = "Livro-razão de contas correntes. Contrato descrito na EF §8; valores monetários como string, instantes em ISO 8601 UTC.";
+        document.Info.Description = "Livro-razão de contas correntes. Contrato descrito na EF §8; valores monetários como número decimal exato, na escala da moeda, instantes em ISO 8601 UTC.";
+        return Task.CompletedTask;
+    });
+
+    // Valor monetario e decimal exato (ADR-0004). O gerador o declara como
+    // "double", e cliente gerado a partir do documento leria o valor em ponto
+    // flutuante: o defeito que o tipo decimal existe para evitar.
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        if (context.JsonTypeInfo.Type == typeof(decimal) || context.JsonTypeInfo.Type == typeof(decimal?))
+        {
+            schema.Format = "decimal";
+        }
+
         return Task.CompletedTask;
     });
 

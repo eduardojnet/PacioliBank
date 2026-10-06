@@ -26,7 +26,7 @@ public class LedgerServiceTests
         _service = new LedgerService(_store, new FixedClock(Agora));
     }
 
-    private static PostingCommand Credito(string valor = "100.00", string moeda = "BRL", string? chave = "k1") =>
+    private static PostingCommand Credito(decimal valor = 100.00m, string moeda = "BRL", string? chave = "k1") =>
         new(Conta, EntryDirection.Credit, valor, moeda, Agora, chave, Guid.NewGuid());
 
     // ---------------------------------------------------------------- RN-005
@@ -54,24 +54,13 @@ public class LedgerServiceTests
 
     // ---------------------------------------------------------------- RN-002, RN-007
 
-    [Theory]
-    [InlineData("abc")]
-    [InlineData("1,50")]
-    [InlineData("")]
-    [InlineData("99999999999999999999999999999999")]
-    public async Task Valor_em_formato_invalido_e_recusado_como_valor_invalido(string valor)
-    {
-        await Assert.ThrowsAsync<InvalidEntryAmountException>(
-            () => _service.PostAsync(Credito(valor: valor), CancellationToken.None));
-
-        Assert.False(_store.Called);
-    }
-
     [Fact]
     public async Task Valor_com_mais_casas_que_a_moeda_e_recusado()
     {
         await Assert.ThrowsAsync<InvalidMoneyScaleException>(
-            () => _service.PostAsync(Credito(valor: "10.001"), CancellationToken.None));
+            () => _service.PostAsync(Credito(valor: 10.001m), CancellationToken.None));
+
+        Assert.False(_store.Called);
     }
 
     [Fact]
@@ -84,10 +73,10 @@ public class LedgerServiceTests
     [Fact]
     public async Task Mesma_quantia_escrita_de_formas_diferentes_produz_a_mesma_impressao()
     {
-        await _service.PostAsync(Credito(valor: "100"), CancellationToken.None);
+        await _service.PostAsync(Credito(valor: 100m), CancellationToken.None);
         var primeira = _store.LastHash;
 
-        await _service.PostAsync(Credito(valor: "100.00"), CancellationToken.None);
+        await _service.PostAsync(Credito(valor: 100.00m), CancellationToken.None);
 
         // ADR-0006: diferenca de serializacao nao pode virar conflito de chave.
         Assert.Equal(primeira, _store.LastHash);
@@ -199,7 +188,7 @@ public class LedgerServiceTests
 
     private static readonly Guid Destino = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
-    private static TransferCommand Transferencia(string valor = "40.00", string? chave = "tr-1") =>
+    private static TransferCommand Transferencia(decimal valor = 40.00m, string? chave = "tr-1") =>
         new(Conta, Destino, valor, "BRL", Agora, chave, Guid.NewGuid());
 
     [Theory]
@@ -214,10 +203,10 @@ public class LedgerServiceTests
     }
 
     [Fact]
-    public async Task Transferencia_com_valor_invalido_e_recusada_antes_de_qualquer_IO()
+    public async Task Transferencia_com_valor_acima_da_escala_da_moeda_e_recusada_antes_de_qualquer_IO()
     {
-        await Assert.ThrowsAsync<InvalidEntryAmountException>(
-            () => _service.TransferAsync(Transferencia(valor: "1,50"), CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidMoneyScaleException>(
+            () => _service.TransferAsync(Transferencia(valor: 1.505m), CancellationToken.None));
 
         Assert.False(_store.Called);
     }

@@ -27,7 +27,7 @@ public class TransferEndpointTests
         return await cliente.SendAsync(pedido, TestContext.Current.CancellationToken);
     }
 
-    private static object Corpo(Guid origem, Guid destino, string valor = "40.00") =>
+    private static object Corpo(Guid origem, Guid destino, decimal valor = 40.00m) =>
         new { sourceAccountId = origem, destinationAccountId = destino, amount = valor, currency = "BRL", occurredAt = "2026-10-05T12:00:00Z" };
 
     private static async Task<string?> CodigoAsync(HttpResponseMessage resposta) =>
@@ -49,8 +49,8 @@ public class TransferEndpointTests
         var json = JsonNode.Parse(corpo)!;
         Assert.Equal(origem.ToString(), json["sourceAccountId"]!.ToString());
         Assert.Equal(destino.ToString(), json["destinationAccountId"]!.ToString());
-        Assert.Equal("40.00", json["amount"]!.ToString());
-        Assert.Equal("60.00", json["debit"]!["balanceAfter"]!.ToString());
+        Assert.Equal("40.00", json["amount"]!.ToJsonString());
+        Assert.Equal("60.00", json["debit"]!["balanceAfter"]!.ToJsonString());
         Assert.Null(json["credit"]!["balanceAfter"]);
 
         Assert.Equal(HttpStatusCode.OK, segunda.StatusCode);
@@ -67,9 +67,9 @@ public class TransferEndpointTests
         using var cliente = api.CreateClient();
 
         using var mesmaConta = await Transferir(cliente, Corpo(origem, origem), "h-2");
-        using var semSaldo = await Transferir(cliente, Corpo(origem, destino, "10.01"), "h-3");
+        using var semSaldo = await Transferir(cliente, Corpo(origem, destino, 10.01m), "h-3");
         using var semDestino = await Transferir(cliente, Corpo(origem, Guid.NewGuid()), "h-4");
-        using var semCampo = await Transferir(cliente, new { sourceAccountId = origem, amount = "1.00", currency = "BRL" }, "h-5");
+        using var semCampo = await Transferir(cliente, new { sourceAccountId = origem, amount = 1.00m, currency = "BRL" }, "h-5");
 
         Assert.Equal(HttpStatusCode.BadRequest, mesmaConta.StatusCode);
         Assert.Equal("SAME_ACCOUNT_TRANSFER", await CodigoAsync(mesmaConta));

@@ -20,8 +20,12 @@ public static class LedgerHeaders
 /// <c>description</c> e <c>metadata</c>, presentes no exemplo da EF, ainda nao
 /// sao persistidos: o lancamento de dominio nao os carrega. Lacuna declarada
 /// no ESTADO.md, e nao descarte silencioso.
+/// <para>
+/// <c>amount</c> e numero JSON (EF secao 8.2). Texto no lugar do numero e
+/// recusado pelo desserializador, em modo estrito, como requisicao invalida.
+/// </para>
 /// </remarks>
-public sealed record PostingBody(string? Amount, string? Currency, DateTimeOffset? OccurredAt);
+public sealed record PostingBody(decimal? Amount, string? Currency, DateTimeOffset? OccurredAt);
 
 /// <summary>Corpo do estorno. O instante e obrigatorio para que o reenvio tenha a mesma impressao.</summary>
 public sealed record ReversalBody(DateTimeOffset? OccurredAt);
@@ -33,7 +37,7 @@ public sealed record ReversalBody(DateTimeOffset? OccurredAt);
 public sealed record TransferBody(
     Guid? SourceAccountId,
     Guid? DestinationAccountId,
-    string? Amount,
+    decimal? Amount,
     string? Currency,
     DateTimeOffset? OccurredAt);
 
@@ -48,7 +52,7 @@ public sealed record TransferBody(
 /// </summary>
 public sealed record BalanceResponse(
     Guid AccountId,
-    string Balance,
+    decimal Balance,
     string Currency,
     string AsOf,
     long ComputedAtSequence,
@@ -61,7 +65,7 @@ public sealed record BalanceResponse(
 
         return new(
             result.AccountId,
-            result.Balance.ToContractString(),
+            result.Balance.ToContractAmount(),
             result.Balance.Currency.Code,
             ContractFormat.Instant(result.AsOf),
             result.ComputedAtSequence,
@@ -80,11 +84,11 @@ public sealed record StatementEntryResponse(
     Guid EntryId,
     long Sequence,
     string Direction,
-    string Amount,
+    decimal Amount,
     string Currency,
     string OccurredAt,
     string RecordedAt,
-    string BalanceAfter,
+    decimal BalanceAfter,
     Guid? ReversalOf);
 
 /// <summary>Pagina do extrato. <c>NextCursor</c> ausente indica a ultima pagina.</summary>
@@ -102,11 +106,11 @@ public sealed record StatementResponse(
                 e.EntryId,
                 e.Sequence,
                 e.Direction.ToString(),
-                e.Amount.ToContractString(),
+                e.Amount.ToContractAmount(),
                 e.Amount.Currency.Code,
                 ContractFormat.Instant(e.OccurredAt),
                 ContractFormat.Instant(e.RecordedAt),
-                e.BalanceAfter.ToContractString(),
+                e.BalanceAfter.ToContractAmount(),
                 e.ReversalOf))
             .ToList();
 

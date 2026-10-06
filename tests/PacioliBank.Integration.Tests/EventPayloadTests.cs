@@ -62,10 +62,10 @@ public class EventPayloadTests
         Assert.Equal(1, payload.GetProperty("sequence").GetInt64());
         Assert.Equal("Credit", payload.GetProperty("direction").GetString());
 
-        // EF secao 8.2: valor monetario e string, com a escala da moeda.
-        Assert.Equal(JsonValueKind.String, payload.GetProperty("amount").ValueKind);
-        Assert.Equal("150.00", payload.GetProperty("amount").GetString());
-        Assert.Equal("150.00", payload.GetProperty("balanceAfter").GetString());
+        // EF secao 8.2: valor monetario e numero, com exatamente a escala da moeda.
+        Assert.Equal(JsonValueKind.Number, payload.GetProperty("amount").ValueKind);
+        Assert.Equal("150.00", payload.GetProperty("amount").GetRawText());
+        Assert.Equal("150.00", payload.GetProperty("balanceAfter").GetRawText());
         Assert.Equal("BRL", payload.GetProperty("currency").GetString());
 
         // EF secao 8.1: instante ISO 8601 em UTC com sufixo Z.
@@ -91,7 +91,7 @@ public class EventPayloadTests
         Assert.Equal(CamposDoLancamento.Append("reversalOf").Order(StringComparer.Ordinal).ToArray(), Campos(payload));
         Assert.Equal(original.EntryId.ToString(), payload.GetProperty("reversalOf").GetString());
         Assert.Equal("Debit", payload.GetProperty("direction").GetString());
-        Assert.Equal("80.00", payload.GetProperty("amount").GetString());
-        Assert.Equal("0.00", payload.GetProperty("balanceAfter").GetString());
+        Assert.Equal("80.00", payload.GetProperty("amount").GetRawText());
+        Assert.Equal("0.00", payload.GetProperty("balanceAfter").GetRawText());
     }
 }

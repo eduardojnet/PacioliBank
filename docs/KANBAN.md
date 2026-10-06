@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-05 · **Cartões:** 64 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
+**Data:** 2026-10-05 · **Cartões:** 65 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -14,7 +14,7 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 63 | 01 a 34, 36 a 43, 45, 46, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
+| Concluído | 64 | 01 a 34, 36 a 43, 45 a 47, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
 
 ---
 
@@ -1241,8 +1241,33 @@ ENTREGUE: `env_pacioli_local`, nome `Local`, filho do *Base Environment*, com as
 
 VERIFICADO em 06/10/2026: `inso` 13.3.0 (SHA-256 conferido) contra o `docker compose`, 52/52 duas vezes, código 0; com `--env env_pacioli_base`, reprova com código 1. No aplicativo com o `Local`: [NVI].
 
+CI verde no commit `e745733`, as quatro tarefas: https://github.com/eduardojnet/PacioliBank/actions/runs/37403263668
+
 ### 46. Registrar no ESTADO §4 a execução da coleção do Insomnia no aplicativo, em 06/10
 
 `prioridade: Baixa` · `documentacao`
 
 ENTREGUE: §4 registra a execução no runner do Insomnia 13.1.0, pelo usuário, às 01:59 UTC de 06/10 contra o `docker compose`: 18 requisições, 52 testes verdes. Horário conferido no banco local do aplicativo; resultado verde pelo relato do usuário.
+
+### 47. Passar o valor monetário de texto a número JSON na API e no evento
+
+`prioridade: Média` · `codigo` · `arquitetura`
+
+REGISTRO POSTERIOR: o TickTick estava desconectado; o usuário autorizou executar antes e criar o cartão na reconexão.
+
+ÂNCORA: ADR-0004 (revisão), EF §8.2 e §9. Decisão do usuário em 06/10/2026: "Necessário que valores sejam numéricos." Escolhas do usuário: evento também, mantendo `v1`; texto na entrada recusado com `400`; respostas gravadas convertidas por migração.
+
+ENTREGUE:
+- Entrada `decimal` nos corpos de crédito, débito e transferência; texto recusado pelo desserializador estrito (`400 INVALID_REQUEST`); escala acima da moeda `400 INVALID_AMOUNT`
+- Saída com as casas da moeda por `Money.ToContractAmount()`: escrita, transferência, posição, extrato, saldo insuficiente e evento
+- OpenAPI com `"format": "decimal"` nos nove campos monetários (o gerador declarava `double`)
+- Migração 0005: converte `response_body` e `payload` da outbox, preservando o resto do texto
+- Insomnia, `requests.http`, painel, README (comentário sobre valor em texto removido), EF 1.8, BDD 1.4, revisão do ADR-0004 com 3 alternativas rejeitadas
+
+CRITÉRIO ATENDIDO:
+- 237 testes verdes, build sem avisos; cobertura do domínio 94,11%, mutação 86,96% (sobreviventes das categorias já aceitas)
+- Poder de detecção: sem a normalização da escala, 10 testes reprovam; aceitando texto como número, 5
+- 0005 no volume local: 284 respostas e 290 mensagens convertidas, texto idêntico ao anterior sem as aspas; reenvio de transferência anterior à mudança devolve 200 com o corpo em número
+- Insomnia 54/54 duas vezes; painel com as quatro demonstrações em Chrome headless, sem erro de console
+
+DECLARADO: consumidor JavaScript com parser padrão lê ponto flutuante (exato até 15 algarismos significativos); leitura exata em Java e Python [NVI]. CI: pendente do push.

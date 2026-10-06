@@ -11,10 +11,10 @@ namespace PacioliBank.Ledger.Application;
 /// Tipo proprio, separado do resultado da API, de proposito: o evento e um
 /// contrato com consumidores que nao conhecem o dominio, e serializar um tipo
 /// do dominio vaza o que ele tem por dentro (propriedades calculadas do
-/// <see cref="Money"/>, sentido como numero). Aqui so ha texto e numero
-/// inteiro, no formato do contrato:
+/// <see cref="Money"/>, sentido como numero). Aqui so ha texto e numero,
+/// no formato do contrato:
 /// <list type="bullet">
-///   <item>valores monetarios como string, na escala da moeda (EF secao 8.2);</item>
+///   <item>valores monetarios como numero, na escala da moeda (EF secao 8.2);</item>
 ///   <item>instantes em ISO 8601 UTC com sufixo Z (EF secao 8.1);</item>
 ///   <item>sentido como <c>Credit</c> ou <c>Debit</c>, como na API;</item>
 ///   <item><c>reversalOf</c> presente apenas no estorno.</item>
@@ -27,11 +27,11 @@ public sealed record LedgerEntryEvent(
     string AccountId,
     long Sequence,
     string Direction,
-    string Amount,
+    decimal Amount,
     string Currency,
     string OccurredAt,
     string RecordedAt,
-    string BalanceAfter,
+    decimal BalanceAfter,
     string? ReversalOf)
 {
     /// <summary>Tipo do evento de lancamento comum (convencoes, secao 8).</summary>
@@ -57,11 +57,11 @@ public sealed record LedgerEntryEvent(
             entry.AccountId.ToString("D", CultureInfo.InvariantCulture),
             entry.Sequence,
             entry.Direction.ToString(),
-            entry.Amount.ToContractString(),
+            entry.Amount.ToContractAmount(),
             entry.Amount.Currency.Code,
             WireFormat.Instant(entry.OccurredAt),
             WireFormat.Instant(recordedAt),
-            entry.BalanceAfter.ToContractString(),
+            entry.BalanceAfter.ToContractAmount(),
             entry.ReversalOf?.ToString("D", CultureInfo.InvariantCulture));
     }
 }

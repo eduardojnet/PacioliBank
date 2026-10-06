@@ -33,7 +33,7 @@ public class TracingTests
 
         var pedido = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/accounts/{conta}/credits")
         {
-            Content = JsonContent.Create(new { amount = "10.00", currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
+            Content = JsonContent.Create(new { amount = 10.00m, currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
         };
         pedido.Headers.Add("Idempotency-Key", "traco-1");
         using (var resposta = await cliente.SendAsync(pedido, TestContext.Current.CancellationToken))
@@ -85,7 +85,7 @@ public class TracingTests
 
         var pedido = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/accounts/{conta}/debits")
         {
-            Content = JsonContent.Create(new { amount = "10.00", currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
+            Content = JsonContent.Create(new { amount = 10.00m, currency = "BRL", occurredAt = "2026-10-01T12:00:00Z" }),
         };
         pedido.Headers.Add("Idempotency-Key", "traco-2");
         using (await cliente.SendAsync(pedido, TestContext.Current.CancellationToken))

@@ -19,6 +19,8 @@ public class MigrationTests
     private const string InitialSchema = "0001_esquema_inicial.sql";
     private const string DailyBalances = "0002_saldo_diario.sql";
     private const string Partitioning = "0003_particionamento_do_ledger.sql";
+    private const string Transfers = "0004_transferencias.sql";
+    private const string NumericAmounts = "0005_valores_numericos.sql";
 
     private readonly LedgerFixture _fixture;
 
@@ -266,6 +268,65 @@ public class MigrationTests
             """)).ToList();
         Assert.Equal(["fk_idempotency_entry->ledger.entry_keys", "fk_outbox_entry->ledger.entry_keys"], alvos);
         Assert.Equal(0, await ContarAsync(banco, "SELECT count(*) FROM pg_class WHERE relname = 'ledger_entries_antigo'"));
+    }
+
+    [Fact]
+    public async Task Migracao_dos_valores_numericos_converte_respostas_gravadas_e_mensagens_da_outbox()
+    {
+        // Banco antes da 0005, com resposta de credito e de transferencia e
+        // evento gravados no formato antigo, com o valor entre aspas.
+        var banco = await _fixture.CreateEmptyDatabaseAsync();
+        using var pasta = PastaDeMigracoes.CopiaDasOficiais(InitialSchema, DailyBalances);
+        Assert.True(SchemaMigrator.ApplySchema(banco, pasta.Caminho).Successful);
+
+        var conta = Guid.NewGuid();
+        var credito = Guid.NewGuid();
+        var debito = Guid.NewGuid();
+        await ExecutarAsync(banco,
+            """
+            INSERT INTO ledger.accounts (account_id, customer_id, currency, status, last_sequence) VALUES (@conta, @conta, 'BRL', 1, 2);
+            INSERT INTO ledger.ledger_entries
+                (entry_id, account_id, sequence, direction, amount, currency, occurred_at, recorded_at,
+                 idempotency_key, correlation_id, reversal_of, balance_after)
+            VALUES (@credito, @conta, 1, 1, 150.00, 'BRL', now(), now(), 'v-1', @credito, NULL, 150.00),
+                   (@debito, @conta, 2, -1, 40.00, 'BRL', now(), now(), 'v-2', @debito, NULL, 110.00);
+            """,
+            new { conta, credito, debito });
+
+        var corpoCredito = "{\"entryId\":\"e\",\"sequence\":1,\"amount\":\"150.00\",\"currency\":\"BRL\",\"balanceAfter\":\"150.00\"}";
+        var corpoTransferencia = "{\"transferId\":\"t\",\"amount\":\"40.00\",\"currency\":\"BRL\",\"debit\":{\"entryId\":\"d\",\"sequence\":2,\"balanceAfter\":\"110.00\"},\"credit\":{\"entryId\":\"c\"}}";
+        await ExecutarAsync(banco,
+            """
+            INSERT INTO ledger.idempotency_records (account_id, idempotency_key, request_hash, response_status, response_body, entry_id)
+            VALUES (@conta, 'v-1', '\\x00', 201, @corpoCredito::json, @credito),
+                   (@conta, 'v-2', '\\x00', 201, @corpoTransferencia::json, @debito);
+            INSERT INTO ledger.outbox_messages (message_id, account_id, sequence, event_type, payload, occurred_at)
+            VALUES (@mensagem, @conta, 1, 'pacioli.ledger.entry-recorded.v1', @corpoCredito::jsonb, now());
+            """,
+            new { conta, credito, debito, corpoCredito, corpoTransferencia, mensagem = Guid.NewGuid() });
+
+        pasta.AcrescentarOficial(Partitioning);
+        pasta.AcrescentarOficial(Transfers);
+        pasta.AcrescentarOficial(NumericAmounts);
+        var resultado = SchemaMigrator.ApplySchema(banco, pasta.Caminho);
+        Assert.True(resultado.Successful, resultado.Error?.ToString());
+
+        // Mesmo texto, sem as aspas nos valores: ordem das chaves e escala preservadas.
+        await using var connection = new NpgsqlConnection(banco);
+        var corpos = (await connection.QueryAsync<string>(
+            "SELECT response_body::text FROM ledger.idempotency_records WHERE account_id = @conta ORDER BY idempotency_key",
+            new { conta })).ToList();
+        Assert.Equal(
+            [
+                "{\"entryId\":\"e\",\"sequence\":1,\"amount\":150.00,\"currency\":\"BRL\",\"balanceAfter\":150.00}",
+                "{\"transferId\":\"t\",\"amount\":40.00,\"currency\":\"BRL\",\"debit\":{\"entryId\":\"d\",\"sequence\":2,\"balanceAfter\":110.00},\"credit\":{\"entryId\":\"c\"}}",
+            ],
+            corpos);
+
+        var evento = await connection.QuerySingleAsync<(string Tipo, string Valor, string Moeda)>(
+            "SELECT jsonb_typeof(payload->'amount'), (payload->'amount')::text, payload->>'currency' FROM ledger.outbox_messages WHERE account_id = @conta",
+            new { conta });
+        Assert.Equal(("number", "150.00", "BRL"), evento);
     }
 
     private static async Task<string[]> TabelasDoLedgerAsync(string conexao)

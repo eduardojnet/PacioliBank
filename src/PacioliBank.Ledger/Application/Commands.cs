@@ -6,16 +6,17 @@ namespace PacioliBank.Ledger.Application;
 /// Comando de credito ou debito, no formato em que chega da borda.
 /// </summary>
 /// <remarks>
-/// Valor e moeda viajam como texto, exatamente como o contrato os recebe
-/// (EF secao 8.2). A conversao para <see cref="Money"/> acontece na porta de
-/// entrada, e nao no adaptador HTTP, para que a regra de formato monetario
-/// e o codigo de erro correspondente (RN-002) tenham um unico dono.
+/// O valor chega como o numero exato do contrato (EF secao 8.2), e a moeda
+/// como texto. A conversao para <see cref="Money"/>, com a escala da moeda,
+/// acontece na porta de entrada, e nao no adaptador HTTP, para que a regra de
+/// formato monetario e o codigo de erro correspondente (RN-002) tenham um
+/// unico dono.
 /// </remarks>
 /// <param name="IdempotencyKey">Nulo ou vazio e rejeitado com RN-005, antes de qualquer I/O.</param>
 public sealed record PostingCommand(
     Guid AccountId,
     EntryDirection Direction,
-    string Amount,
+    decimal Amount,
     string Currency,
     DateTimeOffset OccurredAt,
     string? IdempotencyKey,
@@ -34,13 +35,13 @@ public sealed record ReversalCommand(
 
 /// <summary>
 /// Comando de transferencia entre contas (RF-012), no formato em que chega da
-/// borda. Valor e moeda como texto, pela mesma razao do <see cref="PostingCommand"/>.
+/// borda. Valor e moeda pela mesma razao do <see cref="PostingCommand"/>.
 /// </summary>
 /// <param name="IdempotencyKey">Chave na conta de origem. Nulo ou vazio e rejeitado com RN-005, antes de qualquer I/O.</param>
 public sealed record TransferCommand(
     Guid SourceAccountId,
     Guid DestinationAccountId,
-    string Amount,
+    decimal Amount,
     string Currency,
     DateTimeOffset OccurredAt,
     string? IdempotencyKey,

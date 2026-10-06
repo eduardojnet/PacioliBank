@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "PacioliBank Ledger API",
-    "description": "Livro-raz\u00E3o de contas correntes. Contrato descrito na EF \u00A78; valores monet\u00E1rios como string, instantes em ISO 8601 UTC.",
+    "description": "Livro-raz\u00E3o de contas correntes. Contrato descrito na EF \u00A78; valores monet\u00E1rios como n\u00FAmero decimal exato, na escala da moeda, instantes em ISO 8601 UTC.",
     "version": "1.0.0"
   },
   "paths": {
@@ -665,7 +665,8 @@
             "format": "uuid"
           },
           "balance": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "currency": {
             "type": "string"
@@ -692,8 +693,9 @@
           "amount": {
             "type": [
               "null",
-              "string"
-            ]
+              "number"
+            ],
+            "format": "decimal"
           },
           "currency": {
             "type": [
@@ -738,7 +740,8 @@
             "type": "string"
           },
           "amount": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "currency": {
             "type": "string"
@@ -750,7 +753,8 @@
             "type": "string"
           },
           "balanceAfter": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "reversalOf": {
             "type": [
@@ -833,7 +837,8 @@
             "type": "string"
           },
           "amount": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "currency": {
             "type": "string"
@@ -845,7 +850,8 @@
             "type": "string"
           },
           "balanceAfter": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "reversalOf": {
             "type": [
@@ -901,8 +907,9 @@
           "amount": {
             "type": [
               "null",
-              "string"
-            ]
+              "number"
+            ],
+            "format": "decimal"
           },
           "currency": {
             "type": [
@@ -946,7 +953,8 @@
             "format": "int64"
           },
           "balanceAfter": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           }
         }
       },
@@ -974,7 +982,8 @@
             "type": "string"
           },
           "amount": {
-            "type": "string"
+            "type": "number",
+            "format": "decimal"
           },
           "currency": {
             "type": "string"

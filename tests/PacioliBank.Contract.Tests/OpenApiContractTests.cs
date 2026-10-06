@@ -75,10 +75,10 @@ public class OpenApiContractTests : IClassFixture<OpenApiContractTests.ApiEmMemo
         Assert.NotNull(caminhos["/api/v1/accounts/{accountId}/balance"]?["get"]);
         Assert.NotNull(caminhos["/api/v1/accounts/{accountId}/entries"]?["get"]);
 
-        // EF secao 8.2: valor monetario e string no contrato, nunca numero.
+        // EF secao 8.2: valor monetario e numero no contrato, nunca texto.
         var resposta = documento["components"]!["schemas"]!["PostingResponse"]!["properties"]!;
-        Assert.Equal("string", resposta["amount"]!["type"]!.ToString());
-        Assert.Equal("string", resposta["balanceAfter"]!["type"]!.ToString());
+        Assert.Equal("number", resposta["amount"]!["type"]!.ToString());
+        Assert.Equal("number", resposta["balanceAfter"]!["type"]!.ToString());
     }
 
     /// <summary>

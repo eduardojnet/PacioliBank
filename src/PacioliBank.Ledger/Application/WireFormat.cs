@@ -9,7 +9,7 @@ namespace PacioliBank.Ledger.Application;
 /// <remarks>
 /// Um unico dono para o formato evita que os dois contratos divirjam: o mesmo
 /// instante nao pode sair com <c>Z</c> na API e com <c>+00:00</c> no evento.
-/// O valor monetario ja tem dono em <see cref="Domain.Money.ToContractString"/>.
+/// O valor monetario ja tem dono em <see cref="Domain.Money.ToContractAmount"/>.
 /// </remarks>
 public static class WireFormat
 {

@@ -13,7 +13,7 @@ Comece por [ADR-0001](./ADR-0001-estilo-arquitetural.md). As decisões seguintes
 | [0001](./ADR-0001-estilo-arquitetural.md) | Monolito modular com fronteiras verificadas | Aceito | RNF-035, RNF-037, R-07 |
 | [0002](./ADR-0002-plataforma-e-armazenamento.md) | .NET 10 LTS, PostgreSQL, Dapper e DbUp; migrador em passo separado (revisão do card 27) | Aceito, revisado em 2026-10-02 | RNF-001, RNF-037, RNF-038, R-06 |
 | [0003](./ADR-0003-ledger-append-only.md) | Ledger append-only como única fonte da verdade | Aceito | RN-003, RNF-003, RNF-016 |
-| [0004](./ADR-0004-representacao-monetaria.md) | `decimal` e `numeric(19,4)`, com Value Object `Money` | Aceito | RN-002, EF §8.2 |
+| [0004](./ADR-0004-representacao-monetaria.md) | `decimal` e `numeric(19,4)`, com Value Object `Money`; número JSON na API (revisão do card 47) | Aceito, revisado em 2026-10-06 | RN-002, EF §8.2 |
 | [0005](./ADR-0005-controle-de-concorrencia.md) | Bloqueio pessimista de linha por conta; duas contas em ordem crescente de identificador (revisão do card 38) | Aceito, revisado em 2026-10-05 | RN-001, RNF-004, CQ-02 |
 | [0006](./ADR-0006-idempotencia.md) | Chave obrigatória com unicidade no banco | Aceito, revisado em 2026-10-02 | RN-005, RNF-011, CQ-04 |
 | [0007](./ADR-0007-snapshot-e-projecao.md) | Snapshot inline amortizado por sequência | Aceito | RNF-002, RNF-003, RNF-006 |

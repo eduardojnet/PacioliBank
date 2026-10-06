@@ -54,18 +54,6 @@ public readonly record struct Money
     /// <summary>Valor zero na moeda informada.</summary>
     public static Money Zero(Currency currency) => Of(0m, currency);
 
-    /// <summary>
-    /// Converte a representacao textual usada no contrato de API (string decimal, cultura invariante).
-    /// Ver EF secao 8.2: valores monetarios trafegam como string para preservar precisao no consumidor.
-    /// </summary>
-    public static Money Parse(string value, Currency currency)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
-        var amount = decimal.Parse(value, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
-        return Of(amount, currency);
-    }
-
     /// <summary>Alternativa nomeada ao operador de soma.</summary>
     public static Money Add(Money left, Money right)
     {
@@ -94,9 +82,22 @@ public readonly record struct Money
         return decimal.Compare(left.Amount, right.Amount);
     }
 
-    /// <summary>Representacao no formato do contrato de API: casas fixas, cultura invariante.</summary>
+    /// <summary>
+    /// Texto com as casas fixas da moeda, em cultura invariante. Entra na
+    /// impressao do comando gravada na idempotencia (ADR-0006), entao o formato
+    /// nao muda sem invalidar as impressoes ja gravadas.
+    /// </summary>
     public string ToContractString() =>
         Amount.ToString("F" + Currency.Scale.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Valor no formato dos contratos externos (EF secao 8.2): numero com
+    /// exatamente as casas da moeda. O <c>decimal</c> guarda a escala, e o
+    /// serializador a escreve: 150 em BRL sai como <c>150.00</c>, e nao
+    /// <c>150</c>; 110,0000 lido do banco sai como <c>110.00</c>.
+    /// </summary>
+    public decimal ToContractAmount() =>
+        decimal.Parse(ToContractString(), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
 
     public override string ToString() =>
         string.Concat(Currency.Code ?? string.Empty, " ", ToContractString());

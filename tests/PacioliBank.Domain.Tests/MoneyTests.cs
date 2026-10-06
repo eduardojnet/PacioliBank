@@ -15,7 +15,7 @@ public class MoneyTests
     [InlineData("99999999.99")]
     public void Of_aceita_valor_dentro_da_escala_da_moeda(string raw)
     {
-        var money = Money.Parse(raw, Currency.Brl);
+        var money = Money.Of(decimal.Parse(raw, CultureInfo.InvariantCulture), Currency.Brl);
 
         Assert.Equal(raw, money.ToContractString());
         Assert.Equal(Currency.Brl, money.Currency);
@@ -33,6 +33,22 @@ public class MoneyTests
         var erro = Assert.Throws<InvalidMoneyScaleException>(() => Money.Of(amount, Currency.Brl));
 
         Assert.Equal("BRL", erro.CurrencyCode);
+    }
+
+    [Theory]
+    [InlineData("150", "150.00")]
+    [InlineData("150.5", "150.50")]
+    [InlineData("110.0000", "110.00")]
+    [InlineData("-0.10", "-0.10")]
+    [InlineData("0", "0.00")]
+    public void Valor_do_contrato_tem_exatamente_as_casas_da_moeda(string raw, string esperado)
+    {
+        // O decimal guarda a escala e o serializador JSON a escreve: sem esta
+        // normalizacao, 150 sairia como 150 e o numeric(19,4) do banco como 110.0000.
+        var money = Money.Of(decimal.Parse(raw, CultureInfo.InvariantCulture), Currency.Brl);
+
+        Assert.Equal(esperado, money.ToContractAmount().ToString(CultureInfo.InvariantCulture));
+        Assert.Equal(esperado, System.Text.Json.JsonSerializer.Serialize(money.ToContractAmount()));
     }
 
     [Fact]

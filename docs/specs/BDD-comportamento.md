@@ -2,8 +2,8 @@
 
 **Projeto:** Sistema de Movimentações Financeiras e Posição Consolidada
 **Documento:** 1 de 3 do pacote de especificação
-**Versão:** 1.3
-**Data:** 2026-10-05
+**Versão:** 1.4
+**Data:** 2026-10-06
 **Status:** Proposto
 
 **Documentos relacionados:**
@@ -48,7 +48,7 @@ Gherkin escrito em português (`# language: pt`), suportado nativamente por Reqn
 
 ### 2.3 Formato de valores monetários
 
-Valores aparecem nos cenários como string decimal com duas casas (`"150.00"`). Nunca como número de ponto flutuante. Esta convenção é vinculante também no contrato de API (ver EF §8.2) e existe para eliminar perda de precisão em parsers JSON que usam IEEE-754.
+Valores aparecem nos cenários entre aspas, como decimal exato com duas casas (`"150.00"`), porque o cenário é texto lido por quem não programa, e não JSON. As aspas são do Gherkin, e não do contrato: na API e no evento, o valor trafega como número JSON com as casas da moeda (`150.00`), e texto é recusado (EF §8.2, versão 1.8). Nunca como valor de ponto flutuante.
 
 ### 2.4 Identificadores nos cenários
 
@@ -740,3 +740,4 @@ Nenhuma destas lacunas foi preenchida com número ou política inventada. Todas 
 | 1.1 | 2026-10-02 | Eduardo J. G. do Carmo | F09: conta de terceiro responde `ACCOUNT_NOT_FOUND`, e não `FORBIDDEN`, para não revelar existência ([ADR-0009](../adr/ADR-0009-seguranca-e-privilegio-minimo.md) §3; lacuna L-05) |
 | 1.2 | 2026-10-04 | Eduardo J. G. do Carmo | §8: QA-001 e QA-003 corrigidas contra o código; QA-003 decidida (lacuna L-14, card 29) |
 | 1.3 | 2026-10-05 | Eduardo J. G. do Carmo | F11: transferência entre contas (RF-012, RN-013, card 38, [ADR-0014](../adr/ADR-0014-transferencia-entre-contas.md)); QA-009 em §8 |
+| 1.4 | 2026-10-06 | Eduardo J. G. do Carmo | §2.3: as aspas dos valores são do cenário; no contrato, o valor é número JSON (card 47, EF 1.8) |

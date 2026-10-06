@@ -215,7 +215,7 @@ public class LedgerStoreTests
             new { conta });
 
         Assert.Equal(primeira.ResponseBody, gravado);
-        Assert.Contains("\"amount\":\"100.00\"", gravado, StringComparison.Ordinal);
+        Assert.Contains("\"amount\":100.00,", gravado, StringComparison.Ordinal);
     }
 
     [Fact]

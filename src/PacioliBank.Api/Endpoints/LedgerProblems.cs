@@ -158,6 +158,6 @@ public sealed class LedgerProblems : IExceptionHandler
 
     // A excecao carrega o decimal sem a moeda; a escala de 2 casas e a do BRL,
     // unica moeda do catalogo (QA-005).
-    private static string Amount(decimal value) =>
-        value.ToString("0.00", CultureInfo.InvariantCulture);
+    private static decimal Amount(decimal value) =>
+        Money.Of(decimal.Round(value, Currency.Brl.Scale, MidpointRounding.ToEven), Currency.Brl).ToContractAmount();
 }

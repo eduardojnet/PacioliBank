@@ -2,10 +2,10 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-05 (trigésima terceira revisão)
-**Build:** verde, 0 avisos, 0 erros, os 9 projetos da solução (5 de produção, 4 de teste), analisadores em modo `Recommended` (`dotnet build --no-incremental`, verificado em 2026-10-05, sobre o commit `8cd327f`)
-**Testes:** 230 passando (116 de domínio, 6 de arquitetura, 2 de contrato, 106 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-05). Cobertura de linha do domínio: 95,41% (coverlet.MTP), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 87,06% de mutantes mortos; o CI reprova abaixo de 85%
-**Verificação manual:** `docker compose up --build` servindo os 6 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19); a transferência, com reenvio e duas recusas, em 2026-10-05 (card 38).
+**Última atualização:** 2026-10-06 (trigésima quarta revisão)
+**Build:** verde, 0 avisos, 0 erros, os 9 projetos da solução (5 de produção, 4 de teste), analisadores em modo `Recommended` (`dotnet build --no-incremental`, verificado em 2026-10-06, sobre a mudança do card 47, ainda sem commit)
+**Testes:** 237 passando (117 de domínio, 6 de arquitetura, 2 de contrato, 112 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-06). Cobertura de linha do domínio: 94,11% (coverlet.MTP), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 86,96% de mutantes mortos; o CI reprova abaixo de 85%
+**Verificação manual:** `docker compose up --build` servindo os 6 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19); a transferência, com reenvio e duas recusas, em 2026-10-05 (card 38); valor como número, com reenvio de comando anterior à mudança e texto recusado, e as quatro demonstrações do painel em Chrome headless, em 2026-10-06 (card 47).
 
 ---
 
@@ -29,7 +29,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 | Requisito | Estado |
 |---|---|
 | Implementação em C# | Atendido |
-| Testes automatizados | Atendido, 116 passando |
+| Testes automatizados | Atendido, 237 passando |
 | Código compila sem erros e sem avisos | Atendido, `TreatWarningsAsErrors` ativo |
 | README com instruções de execução local | Atendido: revisão final feita (card 23), verificada seguindo o README num clone limpo |
 | Toda documentação no próprio repositório | Atendido: diagramas C4 em Mermaid em [`docs/diagrams/`](./diagrams/) (L-02 encerrada) |
@@ -48,7 +48,7 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 | 0001 | Monolito modular; Ports and Adapters com DDD tático no interior |
 | 0002 | .NET 10 LTS, PostgreSQL 17, Dapper, DbUp |
 | 0003 | Ledger append-only como única fonte da verdade; posição é derivada |
-| 0004 | `decimal` e `numeric(19,4)`; `Money` com moeda embutida; string na API |
+| 0004 | `decimal` e `numeric(19,4)`; `Money` com moeda embutida; número JSON na API, com as casas da moeda (revisado em 2026-10-06, card 47: era string) |
 | 0005 | Serialização por conta via `FOR NO KEY UPDATE`; constraint única como rede |
 | 0006 | Chave de idempotência obrigatória; detecção pela violação de chave primária |
 | 0007 | Snapshot síncrono amortizado a cada 100 lançamentos; sem projetor assíncrono |
@@ -137,7 +137,7 @@ Sem referência ao `Ledger`: lê a outbox pelo contrato da tabela. Na API, `Even
 | `Program.cs` | Raiz de composição: único lugar que conhece todas as camadas; `/health/ready` consulta o PostgreSQL |
 | `Endpoints/LedgerEndpoints.cs` | Os 6 endpoints da EF §8.3, como adaptador fino sobre `ILedgerService`; `POST /api/v1/transfers` desde o card 38 |
 | `Endpoints/LedgerProblems.cs` | Único mapa de exceção para `application/problem+json` com `code` da EF §8.6 |
-| `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como string, instantes ISO 8601 UTC |
+| `Endpoints/Contracts.cs` | Corpos de requisição e resposta; valores monetários como número JSON com as casas da moeda (texto na entrada é recusado), instantes ISO 8601 UTC; OpenAPI com `"format": "decimal"` nos campos monetários (card 47) |
 | `wwwroot/` | Painel de evidência (ADR-0011): quatro demonstrações na raiz, só com a API pública; sem teste automatizado próprio, verificado em Chrome headless |
 | `Endpoints/Correlation.cs` | `X-Correlation-Id` aceito ou gerado, devolvido inclusive em resposta de erro |
 | `Observability/` | Card 33, ADR-0012: log em JSON na saída padrão (Serilog), uma linha por entrada; correlação da requisição em toda entrada emitida durante ela; uma linha de resumo por requisição; mascaramento no formatador (todo GUID truncado aos quatro últimos caracteres, CPF e token por marcador), coberto por teste pelo caminho completo |
@@ -150,7 +150,7 @@ Repetição idempotente responde `200` com `Idempotency-Replayed: true` e corpo 
 
 O esquema é aplicado por migrações numeradas (DbUp, `dbup-postgresql` 7.0.1), num passo separado do `docker compose` (`pacioli-migrations`): roda com `pacioli_migrator`, aplica só o que falta, registra em `public.schema_versions` e termina. A API depende de `service_completed_successfully` e continua com `pacioli_runtime`. Transação por script: migração com erro não deixa alteração parcial nem registro. A massa local (`db/seed/`) tem diário próprio e só roda com `PACIOLI_SEED_LOCAL=true`. Os testes de integração montam o banco pelo mesmo `SchemaMigrator`. Decisão e alternativas rejeitadas na revisão do ADR-0002.
 
-Esquema `ledger` com 8 tabelas e 3 papéis. **Transferências** (migração 0004, card 38, ADR-0014): `transfers` amarra as duas pernas por chaves estrangeiras compostas que conferem conta, sentido, valor, moeda e instante de registro; perna reaproveitada e origem igual ao destino são recusadas pelo banco. **O ledger é particionado por mês de registro** (migração 0003, card 37, ADR-0013): as restrições de identidade, sequência, idempotência e estorno único vivem em `entry_keys`, tabela não particionada gravada na mesma transação, e cada linha do ledger é amarrada à sua chave por chave estrangeira composta; o migrador abre as partições dos próximos 12 meses a cada execução. A sexta, `daily_balances` (migração 0002, card 32), guarda o fechamento diário por conta: a posição em instante passado parte do fechamento do dia anterior e soma só os lançamentos do próprio dia; a escrita mantém os fechamentos, inclusive os dias seguintes a um retroativo, na mesma transação. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
+Esquema `ledger` com 8 tabelas e 3 papéis. **Valores numéricos** (migração 0005, card 47): converte para número os valores monetários gravados como texto em `idempotency_records.response_body` e `outbox_messages.payload`; aplicada ao volume local em uso, com 284 respostas e 290 mensagens convertidas e o restante do texto idêntico. **Transferências** (migração 0004, card 38, ADR-0014): `transfers` amarra as duas pernas por chaves estrangeiras compostas que conferem conta, sentido, valor, moeda e instante de registro; perna reaproveitada e origem igual ao destino são recusadas pelo banco. **O ledger é particionado por mês de registro** (migração 0003, card 37, ADR-0013): as restrições de identidade, sequência, idempotência e estorno único vivem em `entry_keys`, tabela não particionada gravada na mesma transação, e cada linha do ledger é amarrada à sua chave por chave estrangeira composta; o migrador abre as partições dos próximos 12 meses a cada execução. A sexta, `daily_balances` (migração 0002, card 32), guarda o fechamento diário por conta: a posição em instante passado parte do fechamento do dia anterior e soma só os lançamentos do próprio dia; a escrita mantém os fechamentos, inclusive os dias seguintes a um retroativo, na mesma transação. Cada constraint carrega uma regra: `uq_entries_sequence` (RN-006), `uq_entries_idempotency` (RN-005), `uq_entries_reversal` (RN-004), `CHECK (amount > 0)` (RN-002).
 
 O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar um lançamento gravado é impossível para a aplicação, qualquer que seja o código.
 
@@ -158,11 +158,11 @@ O papel `pacioli_runtime` recebe `SELECT, INSERT` no ledger e nada mais. Alterar
 
 | Projeto | Quantidade | Escopo |
 |---|---|---|
-| `PacioliBank.Domain.Tests` | 116 | Invariantes puras, transferência, validações da porta de entrada e contratos de fio (corpo de escrita e de transferência, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 95,41% (coverlet.MTP); teste de mutação 87,06% (cards 36, 34.1 e 38) |
-| Coleção do Insomnia (`insomnia/`) | 52 testes em 18 requisições | Contra a API no ar, pelo `inso` 13.3.0, com o sub-ambiente `Local` (card 45); código de saída 0 só com tudo verde. Execuções de 2026-10-06 contra o `docker compose`: no runner do aplicativo Insomnia 13.1.0, 18 requisições e 52 testes verdes, executada pelo usuário às 01:59 UTC, ainda com as variáveis no *Base Environment* (card 46); pelo `inso` 13.3.0 com o `Local`, 52/52 duas vezes, e com o *Base Environment* vazio reprova com código 1, como controle |
+| `PacioliBank.Domain.Tests` | 117 | Invariantes puras, transferência, validações da porta de entrada e contratos de fio (corpo de escrita e de transferência, evento, impressão do comando), sem I/O. Cobertura de linha do `PacioliBank.Ledger`: 94,11% (coverlet.MTP); teste de mutação 87,06% (cards 36, 34.1 e 38) |
+| Coleção do Insomnia (`insomnia/`) | 54 testes em 18 requisições (52 até o card 47, que acrescentou a verificação da escala no texto da resposta) | Contra a API no ar, pelo `inso` 13.3.0, com o sub-ambiente `Local` (card 45); código de saída 0 só com tudo verde. Execuções de 2026-10-06 contra o `docker compose`: no runner do aplicativo Insomnia 13.1.0, 18 requisições e 52 testes verdes, executada pelo usuário às 01:59 UTC, ainda com as variáveis no *Base Environment* (card 46); pelo `inso` 13.3.0 com o `Local`, 52/52 duas vezes, e com o *Base Environment* vazio reprova com código 1, como controle |
 | `PacioliBank.Architecture.Tests` | 6 | Regras de dependência com NetArchTest 1.3.2; cada regra reprova o que viola (medido em duas delas). A sexta, do card 27, isola o migrador do domínio e dos módulos |
 | `PacioliBank.Contract.Tests` | 2 | OpenAPI gerado comparado com o instantâneo aprovado (`openapi.v1.approved.json`); reprova quando o contrato muda (medido) |
-| `PacioliBank.Integration.Tests` | 106 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), transferência (F11: atomicidade com falha provocada, ordem dos bloqueios verificada de forma determinística, pernas amarradas pelo banco), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1), métricas (1, card 33.2) e fechamento diário (5, card 32: posição histórica contra o ledger em 63 instantes, fechamentos, origem, privilégio e preenchimento pela migração); particionamento (9, card 37: duplicidade em outro período recusada pelo banco, partição do mês, migração com dados) |
+| `PacioliBank.Integration.Tests` | 112 | PostgreSQL real via Testcontainers, incluindo concorrência, estorno (F06), transferência (F11: atomicidade com falha provocada, ordem dos bloqueios verificada de forma determinística, pernas amarradas pelo banco), extrato (F05), reenvio após mudança de estado (L-10), despachante de outbox (F08), migrações (7, card 27: banco vazio, reexecução, evolução, falha atômica, delimitador nomeado, massa local, diário fora do alcance da aplicação) e snapshot (3, card 30.1: gravação na centésima escrita, limite de 99 somados, posição histórica sem snapshot), log (9, card 33: mascaramento no formatador e caminho completo com API e PostgreSQL reais), rastreamento (2, card 33.1), métricas (1, card 33.2) e fechamento diário (5, card 32: posição histórica contra o ledger em 63 instantes, fechamentos, origem, privilégio e preenchimento pela migração); particionamento (9, card 37: duplicidade em outro período recusada pelo banco, partição do mês, migração com dados) |
 
 Os testes de concorrência usam barreira de sincronização para liberar as tarefas no mesmo instante. Disparar em laço serializa por acidente de escalonamento e o teste perde o propósito.
 
@@ -397,7 +397,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 64 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 65 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -475,12 +475,12 @@ A Fazer e Backlog estão vazios. Próximos por decisão do usuário.
 
 ```bash
 cd pacioli-bank-ledger
-dotnet test                   # esperado: 230 passando, 0 falhando, sem avisos
+dotnet test                   # esperado: 237 passando, 0 falhando, sem avisos
 docker compose up --build     # migrador aplica o que falta e termina; API em http://localhost:8080
 curl http://localhost:8080/health/ready
 curl -X POST http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/credits \
      -H 'Idempotency-Key: k1' -H 'Content-Type: application/json' \
-     -d '{"amount":"150.00","currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
+     -d '{"amount":150.00,"currency":"BRL","occurredAt":"2026-10-02T10:00:00Z"}'
 curl http://localhost:8080/api/v1/accounts/11111111-1111-1111-1111-111111111111/balance
 ```
 
@@ -621,3 +621,4 @@ confirmação.
 | 2026-10-06 | Card 44 aberto: a requisição vazia "New Request", que roda antes de tudo e derruba a execução, existe só no workspace importado no aplicativo Insomnia; o arquivo versionado não a contém. Remoção pela interface do aplicativo, pendente com o usuário: o banco local do aplicativo não é editado com ele aberto |
 | 2026-10-06 | Card 45 concluído: sub-ambiente `Local` (`env_pacioli_local`) na coleção, com as 4 variáveis; o *Base Environment* fica vazio. Elimina o aviso "No environment is selected" do aplicativo e dá existência ao passo de escolher o ambiente, agora escrito no README. CI e README passam a `--env env_pacioli_local`. `inso` 13.3.0 contra o `docker compose`: 52/52 duas vezes; com o *Base Environment*, reprova com código 1. No aplicativo com o `Local` selecionado: [NVI] |
 | 2026-10-06 | Card 46 concluído: §4 registra a execução da coleção no runner do aplicativo Insomnia 13.1.0, feita pelo usuário às 01:59 UTC contra o `docker compose`: 18 requisições, 52 testes verdes. O horário vem do banco local do aplicativo, que registra as variáveis gravadas pelos testes; o resultado verde é o relato do usuário |
+| 2026-10-06 | Card 47 concluído, por decisão do usuário: **valor monetário como número JSON** na API e no evento, revertendo a escolha original do ADR-0004 (texto). Entrada só número: texto sai `400 INVALID_REQUEST`, escala acima da moeda `400 INVALID_AMOUNT`. Saída com exatamente as casas da moeda (`Money.ToContractAmount`): `150` entra e `150.00` sai. Evento muda mantendo `v1` (nenhum consumidor). Migração 0005 converte as respostas gravadas para reenvio e as mensagens da outbox; a impressão do comando não muda, e o reenvio de comando anterior à mudança é reconhecido (verificado via curl). OpenAPI com `"format": "decimal"`, porque o gerador declarava `double`. 237 verdes; mutações medidas: sem a normalização da escala, 10 testes reprovam; aceitando texto, 5. Insomnia 54/54 duas vezes; painel verificado em Chrome headless. Revisão do ADR-0004 com 3 alternativas rejeitadas; EF 1.8, BDD 1.4. Risco aceito, registrado no ADR: consumidor JavaScript com o parser padrão lê ponto flutuante. **Registro posterior no quadro:** o TickTick estava desconectado; o usuário autorizou executar antes e criar o cartão 47 na reconexão |
