@@ -9,6 +9,7 @@ Modelo C4 do PacioliBank Ledger em [Mermaid](https://mermaid.js.org/), renderiza
 | C3 | [Componentes da API](./c3-componentes.md) | Como a API se organiza por dentro, e onde cada regra vive? |
 | C4 | [Registro de débito sob concorrência](./c4-sequencia-debito.md) | Em que ordem bloqueio, decisão e gravação acontecem? |
 | Dados | [Esquema do ledger (ERD)](./ERD-esquema-ledger.md) | Onde os dados e as regras de negócio moram no banco? |
+| Nuvem | [Arquitetura-alvo na AWS](./aws-arquitetura-alvo.md) | Como isto rodaria em nuvem, e o que a nuvem **não** pode mudar? |
 
 ## Implementado ou especificado
 
@@ -29,4 +30,8 @@ Cada diagrama traz, abaixo do desenho, uma tabela com o estado de cada elemento 
 
 Os diagramas nasceram em três documentos do Lucid (C4 detalhado, C4 consolidado e sequência nível 4), que continuam servindo para apresentação. **A fonte de verdade passa a ser esta pasta.** C1 e C2 são transcrição fiel do Lucid, com o estado acrescentado. C3 e C4 foram redesenhados a partir do código, porque o Lucid descreve componentes que o código organizou de outra forma: a tabela de correspondência está em [c3-componentes.md](./c3-componentes.md).
 
-**Atualizado em:** 2026-10-02, após os cards 19 e 19.1.
+## Nota sobre o diagrama de nuvem
+
+O diagrama da AWS é o único desta pasta cujos elementos **não existem em lugar algum**: ele é proposta de implantação, não transcrição do que roda. Por isso tem tabela de estado própria, que declara, para cada serviço, se o **comportamento** que ele representa já existe no sistema entregue. O sistema roda em `docker compose`; nenhum recurso AWS foi provisionado.
+
+**Atualizado em:** 2026-10-06, com o diagrama de arquitetura-alvo na AWS.
