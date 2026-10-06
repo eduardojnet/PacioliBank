@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-05 · **Cartões:** 65 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
+**Data:** 2026-10-05 · **Cartões:** 66 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -14,7 +14,7 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 65 | 01 a 34, 36 a 47, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
+| Concluído | 66 | 01 a 34, 36 a 48, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
 
 ---
 
@@ -1275,3 +1275,13 @@ CRITÉRIO ATENDIDO:
 DECLARADO: consumidor JavaScript com parser padrão lê ponto flutuante (exato até 15 algarismos significativos); leitura exata em Java e Python [NVI].
 
 Commit `e712122`. CI verde, as quatro tarefas: https://github.com/eduardojnet/PacioliBank/actions/runs/37465836390. Cartão criado no TickTick em 06/10/2026, na reconexão.
+
+### 48. Corrigir os números desatualizados do README
+
+`prioridade: Baixa` · `documentacao`
+
+ÂNCORA: regra 9 (README coerente com o ESTADO §4). Pergunta do usuário em 06/10/2026: "README.md atualizado?"
+
+ENTREGUE: README com 14 ADRs (dizia 13), mutação 86,96% e cobertura 94,11% (diziam 87,06% e 95,41%), e linha do contrato numérico na tabela de estado. ESTADO corrigido no mesmo ponto: "Onze ADRs" na §3 e "13" no bloco de retomada passam a 14.
+
+VERIFICADO: `ls docs/adr/ADR-*.md` conta 14; percentuais conferidos com a medição do card 47.

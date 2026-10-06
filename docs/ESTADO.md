@@ -41,7 +41,7 @@ O nome refere-se a Luca Pacioli, que codificou as partidas dobradas em 1494. O s
 
 ## 3. Decisões fechadas
 
-Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas rejeitadas e gatilho de revisão.
+Catorze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas rejeitadas e gatilho de revisão.
 
 | ADR | Decisão |
 |---|---|
@@ -397,7 +397,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 65 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 66 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -535,7 +535,7 @@ por conta.
 Leia, nesta ordem, antes de qualquer sugestão:
   o quadro no TickTick, projeto PacioliBank   fonte das atividades e da ordem
   docs/ESTADO.md                 estado atual e lacunas; a §7 espelha o quadro
-  docs/adr/README.md             índice das 13 decisões arquiteturais
+  docs/adr/README.md             índice das 14 decisões arquiteturais
   docs/specs/EF-especificacao-funcional.md    domínio, regras e contratos
   docs/convencoes-de-nomenclatura.md
 
@@ -623,3 +623,4 @@ confirmação.
 | 2026-10-06 | Card 46 concluído: §4 registra a execução da coleção no runner do aplicativo Insomnia 13.1.0, feita pelo usuário às 01:59 UTC contra o `docker compose`: 18 requisições, 52 testes verdes. O horário vem do banco local do aplicativo, que registra as variáveis gravadas pelos testes; o resultado verde é o relato do usuário |
 | 2026-10-06 | Card 47 concluído, por decisão do usuário: **valor monetário como número JSON** na API e no evento, revertendo a escolha original do ADR-0004 (texto). Entrada só número: texto sai `400 INVALID_REQUEST`, escala acima da moeda `400 INVALID_AMOUNT`. Saída com exatamente as casas da moeda (`Money.ToContractAmount`): `150` entra e `150.00` sai. Evento muda mantendo `v1` (nenhum consumidor). Migração 0005 converte as respostas gravadas para reenvio e as mensagens da outbox; a impressão do comando não muda, e o reenvio de comando anterior à mudança é reconhecido (verificado via curl). OpenAPI com `"format": "decimal"`, porque o gerador declarava `double`. 237 verdes; mutações medidas: sem a normalização da escala, 10 testes reprovam; aceitando texto, 5. Insomnia 54/54 duas vezes; painel verificado em Chrome headless. Revisão do ADR-0004 com 3 alternativas rejeitadas; EF 1.8, BDD 1.4. Risco aceito, registrado no ADR: consumidor JavaScript com o parser padrão lê ponto flutuante. **Registro posterior no quadro:** o TickTick estava desconectado; o usuário autorizou executar antes e criar o cartão 47 na reconexão |
 | 2026-10-06 | Card 44 concluído: a requisição vazia "New Request" foi apagada pelo usuário no aplicativo Insomnia; conferido no banco local do aplicativo (registro de exclusão; 3 pastas e 18 requisições no workspace). Card 47 criado no TickTick na reconexão, com o CI verde do commit `e712122`. Quadro sem cartão aberto |
+| 2026-10-06 | Card 48 concluído, a partir de pergunta do usuário: o README dizia 13 ADRs (são 14), mutação 87,06% e cobertura 95,41% (medidas do card 47: 86,96% e 94,11%), e não tinha a linha do contrato numérico na tabela de estado. Corrigido e acrescentada a linha. Na mesma conferência, esta página dizia "Onze ADRs" na §3 e "13" no bloco de retomada; corrigido para 14 |

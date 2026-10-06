@@ -281,7 +281,7 @@ As decisões estão registradas com alternativas rejeitadas e gatilho de revisã
 | Documento | Conteúdo |
 |---|---|
 | [`docs/diagrams/`](./docs/diagrams/) | Modelo C4 em Mermaid (contexto, contêineres, componentes, sequência), com o estado de cada elemento |
-| [`docs/adr/`](./docs/adr/) | 13 decisões arquiteturais em formato MADR |
+| [`docs/adr/`](./docs/adr/) | 14 decisões arquiteturais em formato MADR |
 | [`docs/specs/EF-especificacao-funcional.md`](./docs/specs/EF-especificacao-funcional.md) | Domínio, regras de negócio, requisitos funcionais, contrato de API |
 | [`docs/specs/ENF-especificacao-nao-funcional.md`](./docs/specs/ENF-especificacao-nao-funcional.md) | Atributos de qualidade, SLOs, riscos |
 | [`docs/specs/BDD-comportamento.md`](./docs/specs/BDD-comportamento.md) | Cenários de aceite em Gherkin |
@@ -343,6 +343,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Estorno por lançamento compensatório | Implementado, com testes |
 | Transferência entre contas numa única transação, contas bloqueadas em ordem de identificador, pernas amarradas pelo banco ([ADR-0014](./docs/adr/ADR-0014-transferencia-entre-contas.md)) | Implementado, com testes; estorno de transferência, tarifa e limites pendentes da QA-009; evento sem o identificador da transferência |
 | Extrato paginado por cursor | Implementado, com testes |
+| Valor monetário como número JSON na API e no evento, com as casas da moeda; texto na entrada recusado ([ADR-0004](./docs/adr/ADR-0004-representacao-monetaria.md), revisão) | Implementado, com testes; dados gravados convertidos pela migração 0005 |
 | Porta de entrada e os 6 endpoints de negócio | Implementado |
 | Gravação de eventos na outbox, na transação do lançamento | Implementado |
 | Ambiente local em um comando | Implementado |
@@ -352,7 +353,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Migrações versionadas (DbUp), em passo separado com o papel de migração | Implementado, com testes |
 | Documento OpenAPI e teste de contrato por instantâneo | Implementado |
 | Testes de arquitetura (NetArchTest), 6 regras de dependência entre módulos e camadas | Implementado |
-| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 87,06% |
+| Teste de mutação do domínio (Stryker.NET), mínimo de 85% de mutantes mortos no CI | Implementado: 86,96% |
 | Log estruturado em JSON, com correlação e identificadores mascarados (RNF-031, ADR-0009 §5) | Implementado, com teste pelo caminho completo ([ADR-0012](./docs/adr/ADR-0012-observabilidade.md)) |
 | Rastreamento ponta a ponta (RNF-030): requisição, caso de uso e PostgreSQL no mesmo traço, com painel local | Implementado, com teste |
 | Métricas de negócio (RNF-032): lançamentos, reenvios, rejeições por código, origem do cálculo da posição, fila da outbox | Implementado, com teste |
@@ -360,7 +361,7 @@ Apresentar requisito especificado como implementado seria, em contrato real, inf
 | Ledger particionado por mês de registro, com as garantias de unicidade mantidas no banco ([ADR-0013](./docs/adr/ADR-0013-particionamento-do-ledger.md)) | Implementado, com testes; arquivamento de períodos pendente da política de retenção (QA-004) |
 | CI no GitHub Actions: build sem avisos, todas as camadas de teste, coleção do Insomnia, varredura de segredos | Implementado |
 | Auditoria de dependências vulneráveis, transitivas inclusive: alta e crítica reprovam o build (RNF-026) | Implementado |
-| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 95,41% (coverlet.MTP) |
+| Cobertura de linha do domínio ≥ 85% (RNF-036), medida pelos testes de domínio, com limite no CI | Implementado: 94,11% (coverlet.MTP) |
 | Painel de evidência, quatro demonstrações na raiz da API | Implementado, sem teste automatizado próprio ([ADR-0011](./docs/adr/ADR-0011-painel-de-evidencia.md)) |
 
 ---
