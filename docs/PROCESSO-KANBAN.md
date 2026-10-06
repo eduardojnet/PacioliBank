@@ -41,7 +41,7 @@ Esta seção existe porque os dois erros mais caros do projeto nasceram aqui.
 > **Nenhum trabalho começa sem cartão.** Trabalho descoberto durante outro vira cartão, numerado pela §4, antes de ser feito.
 >
 > **Nenhum cartão vai para Concluído sem verificação no disco.**
-> Nenhuma entrega fecha sem que `ESTADO.md` e `README.md` sejam atualizados na mesma passada (regra 9 do `CLAUDE.md`).
+> Nenhuma entrega fecha sem que `ESTADO.md` e `README.md` sejam atualizados na mesma passada ([regra 9](./REGRAS.md)).
 
 ### Por que, em fatos e não em teoria
 
@@ -254,7 +254,7 @@ Observados neste projeto ou previsíveis a partir dele.
 | Sintoma | O que significa | Correção |
 |---|---|---|
 | Cartão em Concluído com código ausente do disco | Confiança em relato, não em leitura (L-07) | §2: ler antes de mover |
-| Documento público divergente do estado real | Controle de sincronização incompleto (L-09) | Regra 9 do `CLAUDE.md` |
+| Documento público divergente do estado real | Controle de sincronização incompleto (L-09) | [Regra 9](./REGRAS.md) |
 | Dois ou mais cartões em Em Andamento | Dispersão. Nenhum está sendo feito | Escolher um, devolver os outros |
 | Cartão em Bloqueado sem nomear o bloqueio | Hesitação apresentada como impedimento | Nomear ou mover para Backlog |
 | Cartão em Em Revisão por mais de um ciclo | Conclusão disfarçada | Medir, devolver ou eliminar |

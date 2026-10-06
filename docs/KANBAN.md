@@ -2,7 +2,7 @@
 
 Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda atividade e da ordem ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0). Em divergência, vale o quadro. Atualizado a cada entrega, junto de [`ESTADO.md`](./ESTADO.md). Política do quadro e convenção de numeração em [`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md).
 
-**Data:** 2026-10-05 · **Cartões:** 55 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
+**Data:** 2026-10-05 · **Cartões:** 61 · **Sincronizado com o TickTick em:** 2026-10-05, a partir de leitura direta do quadro
 
 ## Distribuição
 
@@ -14,7 +14,7 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 55 | 01 a 34, 36 a 39, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2 e 34.1. O 35 foi removido do quadro |
+| Concluído | 61 | 01 a 34, 36 a 43, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
 
 ---
 
@@ -1170,3 +1170,57 @@ SITUAÇÃO: a linha Build dizia "os 6 projetos da solução" (são 9: 5 de produ
 ENTREGUE: build reverificado do zero (`dotnet build --no-incremental`): 9 projetos, 0 avisos, 0 erros. Linha corrigida e datada, com o commit verificado. Linhas de testes e de verificação manual conferidas: já datadas de hoje, por execução de hoje. ESTADO §11 registra a correção.
 
 CI verde: https://github.com/eduardojnet/PacioliBank/actions/runs/37369728227
+
+### 40. Reescrever o DECISOES-EM-RESUMO.md no formato do registro de decisão arquitetural
+
+`prioridade: Baixa` · `documentacao`
+
+REGISTRO RETROATIVO, 05/10/2026: entregue sem cartão, contra o PROCESSO-KANBAN 2.0.
+
+ENTREGUE: as seis perguntas do enunciado na estrutura do MADR (decisão, critérios antes das opções, rejeitadas com gatilho, trade-off, verificação). Commit `c3e9d62`. Conferência contra o código: [NVI].
+
+### 41. Reescrever a execução local do README em quatro passos, com resultado esperado e diagnóstico
+
+`prioridade: Baixa` · `documentacao`
+
+REGISTRO RETROATIVO, 05/10/2026: entregue sem cartão, contra o PROCESSO-KANBAN 2.0.
+
+ENTREGUE: seção "Rodar localmente" com ordem de subida dos containers, quatro passos com resultado esperado, `/health/live` e `/health/ready` distinguidos, "Se algo der errado". Commit `ae209cd`, mensagem fora da convenção (dívida aceita, ESTADO §3). Execução num clone limpo: [NVI].
+
+### 41.1. Fazer o passo 3 do README esperar a API subir
+
+`prioridade: Baixa` · `documentacao`
+
+REGISTRO RETROATIVO, 05/10/2026: entregue sem cartão, contra o PROCESSO-KANBAN 2.0. Subnível do 41: corrige o passo criado nele.
+
+ENTREGUE: laço `until curl -sf …/health/ready` no lugar de um curl único, que recebia `connection reset` porque o Docker abre a porta antes de a API estar pronta. Commit `bde5931`. Comportamento contra a subida real: [NVI].
+
+### 42. Fixar o nome do projeto no docker-compose
+
+`prioridade: Baixa` · `infra`
+
+REGISTRO RETROATIVO, 05/10/2026: entregue sem cartão, contra o PROCESSO-KANBAN 2.0.
+
+ENTREGUE: `name: pacioli-bank-ledger`; antes, o nome vinha da pasta, e duas cópias do repositório colidiam nos `container_name` fixos. Commit `bde5931`.
+
+VERIFICADO: `docker compose config` devolve o mesmo nome no repositório e numa cópia em outra pasta.
+
+### 43. Registrar o CLAUDE.md como só local, fora do repositório
+
+`prioridade: Baixa` · `processo`
+
+ÂNCORA: ESTADO §3 (decisões de processo). Decisão do usuário em 05/10/2026.
+
+SITUAÇÃO: `6d2e2d8` apagou o `CLAUDE.md` e `755568e` o pôs no `.gitignore`, sem registro; a §3 ainda o dava como versionado.
+
+ENTREGUE: §3 registra a reversão (não será restaurado; motivo não declarado); `6d2e2d8` na dívida aceita de mensagens; lacuna L-17 (BAIXA) aberta para as citações a regras do arquivo e o link quebrado em `DECISOES-EM-RESUMO.md`, aguardando decisão.
+
+### 43.1. Levar as regras invioláveis para docs/REGRAS.md e repontar as citações (L-17)
+
+`prioridade: Baixa` · `documentacao` · `processo`
+
+ÂNCORA: L-17. Subnível do 43. Opção (a), decisão do usuário em 05/10/2026.
+
+ENTREGUE: `docs/REGRAS.md` com as dez regras (texto de `6d2e2d8~1`); citações repontadas em PROCESSO-KANBAN (2), diagrams/README, DECISOES-EM-RESUMO e ESTADO; link quebrado removido; "nove regras" corrigido para dez; README lista o arquivo. L-17 encerrada.
+
+VERIFICAÇÃO: busca por `CLAUDE` nos documentos vivos (README, PROCESSO-KANBAN, diagrams, DECISOES-EM-RESUMO, adr, specs) sem resultado; no ESTADO, só registro histórico e a decisão da §3.

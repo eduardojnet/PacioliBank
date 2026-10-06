@@ -288,6 +288,7 @@ As decisões estão registradas com alternativas rejeitadas e gatilho de revisã
 | [`docs/specs/BDD-comportamento.md`](./docs/specs/BDD-comportamento.md) | Cenários de aceite em Gherkin |
 | [`docs/ESTADO.md`](./docs/ESTADO.md) | Estado detalhado, lacunas por severidade, espelho da fila do quadro e histórico |
 | [`docs/PROCESSO-KANBAN.md`](./docs/PROCESSO-KANBAN.md) | Política do quadro Kanban, que é a fonte de toda atividade |
+| [`docs/REGRAS.md`](./docs/REGRAS.md) | As dez regras invioláveis do trabalho, citadas pelo número nos demais documentos |
 
 ### As decisões que definem o sistema
 

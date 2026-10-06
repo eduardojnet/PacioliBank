@@ -273,7 +273,7 @@ Encontrar defeito no código é o esperado. Encontrar **afirmação não verific
 - Teste de invariante de persistência roda contra PostgreSQL real. Em memória aprovaria a implementação errada
 - O CI reprova abaixo de 85% de cobertura e de mutantes mortos, e o **poder de detecção do próprio CI foi medido**: um aviso introduzido de propósito o deixa vermelho
 
-> [`CLAUDE.md`](../CLAUDE.md) (nove regras invioláveis) · [`docs/PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) · [ADR-0010](./adr/ADR-0010-estrategia-de-testes.md)
+> [`docs/REGRAS.md`](./REGRAS.md) (dez regras invioláveis) · [`docs/PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) · [ADR-0010](./adr/ADR-0010-estrategia-de-testes.md)
 
 ---
 

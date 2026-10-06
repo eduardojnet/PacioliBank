@@ -12,7 +12,7 @@ Modelo C4 do PacioliBank Ledger em [Mermaid](https://mermaid.js.org/), renderiza
 
 ## Implementado ou especificado
 
-Cada diagrama mostra a **arquitetura-alvo** e declara o **estado atual** de cada elemento. Desenhar como existente o que ainda não existe seria apresentar o especificado como implementado (regra 5 do `CLAUDE.md`).
+Cada diagrama mostra a **arquitetura-alvo** e declara o **estado atual** de cada elemento. Desenhar como existente o que ainda não existe seria apresentar o especificado como implementado ([regra 5](../REGRAS.md)).
 
 | Convenção | Significado |
 |---|---|

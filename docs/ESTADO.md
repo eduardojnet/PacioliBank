@@ -2,7 +2,7 @@
 
 **Documento vivo.** Atualizado a cada entrega. Descreve o que existe, o que falta e o que está decidido, sem otimismo.
 
-**Última atualização:** 2026-10-05 (trigésima segunda revisão)
+**Última atualização:** 2026-10-05 (trigésima terceira revisão)
 **Build:** verde, 0 avisos, 0 erros, os 9 projetos da solução (5 de produção, 4 de teste), analisadores em modo `Recommended` (`dotnet build --no-incremental`, verificado em 2026-10-05, sobre o commit `8cd327f`)
 **Testes:** 230 passando (116 de domínio, 6 de arquitetura, 2 de contrato, 106 de integração), 0 falhando (`dotnet test`, xunit v3 na Microsoft Testing Platform, verificado em 2026-10-05). Cobertura de linha do domínio: 95,41% (coverlet.MTP), medida pelos testes de domínio em Release; o CI reprova abaixo de 85%. Teste de mutação do domínio: 87,06% de mutantes mortos; o CI reprova abaixo de 85%
 **Verificação manual:** `docker compose up --build` servindo os 6 endpoints de negócio; 21 cenários exercitados via curl em 2026-10-02 (card 19); a transferência, com reenvio e duas recusas, em 2026-10-05 (card 38).
@@ -69,10 +69,11 @@ Onze ADRs em formato MADR, em [`docs/adr/`](./adr/). Cada um com alternativas re
 
 | Decisão | Registro |
 |---|---|
-| `CLAUDE.md` **versionado** no repositório público (revertida a decisão de mantê-lo no `.gitignore`) | Correta: o arquivo descreve arquitetura, regras invioláveis e armadilhas encontradas. Em um desafio que avalia processo, é evidência, não configuração de ferramenta. O efeito colateral antes registrado ("quem clonar não recebe as regras") deixa de existir |
+| `CLAUDE.md` **só local, fora do repositório** (decisão do usuário em 2026-10-05, card 43; reverte a de 2026-10-02, que o versionava) | Retirado por `6d2e2d8` e ignorado por `755568e`. Não será restaurado. Motivo não declarado. As regras invioláveis passaram a [`docs/REGRAS.md`](./REGRAS.md), versionado, e as citações apontam para lá (L-17, card 43.1). O histórico continua com as versões antigas do arquivo, porque histórico publicado não é reescrito |
 | `.claude/` permanece ignorado | Contém permissões locais de execução, que são do ambiente e não do projeto |
 | Commits agrupados por decisão, não por arquivo | O enunciado avalia como se pensa e prioriza; push único sinaliza ausência de processo |
 | Convenção de mensagem: Conventional Commits | Uma mensagem fora do padrão já entrou no histórico ("Atualizando CLAUDE.md no .gitignore"), e o histórico é lido pelo avaliador. Não reescrever: histórico publicado é imutável, pelo mesmo princípio do ledger |
+| **Dívida aceita:** três mensagens de commit fora da convenção em 2026-10-05: `ae209cd` ("Melhorias no README.md", card 41), `6d2e2d8` ("Delete CLAUDE.md") e `755568e` ("Modificações necessárias", que põe o `CLAUDE.md` no `.gitignore`); as duas últimas, card 43 | Mesmo critério: o histórico já publicado não é reescrito. A mensagem não descreve a mudança; quem lê o histórico encontra a descrição aqui e no cartão. Regra mantida para os commits seguintes |
 
 ### Questões de negócio ainda abertas
 
@@ -257,7 +258,7 @@ Quatro divergências estavam registradas e não aplicadas. Todas aplicadas, cada
 | ADR-0001 e convenções §3 | Módulos `Balances`, `Accounts`, `Events` e o projeto `Migrations` descritos como se existissem; `Persistence`, que existe, ausente | Nota de estado nos dois documentos. Árvore e tabela permanecem como alvo |
 | EF §8.4 | `type` do problema ilustrado com URL; o código e as convenções usam URN | Exemplo corrigido para URN |
 
-Notas de estado não alteram decisão: separam o alvo do que existe, pela regra 5 do `CLAUDE.md`.
+Notas de estado não alteram decisão: separam o alvo do que existe, pela [regra 5](./REGRAS.md).
 
 ### L-07: Código dado como escrito, mas ausente do disco (ENCERRADA em 2026-10-02, cards 19.1 e 19)
 
@@ -369,6 +370,16 @@ A ENF §11 listava a RNF-036 (cobertura de linha ≥ 85% no projeto de domínio)
 
 Medida em Release (86,4%) e não em Debug (87,9%): o CI compila em Release. Poder de detecção: sem os testes de contrato, 72,8%, e o passo reprova (localmente e num ramo de prova no CI). Método e alternativas rejeitadas na revisão do ADR-0010. ENF na versão 1.3.
 
+### L-17: Documentos citam regras de um arquivo que não está no repositório (ENCERRADA em 2026-10-05, cards 43 e 43.1)
+
+Com o `CLAUDE.md` fora do repositório, o `PROCESSO-KANBAN.md` (linhas 44 e 257), esta página (§6, nota de estado), `docs/diagrams/README.md` e `docs/DECISOES-EM-RESUMO.md` citam "regra N do `CLAUDE.md`", que o leitor não consegue consultar. Em `DECISOES-EM-RESUMO.md` a citação é um link relativo, que fica quebrado. O histórico dos cartões no `KANBAN.md` também o menciona; ali é registro de época e não se altera.
+
+**Risco:** o avaliador encontra justificativas que remetem a regras invisíveis, e um link quebrado no documento de decisões.
+
+**Conduta provisória:** nenhuma alteração até decisão do usuário. Opções: (a) trazer as regras invioláveis para um documento versionado e repontar as citações; (b) trocar as citações pelo texto da própria regra; (c) remover só o link quebrado.
+
+**Resolução:** opção (a), por decisão do usuário. As dez regras foram para [`docs/REGRAS.md`](./REGRAS.md), com o texto da última versão versionada do `CLAUDE.md` (`6d2e2d8~1`). As cinco citações vivas apontam para lá, e o link quebrado saiu. O `DECISOES-EM-RESUMO.md` dizia "nove regras"; são dez, e o texto foi corrigido. O README lista o arquivo novo. O histórico dos cartões no `KANBAN.md` não foi alterado.
+
 ### L-06: `AnalysisMode` ainda em `Default` (ENCERRADA em 2026-10-03, card 28)
 
 O ADR-0002 previu `latest-recommended` após o primeiro build limpo. O build está limpo há três ciclos. Elevar é um commit próprio e pequeno.
@@ -386,7 +397,7 @@ Supressões que já existiam e continuam, cada uma com o motivo ao lado: CA1707 
 
 ## 6-A. Gestão de projeto
 
-O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 54 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
+O quadro Kanban vive no TickTick, projeto **PacioliBank**, com 61 cartões distribuídos em 7 colunas, numerados conforme a convenção do `PROCESSO-KANBAN.md` §4. `docs/KANBAN.md` é o espelho em texto, versionado no repositório.
 
 **O quadro é a fonte** de toda atividade e da ordem de execução ([`PROCESSO-KANBAN.md`](./PROCESSO-KANBAN.md) 2.0, card 18.1). A §7 abaixo e o `KANBAN.md` são espelhos dele; em divergência, vale o quadro. Até a versão 1.2 da política era o inverso.
 
@@ -604,3 +615,6 @@ confirmação.
 | 2026-10-05 | Card 34.1 concluído por antecipação (o xunit v2 segue suportado): xunit v3 4.0.1 nos quatro projetos. O escopo inicial, manter o VSTest, se mostrou impossível, medido: o `dotnet test` do SDK 10 recusa VSTest com a Microsoft Testing Platform ligada, e com ela desligada o Stryker pontua 0% (não exercita o código mutado). Adotada a Microsoft Testing Platform: `global.json` declara o executor, `coverlet.MTP` no lugar dos dois coletores, Stryker com executor `mtp`, CI reescrito. Mesmos 192 testes. Cobertura do domínio 94,45% com o coletor novo (88,15% com o antigo; não comparáveis) e mutação 89,17%; os dois limites verificados de novo, reprovando. Achado: um teste de métricas e dois de rastreamento liam o exportador em memória com a API viva, intermitente sob o v3; a API passou a ser encerrada antes da leitura. ADR-0010 revisado; ENF 1.11 |
 | 2026-10-05 | Card 38 concluído, por decisão do usuário: transferência entre contas como **transação local**, e não a saga da ENF 5.2, cujo motivo (particionamento por conta) não existe. As duas contas bloqueadas em ordem crescente de identificador; serviço de domínio `Transfer` decide as pernas por `Account.Post`; migração 0004 com `transfers` e chaves estrangeiras compostas que conferem conta, sentido, valor, moeda e registro de cada perna; `POST /api/v1/transfers`, código `SAME_ACCOUNT_TRANSFER`. 38 testes novos, reprovando antes da implementação; oito mutações detectadas, entre elas a ordem do sentido (o teste de ordem é determinístico) e o débito confirmado em transação separada (falha provocada no banco). Insomnia com 3 requisições novas, 52/52. A 0004 foi aplicada ao volume local em uso. ADR-0014 com 8 alternativas rejeitadas; revisões do ADR-0001, ADR-0005, ADR-0006 e ADR-0009; EF 1.7 (RF-012, RN-013, QA-009), ENF 1.12, BDD 1.3 (F11), ERD reconferido. Condutas provisórias de negócio aceitas pelo usuário. 230 verdes |
 | 2026-10-05 | Card 39, apontado pelo usuário: o cabeçalho dizia "os 6 projetos da solução", e a solução tem 9 (5 de produção, 4 de teste; o .sln lista 11 entradas, das quais 2 são pastas), e datava o build de 2026-10-03, com 34 commits depois. O build foi reverificado do zero (`--no-incremental`): 9 projetos, 0 avisos, 0 erros. Linhas de testes e de verificação manual conferidas: já datadas de hoje, por execução de hoje |
+| 2026-10-05 | Registro retroativo no quadro, a pedido do usuário, de quatro entregas feitas sem cartão, contra o PROCESSO-KANBAN 2.0: card 40 (`DECISOES-EM-RESUMO.md` reescrito no formato do registro de decisão, `c3e9d62`), card 41 (execução local do README em quatro passos, com resultado esperado e diagnóstico, `ae209cd`), card 41.1 (passo 3 espera a API subir, em vez de verificar uma vez, `bde5931`) e card 42 (nome do projeto fixado no compose, para duas cópias do repositório não colidirem nos `container_name`, `bde5931`). Verificado hoje só o 42: `docker compose config` devolve o mesmo nome no repositório e numa cópia em outra pasta; os demais levam [NVI] no cartão. As mensagens de `ae209cd` e `755568e`, fora da convenção, ficam como dívida aceita na §3, sem reescrever o histórico |
+| 2026-10-05 | Card 43, decisão do usuário: o `CLAUDE.md` fica só local e não volta ao repositório. Reverte a decisão de 2026-10-02 (§3), que tinha sido desfeita de fato em `6d2e2d8` e `755568e` sem registro; a §3 dizia uma coisa e o repositório fazia outra. Motivo não declarado. Consequência aberta como L-17 (BAIXA): documentos citam regras do arquivo, e há um link quebrado em `DECISOES-EM-RESUMO.md`. A mensagem de `6d2e2d8` entra na dívida aceita da §3 |
+| 2026-10-05 | Card 43.1 concluído, opção (a) por decisão do usuário: as dez regras invioláveis em `docs/REGRAS.md`, com o texto da última versão versionada do `CLAUDE.md`. Citações repontadas em `PROCESSO-KANBAN.md` (2), `diagrams/README.md`, `DECISOES-EM-RESUMO.md` (que dizia "nove", e são dez) e nesta página. O link quebrado para `../CLAUDE.md` saiu; o README lista o arquivo. L-17 encerrada; nenhuma lacuna aberta |
