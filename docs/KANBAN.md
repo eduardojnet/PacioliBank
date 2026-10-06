@@ -10,11 +10,11 @@ Espelho em texto do quadro mantido no TickTick, que é a **fonte** de toda ativi
 |---|---|---|
 | Não Classificado | 0 | Vazia por decisão. Cartão aqui é falha de triagem, não trabalho pendente. |
 | Backlog/Ideias | 0 | |
-| A Fazer | 1 | 44 (ação no aplicativo, com o usuário) |
+| A Fazer | 0 | |
 | Em Andamento | 0 | Limite de 1 em curso, por decisão. |
 | Em Revisão | 0 | |
 | Bloqueado | 0 | |
-| Concluído | 64 | 01 a 34, 36 a 43, 45 a 47, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
+| Concluído | 65 | 01 a 34, 36 a 47, mais os subníveis 18.1, 19.1 a 19.5, 20.1, 21.1, 21.2, 24.1, 24.2, 30.1, 31.1, 31.2, 33.1, 33.2, 34.1, 41.1 e 43.1. O 35 foi removido do quadro |
 
 ---
 
@@ -1227,11 +1227,13 @@ VERIFICAÇÃO: busca por `CLAUDE` nos documentos vivos (README, PROCESSO-KANBAN,
 
 ### 44. Apagar a requisição vazia "New Request" do workspace do Insomnia
 
-`prioridade: Baixa` · `teste` · **A Fazer**
+`prioridade: Baixa` · `teste`
 
 SITUAÇÃO: a requisição vazia (GET, sem URL) existe só no workspace importado no aplicativo; o arquivo versionado não a contém. Roda antes de tudo no runner e derruba a execução.
 
-PENDENTE: remoção pela interface do aplicativo (botão direito, *Delete*), com o usuário. O banco local do aplicativo não é editado com ele aberto.
+ENTREGUE em 06/10/2026: requisição apagada pelo usuário na interface do aplicativo.
+
+VERIFICADO no banco local do aplicativo: registro de exclusão da requisição; o workspace tem 3 pastas e 18 requisições, nenhuma `New Request`.
 
 ### 45. Criar o sub-ambiente "Local" na coleção do Insomnia
 
@@ -1270,4 +1272,6 @@ CRITÉRIO ATENDIDO:
 - 0005 no volume local: 284 respostas e 290 mensagens convertidas, texto idêntico ao anterior sem as aspas; reenvio de transferência anterior à mudança devolve 200 com o corpo em número
 - Insomnia 54/54 duas vezes; painel com as quatro demonstrações em Chrome headless, sem erro de console
 
-DECLARADO: consumidor JavaScript com parser padrão lê ponto flutuante (exato até 15 algarismos significativos); leitura exata em Java e Python [NVI]. CI: pendente do push.
+DECLARADO: consumidor JavaScript com parser padrão lê ponto flutuante (exato até 15 algarismos significativos); leitura exata em Java e Python [NVI].
+
+Commit `e712122`. CI verde, as quatro tarefas: https://github.com/eduardojnet/PacioliBank/actions/runs/37465836390. Cartão criado no TickTick em 06/10/2026, na reconexão.
