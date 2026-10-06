@@ -1,5 +1,10 @@
 # Ambiente local completo. RNF-037: um comando, maquina limpa, sem passo manual.
 #   docker compose up --build
+#
+# O nome do projeto e fixo, e nao herdado do nome da pasta: duas copias do
+# repositorio em pastas diferentes passariam a ser dois projetos distintos, e
+# os container_name fixos abaixo colidiriam entre eles.
+name: pacioli-bank-ledger
 
 services:
 

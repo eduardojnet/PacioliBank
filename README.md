@@ -53,13 +53,15 @@ O `-d` solta o terminal. Para acompanhar o que está acontecendo:
 docker compose logs -f pacioli-api
 ```
 
-### Passo 3 de 4: confirmar que está no ar
+### Passo 3 de 4: esperar e confirmar que está no ar
 
 ```bash
-curl http://localhost:8080/health/ready
+until curl -sf http://localhost:8080/health/ready; do sleep 1; done; echo
 ```
 
 **Esperado:** `{"status":"ready"}`
+
+**Por que um laço, e não um `curl` só.** O Docker abre a porta 8080 no host no instante em que cria o mapeamento, antes de a aplicação estar pronta. Um `curl` imediato encontra a porta aberta, a conexão é aceita e logo fechada, e o erro é `Recv failure: connection reset`, que **parece** defeito da aplicação e é apenas pressa. O laço tenta a cada segundo até a resposta chegar.
 
 Se respondeu isso, a API está no ar **e conversando com o banco**. São duas verificações diferentes, e esta é a que importa:
 
